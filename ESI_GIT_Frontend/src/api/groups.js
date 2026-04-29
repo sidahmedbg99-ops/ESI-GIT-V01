@@ -1,0 +1,52 @@
+import client from './client';
+import { ENDPOINTS } from './config';
+
+export const groupApi = {
+  // ── Admin side ─────────────────────────────────────────────────
+  getAll:           async ()          => { const { data } = await client.get(ENDPOINTS.groups.all);                   return data; },
+  getById:          async (id)        => { const { data } = await client.get(ENDPOINTS.groups.byId(id));              return data; },
+  deleteGroup:      async (id)        => { const { data } = await client.delete(ENDPOINTS.groups.delete(id));         return data; },
+  assignJury:       async (id, body)  => { const { data } = await client.post(ENDPOINTS.groups.assignJury(id), body); return data; },
+  archiveProject:   async (id)        => { const { data } = await client.patch(ENDPOINTS.groups.archive(id));         return data; },
+  restoreProject:   async (id)        => { const { data } = await client.patch(ENDPOINTS.groups.restore(id));         return data; },
+  getArchived:      async ()          => { const { data } = await client.get(ENDPOINTS.groups.archived);              return data; },
+
+  // ── Student side ───────────────────────────────────────────────
+  getStudentGroup:  async ()          => { const { data } = await client.get(ENDPOINTS.groups.myProject);             return data; },
+  
+  createGroup:      async (groupData) => { 
+    const { data: project } = await client.post(ENDPOINTS.groups.create, groupData);
+    // If a teacher was selected during creation, send the supervisor request automatically
+    if (groupData.teacherId) {
+      try {
+        await client.post(ENDPOINTS.groups.supervisorRequest, { 
+          teacher_id: groupData.teacherId, 
+          message: groupData.requestMessage || '' 
+        });
+      } catch (err) {
+        console.error("Failed to send supervisor request after group creation:", err);
+      }
+    }
+    return project; 
+  },
+
+  joinProject:      async (code, role) => { const { data } = await client.post(ENDPOINTS.groups.join, { invite_code: code, role: role }); return data; },
+  leaveProject:     async ()          => { const { data } = await client.post(ENDPOINTS.groups.leave);              return data; },
+  leaderAction:     async (patch)     => { const { data } = await client.patch(ENDPOINTS.groups.leader, patch);     return data; },
+  
+  // Supervisor Requests (Student side)
+  getSupervisorRequests: async ()      => { const { data } = await client.get(ENDPOINTS.groups.supervisorRequest);  return data; },
+  sendSupervisorRequest: async (TID, msg) => { const { data } = await client.post(ENDPOINTS.groups.supervisorRequest, { teacher_id: TID, message: msg }); return data; },
+
+  // Project Attachments
+  uploadAttachment: async (formData) => { const { data } = await client.post('/projects/attachments/', formData, { headers: { 'Content-Type': 'multipart/form-data' } }); return data; },
+  getAttachments:    async ()         => { const { data } = await client.get('/projects/attachments/'); return data; },
+
+  // ── Teacher side ───────────────────────────────────────────────
+  getTeacherGroups: async ()          => { const { data } = await client.get(ENDPOINTS.teacher.groups);              return data; },
+  respondToSupervisorRequest: async (reqId, status) => { 
+    const action = status === 'approved' ? 'accept' : (status === 'rejected' ? 'reject' : status);
+    const { data } = await client.patch(ENDPOINTS.teacher.supervisorAction(reqId), { action }); 
+    return data; 
+  },
+};
