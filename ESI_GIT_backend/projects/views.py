@@ -792,6 +792,7 @@ class StudentAttachmentView(APIView):
             file_size=file.size,
             title=request.data.get("title", file.name),
             attachment_type=request.data.get("attachment_type", "other"),
+            is_final=request.data.get("is_final", "false").lower() == "true",
         )
 
         return Response({"message": "File uploaded successfully", "id": attachment.id})
@@ -816,9 +817,30 @@ class StudentAttachmentView(APIView):
                     "file_size": a.file_size,
                     "uploaded_at": a.uploaded_at,
                     "url": a.file.url,
+                    "attachment_type": a.attachment_type,
+                    "is_final": a.is_final,
                 }
                 for a in attachments
             ]
         )
+
+    def delete(self, request):
+        student = request.user
+        attachment_id = request.data.get("attachment_id")
+        if not attachment_id:
+            return Response({"error": "attachment_id is required"}, status=400)
+
+        try:
+            attachment = ProjectAttachment.objects.get(id=attachment_id)
+            # check if student is in the same project as the attachment
+            membership = SProjects.objects.get(CID=student, PID=attachment.PID)
+            
+            attachment.file.delete() # delete file from storage
+            attachment.delete() # delete record from DB
+            return Response({"message": "Attachment deleted successfully"})
+        except ProjectAttachment.DoesNotExist:
+            return Response({"error": "Attachment not found"}, status=404)
+        except SProjects.DoesNotExist:
+            return Response({"error": "Permission denied"}, status=403)
 
 

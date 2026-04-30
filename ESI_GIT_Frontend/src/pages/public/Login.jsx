@@ -4,6 +4,7 @@ import { IoMailOutline, IoLockClosedOutline, IoEyeOutline, IoEyeOffOutline, IoAl
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/auth';
 import { useLanguage } from '../../context/LanguageContext';
+import Modal from '../../components/ui/Modal';
 import { toast } from 'react-hot-toast';
 
 
@@ -15,6 +16,7 @@ export default function Login() {
   const [isFirstLoginState, setIsFirstLoginState] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeRole, setActiveRole] = useState(null);
+  const [showForgotModal, setShowForgotModal] = useState(false);
   const { login, error, clearError } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -245,7 +247,7 @@ export default function Login() {
                       </button>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                      <a href="#" onClick={(e) => { e.preventDefault(); alert("Veuillez contacter l'administration pour réinitialiser votre mot de passe."); }} style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                      <a href="#" onClick={(e) => { e.preventDefault(); setShowForgotModal(true); }} style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
                         Mot de passe oublié ?
                       </a>
                     </div>
@@ -253,6 +255,30 @@ export default function Login() {
                 </>
               )}
             </div>
+
+            <Modal 
+              isOpen={showForgotModal} 
+              onClose={() => setShowForgotModal(false)}
+              title="Mot de passe oublié ?"
+            >
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--primary-subtle)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                  <IoLockClosedOutline size={32} />
+                </div>
+                <p style={{ fontSize: '15px', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: 1.6 }}>
+                  Pour réinitialiser votre mot de passe, veuillez vous rapprocher de <strong>l'administration de l'ESI</strong> ou envoyer un email à :
+                </p>
+                <div style={{ padding: '12px', borderRadius: '12px', background: 'var(--bg)', border: '1px solid var(--border)', fontWeight: 700, color: 'var(--primary)', fontSize: '16px', marginBottom: '24px' }}>
+                  admin@esi.dz
+                </div>
+                <button 
+                  onClick={() => setShowForgotModal(false)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  J'ai compris
+                </button>
+              </div>
+            </Modal>
 
             {error && (
               <div style={{

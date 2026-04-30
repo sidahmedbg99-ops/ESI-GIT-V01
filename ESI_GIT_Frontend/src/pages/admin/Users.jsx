@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   IoAddOutline, IoSearchOutline, IoPencilOutline,
   IoTrashOutline, IoPersonOutline, IoMailOutline,
   IoCheckmarkOutline, IoArrowBackOutline, IoSaveOutline,
   IoShieldOutline, IoSchoolOutline, IoPeopleOutline,
-  IoEyeOutline, IoCloseOutline,
+  IoEyeOutline, IoCloseOutline, IoCloudUploadOutline,
+  IoDocumentTextOutline, IoCheckmarkCircleOutline, IoAlertCircleOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -13,9 +14,10 @@ import Button from '../../components/ui/Button';
 import Table from '../../components/ui/Table';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
-import AssignStudentModal from '../../components/ui/AssignStudentModal';
 import { useAdmin } from '../../context/AdminContext';
 import { useLanguage } from '../../context/LanguageContext';
+import client from '../../api/client';
+import { ENDPOINTS } from '../../api/config';
 
 const ROLE_VARIANTS = { student: 'gray', teacher: 'info', admin: 'primary' };
 const SPECIALITES   = ['ISI', 'IASD', 'GL', 'SIQ', 'SIT'];
@@ -57,7 +59,10 @@ function UserForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState({
     id: '', name: '', email: '', role: 'student', status: 'active',
     specialite: 'ISI', promo: '2024', department: 'Informatique',
-    year: 'L3', password: isEdit ? '' : generateRandomPassword(), ...(initial || {}),
+    year: 'L3', 
+    is_teacher: initial?.role === 'student' ? false : (initial?.is_teacher ?? true),
+    is_admin: initial?.is_admin ?? false,
+    password: isEdit ? '' : generateRandomPassword(), ...(initial || {}),
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const [saved, setSaved] = useState(false);
@@ -135,13 +140,24 @@ function UserForm({ initial, onSave, onCancel }) {
                   <Input value={form.email} onChange={e => set('email', e.target.value)} placeholder="amira@esi.dz" icon={<IoMailOutline size={14}/>} type="email"/>
                 </Field>
               </div>
-              <Field label="Rôle">
-                <SelectBox value={form.role} onChange={v => set('role', v)} options={[
+              <Field label="Rôle Principal">
+                <SelectBox value={form.role === 'student' ? 'student' : 'staff'} onChange={v => set('role', v === 'student' ? 'student' : 'teacher')} options={[
                   { value: 'student',  label: `🎓 ${t('Students').slice(0,-1)}` },
-                  { value: 'teacher',  label: `👨‍🏫 ${t('Teachers').slice(0,-1)}` },
-                  { value: 'admin',    label: '🛡️ Admin' },
+                  { value: 'staff',    label: `👔 Staff (Enseignant / Admin)` },
                 ]}/>
               </Field>
+              {form.role !== 'student' && (
+                <div style={{ display: 'flex', gap: '16px', gridColumn: '1/-1', background: 'var(--primary-subtle)', padding: '12px', borderRadius: '10px', border: '1px solid var(--primary)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={!!form.is_teacher} onChange={e => set('is_teacher', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
+                    <span style={{ fontSize: '13px', fontWeight: 600 }}>Enseignant</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={!!form.is_admin} onChange={e => set('is_admin', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
+                    <span style={{ fontSize: '13px', fontWeight: 600 }}>Administrateur</span>
+                  </label>
+                </div>
+              )}
               <Field label={isEdit ? "Nouveau Password (optionnel)" : "Password"}>
                 <Input type="text" value={form.password || ''} onChange={e => set('password', e.target.value)} placeholder={isEdit ? "Laisser vide pour ne pas changer" : "Default: student123"} icon={<IoShieldOutline size={14}/>}/>
               </Field>
@@ -155,7 +171,15 @@ function UserForm({ initial, onSave, onCancel }) {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <Field label={t('Specialty')}>
-                  <SelectBox value={form.specialite} onChange={v => set('specialite', v)} options={SPECIALITES.map(s => ({ value: s, label: s }))}/>
+                  <SelectBox 
+                    value={['M1', 'M2'].includes(form.year) ? form.specialite : ''} 
+                    onChange={v => set('specialite', v)} 
+                    options={[
+                      { value: '', label: (['M1', 'M2'].includes(form.year) ? '-- Choisir --' : 'N/A (2CPI / 3CS)') },
+                      ...SPECIALITES.map(s => ({ value: s, label: s }))
+                    ]}
+                    disabled={!['M1', 'M2'].includes(form.year)}
+                  />
                 </Field>
                 <Field label={t('Promotion')}>
                   <SelectBox value={form.promo} onChange={v => set('promo', v)} options={PROMOS.map(p => ({ value: p, label: p }))}/>
@@ -163,11 +187,11 @@ function UserForm({ initial, onSave, onCancel }) {
                 <div style={{ gridColumn: '1/-1' }}>
                   <Field label={t('Year')}>
                     <SelectBox value={form.year} onChange={v => set('year', v)} options={[
-                      { value: 'L1', label: t('L1') },
-                      { value: 'L2', label: t('L2') },
-                      { value: 'L3', label: t('L3') },
-                      { value: 'M1', label: t('M1') },
-                      { value: 'M2', label: t('M2') },
+                      { value: 'L1', label: '1ère Année (1CPI)' },
+                      { value: 'L2', label: '2ème Année (2CPI)' },
+                      { value: 'L3', label: '3ème Année (1CS / 3CS)' },
+                      { value: 'M1', label: '4ème Année (2CS / 4CS)' },
+                      { value: 'M2', label: '5ème Année (3CS / 5CS)' },
                     ]}/>
                   </Field>
                 </div>
@@ -222,8 +246,15 @@ function UserDetailModal({ user: u, onClose, onEdit }) {
         <div style={{ flex: 1 }}>
           <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>{u.name}</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px' }}>{u.email}</p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <Badge variant={ROLE_VARIANTS[u.role] || 'gray'}>{ROLE_LABELS[u.role] || u.role}</Badge>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {u.role === 'student' ? (
+              <Badge variant="primary">{t('Students').slice(0,-1)}</Badge>
+            ) : (
+              <>
+                {u.is_teacher !== false && <Badge variant="accent">{t('Teachers').slice(0,-1)}</Badge>}
+                {u.is_admin && <Badge variant="warning">Admin</Badge>}
+              </>
+            )}
             <Badge variant={u.status === 'active' ? 'success' : 'warning'}>{u.status === 'active' ? t('Validated') : t('InProgress')}</Badge>
           </div>
         </div>
@@ -258,6 +289,172 @@ function UserDetailModal({ user: u, onClose, onEdit }) {
   );
 }
 
+// ── Excel Import Modal ────────────────────────────────────────────
+function ExcelImportModal({ isOpen, onClose, onImported }) {
+  const [file, setFile] = useState(null);
+  const [userType, setUserType] = useState('student');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef();
+
+  const handleFile = (f) => {
+    if (!f) return;
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) { alert('Fichier CSV ou Excel uniquement (.csv, .xlsx, .xls)'); return; }
+    setFile(f);
+    setResult(null);
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const endpoint = userType === 'student' ? ENDPOINTS.admin.student.upload : ENDPOINTS.admin.staff.upload;
+      const { data } = await client.post(endpoint, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setResult({ 
+        success: true, 
+        created: data.created, 
+        errors: data.errors || [],
+        users: data.users || [] 
+      });
+      if (onImported) onImported();
+    } catch (e) {
+      const msg = e?.response?.data?.error || 'Erreur lors de l\'import';
+      setResult({ success: false, errors: [msg] });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reset = () => { setFile(null); setResult(null); };
+
+  return (
+    <Modal isOpen={isOpen} onClose={() => { reset(); onClose(); }} title="📥 Importer des utilisateurs" size="lg">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        {/* Type selector */}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {[{ v: 'student', label: '🎓 Étudiants' }, { v: 'staff', label: '👨‍🏫 Enseignants / Staff' }].map(({ v, label }) => (
+            <button key={v} onClick={() => { setUserType(v); reset(); }}
+              style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${userType === v ? 'var(--primary)' : 'var(--border)'}`, background: userType === v ? 'var(--primary-subtle)' : 'var(--bg)', color: userType === v ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Results with Password List */}
+        {result && result.success && result.users.length > 0 && (
+          <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '10px' }}>
+             <p style={{ fontSize: '14px', fontWeight: 700, color: '#16A34A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <IoCheckmarkCircleOutline size={18} /> Comptes créés avec succès
+             </p>
+             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+               <thead>
+                 <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--border)' }}>
+                   <th style={{ padding: '8px' }}>Nom</th>
+                   <th style={{ padding: '8px' }}>Email</th>
+                   <th style={{ padding: '8px' }}>Mot de passe</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {result.users.map((u, i) => (
+                   <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                     <td style={{ padding: '8px', fontWeight: 600 }}>{u.name}</td>
+                     <td style={{ padding: '8px', color: 'var(--text-muted)' }}>{u.email}</td>
+                     <td style={{ padding: '8px' }}>
+                       <code style={{ background: 'var(--primary-subtle)', color: 'var(--primary)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>{u.password}</code>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+          </div>
+        )}
+
+        {/* Template hint */}
+        {!result && (
+          <div style={{ padding: '12px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+            <strong style={{ color: 'var(--text-primary)' }}>📋 Colonnes attendues :</strong><br/>
+            {userType === 'student'
+              ? <code style={{ fontSize: '11px' }}>CID, email, first_name, last_name, specialty, academic_year</code>
+              : <code style={{ fontSize: '11px' }}>email, first_name, last_name, is_admin (0/1), is_teacher (0/1)</code>
+            }
+            <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
+               💡 Note: Un utilisateur Staff peut être à la fois Enseignant et Admin (mettre 1 dans les deux colonnes).
+            </div>
+          </div>
+        )}
+
+        {/* Drop zone */}
+        {!result && (
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
+            onClick={() => fileRef.current?.click()}
+            style={{ border: `2px dashed ${dragOver ? 'var(--primary)' : file ? '#10B981' : 'var(--border)'}`, borderRadius: '14px', padding: '36px 20px', textAlign: 'center', cursor: 'pointer', background: dragOver ? 'var(--primary-subtle)' : file ? '#F0FDF4' : 'var(--bg)', transition: 'all 0.2s' }}
+          >
+            <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+            {file ? (
+              <>
+                <IoDocumentTextOutline size={36} color="#10B981" style={{ marginBottom: '10px' }} />
+                <p style={{ fontWeight: 700, color: '#10B981', fontSize: '14px' }}>{file.name}</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{(file.size / 1024).toFixed(1)} KB — Cliquez pour changer</p>
+              </>
+            ) : (
+              <>
+                <IoCloudUploadOutline size={40} color="var(--text-muted)" style={{ marginBottom: '10px' }} />
+                <p style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', marginBottom: '6px' }}>Glissez votre fichier ici</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>ou <span style={{ color: 'var(--primary)', fontWeight: 600 }}>parcourir</span> — CSV, XLSX, XLS</p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Results Summary & Errors */}
+        {result && (
+          <div style={{ borderRadius: '12px', border: `1px solid ${result.success ? '#86EFAC' : '#FECACA'}`, background: result.success ? '#F0FDF4' : '#FEF2F2', padding: '16px' }}>
+            {result.success ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <IoCheckmarkCircleOutline size={22} color="#16A34A" />
+                  <p style={{ fontWeight: 700, color: '#16A34A', fontSize: '15px' }}>{result.created} utilisateur(s) importé(s) !</p>
+                </div>
+                {result.errors.length > 0 && (
+                  <div style={{ marginTop: '8px' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: '#B45309', marginBottom: '6px' }}>⚠️ {result.errors.length} ligne(s) ignorée(s) :</p>
+                    <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
+                      {result.errors.map((err, i) => <p key={i} style={{ fontSize: '11px', color: '#92400E', padding: '2px 0' }}>• {JSON.stringify(err)}</p>)}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <IoAlertCircleOutline size={22} color="#DC2626" />
+                <p style={{ color: '#DC2626', fontWeight: 600, fontSize: '14px' }}>{result.errors[0]}</p>
+              </div>
+            )}
+            <button onClick={reset} style={{ marginTop: '12px', fontSize: '13px', color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ Importer un autre fichier</button>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <Button variant="ghost" onClick={() => { reset(); onClose(); }}>Fermer</Button>
+          {!result && (
+            <Button onClick={handleUpload} disabled={!file || loading} icon={<IoCloudUploadOutline size={16}/>}>
+              {loading ? 'Import en cours...' : 'Importer'}
+            </Button>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────
 export default function AdminUsers() {
   const { t } = useLanguage();
@@ -271,7 +468,7 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [detailUser, setDetailUser] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -380,7 +577,7 @@ export default function AdminUsers() {
             </select>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Button icon={<IoPeopleOutline size={16}/>} variant="secondary" onClick={() => setIsAssignModalOpen(true)}>{t('AssignStudent')}</Button>
+            <Button icon={<IoCloudUploadOutline size={16}/>} variant="secondary" onClick={() => setIsImportModalOpen(true)}>Importer Excel</Button>
             <Button icon={<IoAddOutline size={16}/>} onClick={openAdd}>{t('AddUser')}</Button>
           </div>
         </div>
@@ -416,7 +613,7 @@ export default function AdminUsers() {
         </Modal>
       )}
 
-      <AssignStudentModal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} />
+      <ExcelImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImported={() => window.location.reload()} />
     </DashboardLayout>
   );
 }

@@ -28,6 +28,7 @@ const navByRole = {
     { path: '/teacher/dashboard', labelKey: 'Dashboard', icon: <IoGridOutline /> },
     { path: '/teacher/groupes',   labelKey: 'Groups',    icon: <IoPeopleOutline /> },
     { path: '/teacher/reunions',  labelKey: 'Meetings',  icon: <IoCalendarOutline /> },
+    { path: '/teacher/requests',  labelKey: 'Requests',  icon: <IoNotificationsOutline /> },
     { path: '/teacher/jury',      labelKey: 'Juries',    icon: <IoRibbonOutline /> },
     { path: '/teacher/archive',   labelKey: 'Archive',   icon: <IoArchiveOutline /> },
   ],

@@ -11,6 +11,20 @@ export const groupApi = {
   restoreProject:   async (id)        => { const { data } = await client.patch(ENDPOINTS.groups.restore(id));         return data; },
   getArchived:      async ()          => { const { data } = await client.get(ENDPOINTS.groups.archived);              return data; },
 
+  // ── Admin: create a group directly (bypasses student flow) ────
+  adminCreateGroup: async (groupData) => {
+    // POST /api/projects/admin/projects/
+    // Backend expects: { name, invite_code, TID (int), student_ids: [int, ...] }
+    const payload = {
+      name:        groupData.title || groupData.Name,
+      invite_code: groupData.groupCode,
+      teacher_id:  parseInt(groupData.teacherId || groupData.TID),
+      student_ids: (groupData.studentIds || []).map(id => parseInt(id)),
+    };
+    const { data } = await client.post('/projects/admin/projects/', payload);
+    return data;
+  },
+
   // ── Student side ───────────────────────────────────────────────
   getStudentGroup:  async ()          => { const { data } = await client.get(ENDPOINTS.groups.myProject);             return data; },
   
@@ -41,6 +55,7 @@ export const groupApi = {
   // Project Attachments
   uploadAttachment: async (formData) => { const { data } = await client.post('/projects/attachments/', formData, { headers: { 'Content-Type': 'multipart/form-data' } }); return data; },
   getAttachments:    async ()         => { const { data } = await client.get('/projects/attachments/'); return data; },
+  deleteAttachment:  async (id)         => { const { data } = await client.delete('/projects/attachments/', { data: { attachment_id: id } }); return data; },
 
   // ── Teacher side ───────────────────────────────────────────────
   getTeacherGroups: async ()          => { const { data } = await client.get(ENDPOINTS.teacher.groups);              return data; },
@@ -48,5 +63,10 @@ export const groupApi = {
     const action = status === 'approved' ? 'accept' : (status === 'rejected' ? 'reject' : status);
     const { data } = await client.patch(ENDPOINTS.teacher.supervisorAction(reqId), { action }); 
     return data; 
+  },
+
+  updateGroup: async (pid, patch) => {
+    const { data } = await client.patch(ENDPOINTS.teacher.groupDetail(pid), patch);
+    return data;
   },
 };

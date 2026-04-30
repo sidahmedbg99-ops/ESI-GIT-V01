@@ -2,6 +2,7 @@ import {
   IoPeopleOutline, IoCalendarOutline,
   IoCheckmarkCircleOutline, IoStarOutline,
   IoTimeOutline, IoTrendingUpOutline,
+  IoDocumentTextOutline,
 } from 'react-icons/io5';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -168,65 +169,7 @@ export default function TeacherDashboard() {
         </Card>
       </div>
 
-      {/* Row 3: Special Requests */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-         {/* Supervisor Requests */}
-         {(supervisorRequests || []).length > 0 && (
-           <Card style={{ border: '1px solid var(--primary)' }}>
-             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', color: 'var(--primary)' }}>
-               {t('SupervisionRequests')}
-             </h3>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-               {(supervisorRequests || []).map(req => (
-                 <div key={req.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                   <div>
-                     <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '2px' }}>{req.projectTitle}</p>
-                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>Groupe: {req.groupCode}</p>
-                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                        {(req.members || []).map((m, idx) => (
-                          <span key={idx} style={{ fontSize: '9px', padding: '1px 6px', borderRadius: '4px', background: 'var(--primary-subtle)', color: m.is_leader ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: m.is_leader ? 700 : 400 }}>
-                            {m.is_leader && '⭐ '}{m.name}
-                          </span>
-                        ))}
-                     </div>
-                     {req.Message && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>"{req.Message}"</p>}
-                   </div>
-                   <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => respondToSupervisorRequest(req.id, 'approved')} style={{ padding: '6px 12px', borderRadius: '8px', background: '#DCFCE7', border: '1px solid #86EFAC', color: '#16A34A', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>{t('Approve')}</button>
-                      <button onClick={() => respondToSupervisorRequest(req.id, 'rejected')} style={{ padding: '6px 12px', borderRadius: '8px', background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>{t('Reject')}</button>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           </Card>
-         )}
-
-         {/* Final Validation Requests */}
-         {safeGroups.filter(g => g.submitted_to_supervisor && !g.final_submission_approved).length > 0 && (
-           <Card style={{ border: '1px solid var(--primary)', background: 'var(--primary-subtle)' }}>
-             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-               <IoDocumentTextOutline /> {t('FinalValidationRequests')}
-             </h3>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-               {safeGroups.filter(g => g.submitted_to_supervisor && !g.final_submission_approved).map(g => (
-                 <div key={g._id || g.PID} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: 'var(--radius-md)', background: '#fff', border: '1px solid var(--border)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                   <div>
-                     <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '2px' }}>{g.title || g.name || g.Name}</p>
-                     <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Groupe: {g.groupCode || g.invite_code} — <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{t('ProjectSubmittedFinal')}</span></p>
-                   </div>
-                   <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => updateGroup?.(g._id || g.PID, { final_submission_approved: true })} style={{ padding: '8px 16px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>✓ {t('Approve')}</button>
-                      <button onClick={() => {
-                        const fb = prompt(t('Reject') + " (Raison / Feedback) :");
-                        if (fb) updateGroup?.(g._id || g.PID, { final_submission_approved: false, supervisor_feedback: fb });
-                      }} style={{ padding: '8px 16px', borderRadius: '10px', background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>✕ {t('Reject')}</button>
-                   </div>
-                 </div>
-               ))}
-             </div>
-           </Card>
-         )}
-      </div>
+      {/* Row 3 removed: now on dedicated Requests page */}
       {/* Groups table */}
       <Card style={{ marginTop: '20px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>{t('MyGroups')}</h3>

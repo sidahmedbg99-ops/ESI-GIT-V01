@@ -36,6 +36,7 @@ class PlatformSettings(models.Model):
     """
 
     students_can_see_archived_projects = models.BooleanField(default=False)
+    current_academic_year = models.CharField(max_length=20, default="2024-2025")
 
     updated_by = models.ForeignKey(
         Staff, on_delete=models.SET_NULL, null=True, blank=True

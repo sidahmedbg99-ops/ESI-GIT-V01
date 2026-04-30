@@ -29,6 +29,7 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
     member_count = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
+    final_report_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Projects
@@ -36,7 +37,15 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
             "PID", "name", "invite_code", "specialty", "year",
             "status", "member_count", "progress", "members",
             "submitted_to_supervisor", "final_submission_approved",
+            "final_report_url",
         ]
+
+    def get_final_report_url(self, obj):
+        from projects.models import ProjectAttachment
+        att = ProjectAttachment.objects.filter(PID=obj, is_final=True).first()
+        if att:
+            return att.file.url if att.file else None
+        return None
 
     def get_member_count(self, obj):
         return SProjects.objects.filter(PID=obj).count()

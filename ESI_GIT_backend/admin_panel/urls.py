@@ -11,7 +11,7 @@ from django.urls import path
 
 from admin_panel.views import (
     # Dashboard
-    dashboard_stats,
+    dashboard_stats, dashboard_analytics, AdvancedAnalyticsAPI,
     # User listing
     list_users,
     # Students
@@ -33,6 +33,8 @@ urlpatterns = [
 
     # ── Dashboard ──────────────────────────────────────────────────────────────
     path("dashboard/", dashboard_stats),
+    path("dashboard/analytics/", dashboard_analytics),
+    path("analytics/advanced/", AdvancedAnalyticsAPI.as_view()),
 
     # ── User listing (search + filter + pagination) ────────────────────────────
     path("users/", list_users),

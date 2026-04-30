@@ -273,4 +273,4 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlatformSettings
-        fields = ["students_can_see_archived_projects"]
+        fields = ["students_can_see_archived_projects", "current_academic_year"]

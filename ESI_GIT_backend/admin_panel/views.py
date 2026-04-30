@@ -343,12 +343,13 @@ def upload_students(request):
         return Response(
             {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
         )
-    created, errors = import_Student_from_file(file)
+    created, errors, imported_users = import_Student_from_file(file)
     return Response(
         {
             "message": f"{created} student(s) imported.",
             "created": created,
             "errors": errors,
+            "users": imported_users,
         }
     )
 
@@ -495,12 +496,13 @@ def upload_staff(request):
         return Response(
             {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
         )
-    created, errors = import_staff_from_file(file)
+    created, errors, imported_users = import_staff_from_file(file)
     return Response(
         {
             "message": f"{created} staff member(s) imported.",
             "created": created,
             "errors": errors,
+            "users": imported_users,
         }
     )
 
@@ -598,6 +600,112 @@ def dashboard_analytics(request):
             "students_by_specialty": list(students_by_specialty),
         }
     )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# ADVANCED ANALYTICS
+# ──────────────────────────────────────────────────────────────────────────────
+
+class AdvancedAnalyticsAPI(APIView):
+    """
+    GET /api/admin/analytics/advanced/
+    
+    A comprehensive analytics engine providing metrics for:
+    - Student activity & risk detection
+    - Academic performance (grades, trends)
+    - Operational efficiency (tasks, delays)
+    - System usage
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        from projects.models import Projects, SProjects
+        from tasks.models import Task
+        from jury.models import Grades, ProjectJury
+
+        now = datetime.now()
+        thirty_days_ago = now - timedelta(days=30)
+
+        # 1. Active vs Inactive Students
+        total_students = Student.objects.count()
+        students_with_group = SProjects.objects.values('CID').distinct().count()
+        
+        # 2. At-risk Students (Past-due tasks)
+        at_risk_count = Task.objects.filter(
+            state__in=['todo', 'in_progress'], 
+            deadline__lt=now.date()
+        ).values('assignments__CID').distinct().count()
+
+        # 3. Grade Trends (by month)
+        grade_trends = (
+            Grades.objects.filter(final_grade__isnull=False)
+            .annotate(month=TruncMonth('PID__creation_date'))
+            .values('month')
+            .annotate(avg_grade=models.Avg('final_grade'))
+            .order_by('month')
+        )
+
+        # 4. Specialty Performance (Module difficulty)
+        specialty_performance = (
+            Projects.objects.filter(grades__final_grade__isnull=False)
+            .values('specialty')
+            .annotate(avg_grade=models.Avg('grades__final_grade'), count=Count('PID'))
+            .order_by('-avg_grade')
+        )
+
+        # 5. Pass/Fail Rates
+        all_grades = Grades.objects.filter(final_grade__isnull=False)
+        pass_count = all_grades.filter(final_grade__gte=10).count()
+        fail_count = all_grades.filter(final_grade__lt=10).count()
+
+        # 6. Task Completion Rate
+        total_tasks = Task.objects.count()
+        done_tasks = Task.objects.filter(state='done').count()
+
+        # 7. Late Submissions (Approximate: Past due tasks)
+        late_tasks_count = Task.objects.filter(deadline__lt=now.date()).exclude(state='done').count()
+
+        # 8. Teacher Grading Patterns (Average grade given)
+        # We need to aggregate across g1, g2, g3 based on ProjectJury
+        # This is complex, let's do a simpler version first
+        teacher_patterns = (
+            Staff.objects.filter(is_teacher=True)
+            .annotate(
+                avg_given=models.Avg('jury_as_president__PID__grades__final_grade')
+            )
+            .values('TID', 'first_name', 'last_name', 'avg_given')
+            .filter(avg_given__isnull=False)
+            .order_by('-avg_given')[:10]
+        )
+
+        # 9. System Usage (Creations per month)
+        usage_trends = (
+            Projects.objects.annotate(month=TruncMonth('creation_date'))
+            .values('month')
+            .annotate(projects=Count('PID'))
+            .order_by('month')
+        )
+
+        return Response({
+            "student_stats": {
+                "active": students_with_group,
+                "inactive": total_students - students_with_group,
+                "at_risk": at_risk_count,
+            },
+            "performance": {
+                "grade_trends": list(grade_trends),
+                "specialty_ranking": list(specialty_performance),
+                "pass_rate": round((pass_count / all_grades.count() * 100) if all_grades.count() > 0 else 0, 1),
+                "fail_rate": round((fail_count / all_grades.count() * 100) if all_grades.count() > 0 else 0, 1),
+            },
+            "operations": {
+                "task_completion_rate": round((done_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1),
+                "late_tasks": late_tasks_count,
+                "total_tasks": total_tasks,
+            },
+            "teacher_patterns": list(teacher_patterns),
+            "usage_trends": list(usage_trends),
+        })
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -875,9 +983,24 @@ class PlatformSettingsAPI(APIView):
             settings_obj, data=request.data, partial=True
         )
         if serializer.is_valid():
+            old_year = settings_obj.current_academic_year
+            new_year = request.data.get("current_academic_year")
+
             instance = cast(PlatformSettings, serializer.save())
             instance.updated_by = request.user  # record which admin made the change
             instance.save()
+
+            # If the academic year has changed, archive all active projects
+            if new_year and new_year != old_year:
+                from projects.models import Projects
+                archived_count = Projects.objects.filter(archived=False).update(archived=True)
+                return Response(
+                    {
+                        "message": f"Platform settings updated. Academic year changed from {old_year} to {new_year}. {archived_count} projects archived.",
+                        "data": serializer.data,
+                    }
+                )
+
             return Response(
                 {"message": "Platform settings updated.", "data": serializer.data}
             )

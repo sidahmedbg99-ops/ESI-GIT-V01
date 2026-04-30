@@ -27,23 +27,16 @@ def import_Student_from_file(file) -> tuple:
     """
     Bulk-create students from an uploaded CSV or XLSX file.
 
-    Each valid row triggers account creation and an email with credentials.
-    Invalid rows are collected in the errors list and do NOT stop the import.
-
-    Args:
-        file: Django UploadedFile (name must end in ``.xlsx`` or ``.csv``).
-
     Returns:
-        Tuple[int, list]: (number of students created, list of row errors)
+        Tuple[int, list, list]: (count, errors, imported_list)
     """
-    # Lazy import — pandas is only needed when this function is called,
-    # not at Django startup (the binary may be platform-specific).
     import pandas as pd
 
     df = pd.read_excel(file) if file.name.endswith("xlsx") else pd.read_csv(file)
 
     created = 0
     errors  = []
+    imported_list = []
 
     for _, row in df.iterrows():
         data = {
@@ -61,22 +54,24 @@ def import_Student_from_file(file) -> tuple:
             student, password = serializer.save()
             send_account_email(student.email, password, "student")
             created += 1
+            imported_list.append({
+                "email": student.email,
+                "password": password,
+                "name": f"{student.first_name} {student.last_name}",
+                "role": "student"
+            })
         else:
-            # Record which row failed and why
             errors.append({"row": data, "errors": serializer.errors})
 
-    return created, errors
+    return created, errors, imported_list
 
 
 def import_staff_from_file(file) -> tuple:
     """
     Bulk-create staff members from an uploaded CSV or XLSX file.
 
-    Args:
-        file: Django UploadedFile (name must end in ``.xlsx`` or ``.csv``).
-
     Returns:
-        Tuple[int, list]: (number of staff created, list of row errors)
+        Tuple[int, list, list]: (count, errors, imported_list)
     """
     import pandas as pd
 
@@ -84,6 +79,7 @@ def import_staff_from_file(file) -> tuple:
 
     created = 0
     errors  = []
+    imported_list = []
 
     for _, row in df.iterrows():
         data = {
@@ -100,7 +96,13 @@ def import_staff_from_file(file) -> tuple:
             staff, password = serializer.save()
             send_account_email(staff.email, password, "staff")
             created += 1
+            imported_list.append({
+                "email": staff.email,
+                "password": password,
+                "name": f"{staff.first_name} {staff.last_name}",
+                "role": "admin" if staff.is_admin else "teacher"
+            })
         else:
             errors.append({"row": data, "errors": serializer.errors})
 
-    return created, errors
+    return created, errors, imported_list

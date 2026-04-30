@@ -40,8 +40,12 @@ function ChipBar({ values, active, onSelect, colorMap }) {
 export function Archive() {
   const { data: archiveItems, loading, request: loadArchive } = useApi(archiveApi.getArchive);
   
+  const [forbidden, setForbidden] = useState(false);
+
   useEffect(() => {
-    loadArchive();
+    loadArchive().catch(err => {
+      if (err?.response?.status === 403) setForbidden(true);
+    });
   }, [loadArchive]);
 
   const projects = archiveItems || [];
@@ -88,6 +92,14 @@ export function Archive() {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>Chargement de l'archive...</div>
+      ) : forbidden ? (
+        <Card style={{ textAlign: 'center', padding: '80px 40px', color: 'var(--text-muted)' }}>
+          <div style={{ fontSize: '64px', marginBottom: '20px', opacity: 0.3 }}>👁️‍🗨️</div>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px' }}>Archive masquée</h2>
+          <p style={{ fontSize: '15px', maxWidth: '400px', margin: '0 auto', lineHeight: 1.6 }}>
+            L'administration a temporairement désactivé la consultation des archives de projets pour les étudiants.
+          </p>
+        </Card>
       ) : (
         <>
           {/* Stats */}

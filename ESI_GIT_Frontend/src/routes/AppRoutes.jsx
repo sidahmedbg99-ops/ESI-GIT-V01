@@ -15,13 +15,15 @@ import Reunions         from '../pages/student/Reunions';
 import Taches           from '../pages/student/Taches';
 import { Archive }      from '../pages/student/Archive';
 import Profil           from '../pages/student/Profil';
+import Supervisor      from '../pages/student/Supervisor';
 
 import TeacherDashboard  from '../pages/teacher/Dashboard';
+import TeacherJury       from '../pages/teacher/TeacherJury';
+import TeacherArchive    from '../pages/teacher/TeacherArchive';
+import TeacherRequests   from '../pages/teacher/TeacherRequests';
 import TeacherProfil     from '../pages/teacher/TeacherProfil';
 import TeacherGroups     from '../pages/teacher/TeacherGroups';
 import TeacherMeetings   from '../pages/teacher/TeacherMeetings';
-import TeacherJury       from '../pages/teacher/TeacherJury';
-import TeacherArchive    from '../pages/teacher/TeacherArchive';
 
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers     from '../pages/admin/Users';
@@ -77,6 +79,7 @@ export default function AppRoutes() {
         <Route path="/student/groupe"         element={<Groupe/>}/>
         <Route path="/student/reunions"       element={<Reunions/>}/>
         <Route path="/student/taches"         element={<Taches/>}/>
+        <Route path="/student/encadreur"      element={<Supervisor/>}/>
         <Route path="/student/archive"        element={<Archive/>}/>
         <Route path="/student/profil"         element={<Profil/>}/>
       </Route>
@@ -87,6 +90,7 @@ export default function AppRoutes() {
         <Route path="/teacher/dashboard"      element={<TeacherDashboard/>}/>
         <Route path="/teacher/groupes"        element={<TeacherGroups/>}/>
         <Route path="/teacher/reunions"       element={<TeacherMeetings/>}/>
+        <Route path="/teacher/requests"       element={<TeacherRequests/>}/>
         <Route path="/teacher/jury"           element={<TeacherJury/>}/>
         <Route path="/teacher/archive"        element={<TeacherArchive/>}/>
         <Route path="/teacher/profil"         element={<TeacherProfil/>}/>

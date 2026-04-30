@@ -112,9 +112,9 @@ function GroupDetailModal({ group: g, users, onClose, onAssignJury }) {
     });
   } else if (g.jury && typeof g.jury === 'object') {
     // Handle real backend object format
-    if (g.jury.president) juryMembers.push({ name: g.jury.president, role: t('JuryRoles')?.president || 'Président' });
-    if (g.jury.examiner1) juryMembers.push({ name: g.jury.examiner1, role: t('JuryRoles')?.member || 'Examinateur' });
-    if (g.jury.examiner2) juryMembers.push({ name: g.jury.examiner2, role: t('JuryRoles')?.member || 'Examinateur' });
+    if (g.jury.president) juryMembers.push({ name: g.jury.president, role: 'Président' });
+    if (g.jury.examiner1) juryMembers.push({ name: g.jury.examiner1, role: 'Examinateur' });
+    if (g.jury.examiner2) juryMembers.push({ name: g.jury.examiner2, role: 'Examinateur' });
   }
 
   return (
@@ -126,10 +126,10 @@ function GroupDetailModal({ group: g, users, onClose, onAssignJury }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           {[
-            { label: t('Supervisor'), value: teacher?.name || g.encadreur || '—' },
-            { label: t('Status'),    value: g.status === 'active' ? t('Active_Stat') : t('Archive') },
-            { label: t('Members'),   value: (g.members || g.studentIds || []).length + ' ' + t('Students').toLowerCase() },
-            { label: 'Approbation', value: g.supervisorApproved ? t('Approve') : t('InProgress') },
+            { label: t('Supervisor'), value: teacher?.name || g.teacher_name || g.encadreur || '—' },
+            { label: t('Status'),    value: g.archived ? t('Archive') : t('Active_Stat') },
+            { label: t('Members'),   value: (g.Student_count || (g.members || g.studentIds || []).length) + ' ' + t('Students').toLowerCase() },
+            { label: 'Approbation', value: g.supervisorApproved || g.status === 'approved' ? t('Approve') : t('InProgress') },
           ].map((f, i) => (
             <div key={i} style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
               <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '3px' }}>{f.label}</p>
@@ -171,9 +171,15 @@ function GroupDetailModal({ group: g, users, onClose, onAssignJury }) {
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
           <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          <Button onClick={() => { onClose(); onAssignJury(g); }} icon={<IoRibbonOutline size={16}/>}>
-            {juryMembers.length ? t('EditJury') : t('AssignJury')}
-          </Button>
+          <div title={!g.supervisorApproved ? "L'encadreur doit d'abord approuver le projet" : ""}>
+            <Button 
+              onClick={() => { onClose(); onAssignJury(g); }} 
+              disabled={!g.supervisorApproved}
+              icon={<IoRibbonOutline size={16}/>}
+            >
+              {juryMembers.length ? t('EditJury') : t('AssignJury')}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -189,6 +195,8 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
   const [projectTitle, setProjectTitle] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedStudents, setSelectedStudents] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const toggleStudent = (s) => {
     setSelectedStudents(prev => {
@@ -202,52 +210,69 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
     setSelectedStudents(prev => prev.map(x => x.cid === cid ? { ...x, role } : x));
   };
 
-  const handleSubmit = () => {
-    onSubmit({
-      Name: projectTitle,
-      title: projectTitle,
-      groupCode: groupCode,
-      teacherId: selectedTeacher,
-      TID: selectedTeacher,
-      supervisorApproved: true,
-      members: selectedStudents,
-      studentIds: selectedStudents.map(s => s.cid)
-    });
-    onClose();
+  const handleSubmit = async () => {
+    setError('');
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        Name: projectTitle,
+        title: projectTitle,
+        groupCode: groupCode,
+        teacherId: selectedTeacher,
+        TID: selectedTeacher,
+        supervisorApproved: true,
+        members: selectedStudents,
+        studentIds: selectedStudents.map(s => s.cid),
+      });
+      onClose();
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.response?.data?.detail || 'Erreur lors de la création');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const isValid = projectTitle.trim() && groupCode.trim() && selectedTeacher && selectedStudents.length > 0;
 
   return (
     <Modal isOpen onClose={onClose} title={t('CreateGroupTitle')} size="md">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {error && (
+          <div style={{ padding: '10px 14px', borderRadius: '10px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px' }}>
+            {error}
+          </div>
+        )}
         <div>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('ProjectTitle')} *</label>
           <input value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Ex: E-learning platform"
-                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)' }}/>
+                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}/>
         </div>
         <div>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('GroupCode')} *</label>
           <input value={groupCode} onChange={e => setGroupCode(e.target.value)} placeholder="Ex: ISI-24-01"
-                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)' }}/>
+                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}/>
         </div>
         <div>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Supervisor')} *</label>
           <select value={selectedTeacher} onChange={e => setSelectedTeacher(e.target.value)}
-                  style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)' }}>
+                  style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}>
             <option value="">-- {t('Select')} --</option>
             {teachers.map(tr => <option key={tr._id} value={tr._id}>{tr.name}</option>)}
           </select>
+          {teachers.length === 0 && <p style={{ fontSize: '12px', color: '#F59E0B', marginTop: '4px' }}>⚠️ Aucun enseignant disponible trouvé</p>}
         </div>
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Students')} (max 6) *</label>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Students')} (max 6) * — {selectedStudents.length} sélectionné(s)</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', padding: '10px', borderRadius: 'var(--radius-md)' }}>
+            {withoutGroup.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '10px' }}>Tous les étudiants ont un groupe</p>}
             {withoutGroup.map(s => {
               const sel = selectedStudents.find(x => x.cid === s._id);
               return (
                 <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input type="checkbox" checked={!!sel} onChange={() => toggleStudent(s)} />
-                  <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{s.name}</span>
+                  <input type="checkbox" checked={!!sel} onChange={() => toggleStudent(s)} style={{ cursor: 'pointer' }}/>
+                  <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{s.name} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>— {s.specialite} {s.promo}</span></span>
                   {sel && (
-                    <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '12px', padding: '4px', borderRadius: '4px' }}>
+                    <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '12px', padding: '4px', borderRadius: '4px', border: '1px solid var(--border)' }}>
                       <option value="développeur">Développeur</option>
                       <option value="frontend">Frontend</option>
                       <option value="backend">Backend</option>
@@ -262,7 +287,9 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
         </div>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
           <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          <Button onClick={handleSubmit} disabled={!projectTitle.trim() || !groupCode.trim() || !selectedTeacher || selectedStudents.length === 0}>{t('CreateGroup')} ({selectedStudents.length})</Button>
+          <Button onClick={handleSubmit} disabled={!isValid || submitting}>
+            {submitting ? 'Création...' : `${t('CreateGroup')} (${selectedStudents.length})`}
+          </Button>
         </div>
       </div>
     </Modal>
@@ -272,7 +299,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
 // ── Main page ──────────────────────────────────────────────────────
 export default function AdminGroupes() {
   const { t } = useLanguage();
-  const { groups, users, updateGroup, addGroup, assignJury } = useAdmin();
+  const { groups, users, updateGroup, addGroup, assignJury, restoreGroup } = useAdmin();
   const safeGroups = groups || [];
   const safeUsers  = users  || [];
 
@@ -345,14 +372,14 @@ export default function AdminGroupes() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                         <p style={{ fontSize: '14px', fontWeight: 700 }}>{g.groupCode ?? g.title}</p>
-                        <Badge variant={g.status === 'active' ? 'success' : 'warning'}>{g.status === 'active' ? t('Active_Stat') : 'Inactif'}</Badge>
-                        {!g.supervisorApproved && <Badge variant="warning">{t('NonApproved_Stat')}</Badge>}
+                        <Badge variant={g.archived ? 'warning' : 'success'}>{g.archived ? t('Archive') : t('Active_Stat')}</Badge>
+                        {(!g.supervisorApproved && g.status !== 'approved') && <Badge variant="warning">{t('NonApproved_Stat')}</Badge>}
                         {g.final_submission_approved && <Badge variant="success">Prêt pour Soutenance ✓</Badge>}
                         {hasJury && <Badge variant="primary">Jury ✓</Badge>}
                       </div>
                       <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title}</p>
                       <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        👤 {teacher?.name || g.encadreur || '—'} · {g.Student_count || 0} {t('Members').toLowerCase()}
+                        👤 {teacher?.name || g.teacher_name || g.encadreur || '—'} · {g.Student_count || 0} {t('Members').toLowerCase()}
                       </p>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>

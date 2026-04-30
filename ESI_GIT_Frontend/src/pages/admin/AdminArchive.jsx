@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   IoArchiveOutline, IoSearchOutline, IoStarOutline,
-  IoPeopleOutline, IoFunnelOutline, IoGitBranchOutline, IoRefreshOutline,
+  IoPeopleOutline, IoFunnelOutline, IoGitBranchOutline, IoRefreshOutline, IoTrashOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -33,7 +33,7 @@ function ChipBar({ values, active, onSelect }) {
 }
 
 export default function AdminArchive() {
-  const { archive, archiveLoading, restoreGroup } = useAdmin();
+  const { archive, archiveLoading, restoreGroup, deleteArchiveProject } = useAdmin();
   const projects = archive || [];
 
   const [search,      setSearch]      = useState('');
@@ -137,9 +137,12 @@ export default function AdminArchive() {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <IoStarOutline size={13} style={{ color: '#F59E0B' }}/>
-                      <span style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B' }}>{p.grade}/20</span>
+                      <span style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B' }}>{p.grade || p.final_grade || 0}/20</span>
                     </div>
-                    <Badge variant={p.status === 'mention' ? 'success' : 'info'}>{p.status === 'mention' ? '🏅 Mention' : '✓ Validé'}</Badge>
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <Badge variant={p.status === 'mention' ? 'success' : 'info'}>{p.status === 'mention' ? '🏅 Mention' : '✓ Validé'}</Badge>
+                      <Button size="sm" variant="outline" onClick={() => { if(window.confirm('Supprimer définitivement ce projet ?')) deleteArchiveProject(p._id); }} icon={<IoTrashOutline size={12}/>} style={{ height: '24px', padding: '0 8px', fontSize: '10px', borderColor: '#FCA5A5', color: '#DC2626' }}>Supprimer</Button>
+                    </div>
                   </div>
                 </div>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px' }}>{p.description}</p>
@@ -148,15 +151,15 @@ export default function AdminArchive() {
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    <IoPeopleOutline size={13}/>{(p.members || []).join(', ')}
+                    <IoPeopleOutline size={13}/>{(p.members || []).map(m => m.name || m).join(', ') || 'Aucun membre'}
                   </div>
-                  {p.repo && (
-                    <a href={`https://${p.repo}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontFamily: 'monospace' }}>
-                      <IoGitBranchOutline size={13}/>{p.repo.split('/').slice(-1)[0]}
-                    </a>
+                  {p.jury && (
+                    <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
+                      ⚖️ {p.jury.president || p.jury.teacher1_name || 'Jury assigné'}
+                    </div>
                   )}
                 </div>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Encadreur : {p.encadreur}</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>Encadreur : {p.encadreur || p.teacher_name || '—'}</p>
               </Card>
             ))}
             {filtered.length === 0 && (

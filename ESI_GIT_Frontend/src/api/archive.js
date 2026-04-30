@@ -19,4 +19,9 @@ export const archiveApi = {
     const { data } = await client.put(ENDPOINTS.archive.update(id), patch);
     return data;
   },
+
+  // DELETE /api/projects/admin/projects/<id>/ → admin deletes project
+  deleteArchiveEntry: async (id) => {
+    await client.delete(ENDPOINTS.archive.byId(id));
+  },
 };

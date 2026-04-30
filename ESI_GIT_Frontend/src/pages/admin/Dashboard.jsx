@@ -1,11 +1,11 @@
 import {
   IoPeopleOutline, IoSchoolOutline, IoCheckmarkCircleOutline,
   IoBarChartOutline, IoTimeOutline, IoTrendingUpOutline, IoCalendarOutline,
-  IoDocumentOutline,
+  IoDocumentOutline, IoDownloadOutline,
 } from 'react-icons/io5';
 import {
   PieChart, Pie, Cell, Tooltip, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, LineChart, Line,
 } from 'recharts';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import StatCard from '../../components/ui/StatCard';
@@ -17,7 +17,7 @@ const PIE_COLORS   = ['var(--primary)', 'var(--accent)', '#10B981'];
 const PROG_COLORS  = ['#6B7280', '#F59E0B', '#10B981'];
 
 export default function AdminDashboard() {
-  const { users, groups, analytics } = useAdmin();
+  const { users, groups, analytics, advancedAnalytics } = useAdmin();
   const { t } = useLanguage();
   const safeUsers  = users  || [];
 
@@ -51,7 +51,48 @@ export default function AdminDashboard() {
     { label: t('CompletionRate_Stat'),  value: `${a.completionRate ?? 0}%`,icon: <IoTrendingUpOutline size={22}/>,    color: '#8B5CF6' },
     { label: t('PendingMeetings_Stat'), value: a.pendingMeetings ?? 0,  icon: <IoCalendarOutline size={22}/>,         color: '#F59E0B' },
     { label: t('ArchivedProjects_Stat'), value: a.archivedProjects ?? 0, icon: <IoDocumentOutline size={22}/>,         color: '#EF4444' },
+    { label: 'Étudiants à risque', value: advancedAnalytics?.student_stats?.at_risk ?? 0, icon: <IoTimeOutline size={22}/>, color: '#DC2626' },
   ];
+
+  const activeVsInactiveData = [
+    { name: 'Actifs', value: advancedAnalytics?.student_stats?.active ?? 0 },
+    { name: 'Inactifs', value: advancedAnalytics?.student_stats?.inactive ?? 0 },
+  ];
+
+  const gradeTrendsData = (advancedAnalytics?.performance?.grade_trends ?? []).map(item => ({
+    month: new Date(item.month).toLocaleDateString('fr-FR', { month: 'short' }),
+    grade: item.avg_grade,
+  }));
+
+  const usageTrendsData = (advancedAnalytics?.usage_trends ?? []).map(item => ({
+    month: new Date(item.month).toLocaleDateString('fr-FR', { month: 'short' }),
+    projects: item.projects,
+  }));
+
+  const teacherPatternsData = (advancedAnalytics?.teacher_patterns ?? []).map(tp => ({
+    name: tp.last_name,
+    grade: tp.avg_given,
+  }));
+
+  const exportToCSV = () => {
+    const headers = ["Catégorie", "Valeur"];
+    const rows = [
+      ["Étudiants Actifs", advancedAnalytics?.student_stats?.active],
+      ["Étudiants Inactifs", advancedAnalytics?.student_stats?.inactive],
+      ["Étudiants à Risque", advancedAnalytics?.student_stats?.at_risk],
+      ["Taux de Réussite", `${advancedAnalytics?.performance?.pass_rate}%`],
+      ["Taux d'Achèvement des Tâches", `${advancedAnalytics?.operations?.task_completion_rate}%`],
+    ];
+    
+    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `rapport_analytique_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <DashboardLayout>
@@ -218,12 +259,93 @@ export default function AdminDashboard() {
             { label: t('ArchivedProjects_Stat'), value: a.archivedProjects ?? 0,          color: '#6B7280' },
             { label: t('OverallAverage'),        value: a.avgGrade ? `${a.avgGrade}/20` : '—', color: 'var(--primary)' },
             { label: t('Mentions_Stat'),         value: a.mentions ?? 0,                  color: '#8B5CF6' },
+            { label: 'Taux de réussite',         value: `${advancedAnalytics?.performance?.pass_rate ?? 0}%`, color: '#10B981' },
           ].map((item, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: i < 3 ? '1px solid var(--border)' : 'none' }}>
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.label}</span>
               <span style={{ fontSize: '16px', fontWeight: 700, color: item.color }}>{item.value}</span>
             </div>
           ))}
+        </Card>
+      </div>
+
+      {/* Advanced Analytics Section */}
+      <div style={{ marginTop: '32px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <IoBarChartOutline size={20} style={{ color: 'var(--primary)' }}/>
+          <h2 style={{ fontSize: '20px', fontWeight: 800 }}>Analyses Avancées</h2>
+        </div>
+        <button 
+          onClick={exportToCSV}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+        >
+          <IoDownloadOutline size={16}/> Exporter Rapport (CSV)
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+        <Card>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Tendances des Notes</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={gradeTrendsData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 20]}/>
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
+              <Line type="monotone" dataKey="grade" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)' }} name="Moyenne"/>
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Activité des Étudiants</h3>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <PieChart width={160} height={160}>
+              <Pie data={activeVsInactiveData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                <Cell fill="var(--primary)"/>
+                <Cell fill="var(--border)"/>
+              </Pie>
+              <Tooltip/>
+            </PieChart>
+            <div style={{ flex: 1, paddingLeft: '20px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Étudiants Actifs</p>
+                <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)' }}>{advancedAnalytics?.student_stats?.active ?? 0}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Étudiants Inactifs</p>
+                <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-secondary)' }}>{advancedAnalytics?.student_stats?.inactive ?? 0}</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <Card>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Patterns de Notation (Enseignants)</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={teacherPatternsData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)"/>
+              <XAxis type="number" domain={[0, 20]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80}/>
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
+              <Bar dataKey="grade" fill="var(--accent)" radius={[0, 4, 4, 0]} name="Moyenne donnée"/>
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Tendances d'Utilisation du Système</h3>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={usageTrendsData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
+              <Bar dataKey="projects" fill="#10B981" radius={[4, 4, 0, 0]} name="Nouveaux Projets"/>
+            </BarChart>
+          </ResponsiveContainer>
         </Card>
       </div>
     </DashboardLayout>

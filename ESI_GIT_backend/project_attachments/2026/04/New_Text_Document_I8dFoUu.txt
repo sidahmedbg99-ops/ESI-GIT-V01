@@ -1,0 +1,17 @@
+Les fonctions:
+Etudiant:
+    -Cree group:
+        Titre du projet,Thème,Encadreur,Votre rôle
+    -Send request to the supervisor if there is one avec message??
+    -Rejoindre un groupe 
+        group id
+    -quitter le groupe
+        inverse Rejoindre
+    -changer le role
+        student id ,new role
+
+    -Planifier une réunion(objet date + heure + type + description)
+
+    -Créer une tâche (objet titre description priorite?  colone deadline assigne membre)
+    -delete tache + type d'avencement (a faire termine en cours)
+

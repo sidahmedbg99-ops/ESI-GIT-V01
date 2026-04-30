@@ -23,6 +23,7 @@ export const translations = {
     Year: 'Année d\'étude',
     Settings: 'Paramètres',
     Logout: 'Déconnexion',
+    Requests: 'Demandes',
 
     // Common phrases
     Search: 'Rechercher...',
@@ -302,6 +303,7 @@ export const translations = {
     Year: 'Study Year',
     Settings: 'Settings',
     Logout: 'Logout',
+    Requests: 'Requests',
 
     // Common phrases
     Search: 'Search...',

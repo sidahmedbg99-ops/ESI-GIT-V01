@@ -37,6 +37,7 @@ export function AuthProvider({ children }) {
 
         const fullUser = { 
           ...data.user, 
+          name: data.user.name || data.user.full_name || `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim(),
           role: normalizedRole, 
           first_login: data.first_login ?? data.user.IsFirstLogin,
           _id: data.user.CID || data.user.TID || data.user.id || data.user._id 
@@ -70,6 +71,7 @@ export function AuthProvider({ children }) {
          if (r && r.email) {
            const normalized = { 
              ...r, 
+             name: r.name || r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
              _id: r.CID || r.TID || r.id,
              // Ensure role is correctly mapped for redirection logic
              role: r.role === 'staff' ? (r.is_admin ? 'admin' : 'teacher') : r.role

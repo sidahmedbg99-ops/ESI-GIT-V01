@@ -32,6 +32,11 @@ export function AdminProvider({ children }) {
   const [messages,       setMessages]       = useState({});
   const [activeContact,  setActiveContact]  = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
+  const [platformSettings, setPlatformSettings] = useState({
+    students_can_see_archived_projects: false,
+    current_academic_year: '2024-2025'
+  });
 
   const [stats,          setStats]          = useState(null);
   const [evaluationFormula, setEvaluationFormula] = useState({
@@ -120,6 +125,11 @@ export function AdminProvider({ children }) {
       setArchive(archived);
     }).catch(() => setArchive([]));
 
+    // GET /api/admin/platform-settings/
+    client.get(ENDPOINTS.admin.platformSettings).then(res => {
+      setPlatformSettings(res.data);
+    }).catch(err => console.error('Settings load failed', err));
+
     setMeetings([]);
   }, [user]);
 
@@ -205,14 +215,24 @@ export function AdminProvider({ children }) {
   // ── GROUPS ────────────────────────────────────────────────────────
   const addGroup = useCallback(async (groupData) => {
     try {
-      const newGroup = await groupApi.createGroup(groupData);
-      setGroups(prev => [...(prev ?? []), newGroup]);
-      pushActivity({ type: 'group_created', action: 'Groupe créé', desc: newGroup.name, color: '#F59E0B' });
-      toast.success('Groupe créé');
-      return newGroup;
+      const newGroup = await groupApi.adminCreateGroup(groupData);
+      const normalized = {
+        ...newGroup,
+        _id: newGroup.PID || newGroup.id,
+        title: newGroup.name,
+        teacherId: newGroup.TID,
+        groupCode: newGroup.invite_code,
+        supervisorApproved: newGroup.status === 'approved',
+        Student_count: (groupData.studentIds || []).length,
+      };
+      setGroups(prev => [...(prev ?? []), normalized]);
+      pushActivity({ type: 'group_created', action: 'Groupe créé', desc: normalized.title, color: '#F59E0B' });
+      toast.success('Groupe créé avec succès !');
+      return normalized;
     } catch (e) {
       console.error(e);
-      toast.error('Erreur lors de la création');
+      const msg = e?.response?.data?.error || e?.response?.data?.detail || 'Erreur lors de la création';
+      toast.error(msg);
     }
   }, [pushActivity]);
 
@@ -254,12 +274,16 @@ export function AdminProvider({ children }) {
 
       setGroups(prev => prev?.map(g => {
         if (g._id !== groupId) return g;
+        const pres = users?.find(u => (u._id === president || u.id === president));
+        const ex1  = users?.find(u => (u._id === examiner1 || u.id === examiner1));
+        const ex2  = users?.find(u => (u._id === examiner2 || u.id === examiner2));
+
         return {
           ...g,
           jury: {
-            president: selection.find(x => x.role === 'president')?.name || '',
-            examiner1: selection.filter(x => x.role === 'member')[0]?.name || '',
-            examiner2: selection.filter(x => x.role === 'member')[1]?.name || '',
+            president: pres?.name || pres?.full_name || '—',
+            examiner1: ex1?.name || ex1?.full_name || '—',
+            examiner2: ex2?.name || ex2?.full_name || '—',
           }
         };
       }));
@@ -298,6 +322,60 @@ export function AdminProvider({ children }) {
       toast.error('Erreur lors de la suppression');
     }
   }, [pushActivity]);
+
+  const deleteArchiveProject = useCallback(async (projectId) => {
+    try {
+      const proj = archive?.find(p => p._id === projectId);
+      await archiveApi.deleteArchiveEntry(projectId);
+      setArchive(prev => prev?.filter(p => p._id !== projectId));
+      pushActivity({ type: 'archive_deleted', action: 'Projet supprimé (Archive)', desc: proj?.name || projectId, color: '#EF4444' });
+      toast.success('Projet supprimé définitivement');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de la suppression');
+    }
+  }, [archive, pushActivity]);
+
+  const updatePlatformSettings = useCallback(async (patch) => {
+    try {
+      const res = await client.patch(ENDPOINTS.admin.platformSettings, patch);
+      setPlatformSettings(res.data.data);
+      if (patch.current_academic_year) {
+        // Refresh groups and archive if year changed as many projects might have been archived
+        loadGroups().then(res => {
+          const all = (Array.isArray(res) ? res : []).map(g => ({
+            ...g,
+            _id:      g.PID,
+            title:    g.name,
+            teacherId: g.TID,
+            groupCode: g.invite_code,
+            supervisorApproved: g.status === 'approved',
+          }));
+          setGroups(all.filter(g => !g.archived));
+        });
+        loadArchive().then(res => {
+          const archived = (Array.isArray(res) ? res : []).map(p => ({
+            ...p,
+            _id:       p.PID || p.id,
+            name:      p.name,
+            group:     p.invite_code,
+            year:      p.year || new Date().getFullYear().toString(),
+            specialite: p.specialty,
+            encadreur: p.teacher_name,
+            members:   (p.members || []).map(m => m.student_name || m.name),
+            grade:     p.grades?.final_grade || null,
+            archived:  true,
+          }));
+          setArchive(archived);
+        });
+      }
+      toast.success('Paramètres mis à jour');
+      return res.data.data;
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de la mise à jour des paramètres');
+    }
+  }, [loadGroups, loadArchive]);
 
   // ── MEETINGS ──────────────────────────────────────────────────────
   const addMeeting = useCallback(async (meetingData) => {
@@ -380,8 +458,16 @@ export function AdminProvider({ children }) {
     };
   });
 
+  const { request: fetchAdvancedAnalytics, data: advAnalytics } = useApi(async () => {
+    const { data } = await client.get('/admin/analytics/advanced/');
+    return data;
+  });
+
   useEffect(() => {
-    if (user?._id && user.role === 'admin') fetchAnalytics();
+    if (user?._id && user.role === 'admin') {
+      fetchAnalytics();
+      fetchAdvancedAnalytics().then(data => setAdvancedAnalytics(data));
+    }
   }, [user]);
 
   // ── Derived stats ─────────────────────────────────────────────────
@@ -397,10 +483,12 @@ export function AdminProvider({ children }) {
 
   const value = {
     users, groups, meetings, archive, messages, activeContact, recentActivity,
+    platformSettings, advancedAnalytics,
     stats: currentStats, analytics,
     usersLoading, groupsLoading, archiveLoading,
     addUser, updateUser, removeUser, blockUser, unblockUser,
-    addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup,
+    addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup, deleteArchiveProject,
+    updatePlatformSettings, fetchAdvancedAnalytics,
     assignJury,
     addMeeting, updateMeetingStatus,
     loadThread, sendMessage, receiveMessage, markThreadRead,
