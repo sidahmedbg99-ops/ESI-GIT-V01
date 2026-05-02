@@ -1,6 +1,6 @@
 # Changelog — ESI GIT Backend
 
-## [ESI-GIT-V1.1] — 2026-05-02
+## [ESI_GIT_V1.10] — 2026-05-02
 
 ### New Features
 
@@ -107,7 +107,7 @@
 
 ---
 
-### Bugs (to be fixed)
+### Known Bugs (to be fixed)
 
 #### Bug 1 — Archived project permanently blocks student from creating or joining a new one (`projects/views.py`)
 - When a project is archived, the `SProjects` memberships are not deleted — students remain linked to it in the database.
@@ -130,10 +130,41 @@
       return Response({"error": "You already participated in a project during this academic year. Please contact the admin."}, status=400)
   ```
 
+#### Bug 3 — `Students_without_group` ignores archived projects (`projects/views.py`)
+- `Students_without_group` excludes any student who has **any** `SProjects` entry, including archived ones.
+- A student whose only project was archived will never appear in the unassigned students list, so the admin can't assign them to a new group manually either.
+- **Fix:** Filter out archived memberships: `SProjects.objects.filter(PID__archived=False).values_list("CID", flat=True)`.
+
+#### Bug 4 — `MyProjectView` and `LeaderActionsView` can return archived projects (`projects/views.py`)
+- Both views look up the student's project using `PID__year=student.academic_year` with no `PID__archived=False` filter.
+- If a student's project was archived, these views will still return it as their "current project", allowing them to perform leader actions (kick, promote, edit) on an archived project.
+- **Fix:** Add `PID__archived=False` to the `SProjects.objects.get(...)` call in both views.
+
+#### Bug 5 — Leader can leave a solo project but the project is never deleted (`projects/views.py`)
+- The comment in `LeaveProjectView` says *"Leader can leave if he is alone, if he does the group is deleted"* but the code only calls `membership.delete()` — it never deletes the `Projects` object itself.
+- This leaves orphaned projects in the database with no members and no leader.
+- **Fix:** After `membership.delete()`, check if the project has zero remaining members and delete the project if so:
+  ```python
+  membership.delete()
+  if not SProjects.objects.filter(PID=project).exists():
+      project.delete()
+  ```
+
+#### Bug 6 — Teacher task creation silently skips the student assignment on error (`teacher/views.py`)
+- In `TeacherAssignTaskView`, if `student_cid` is provided but the student doesn't exist or isn't in the project, the task is still created but the assignment is silently skipped with a bare `pass`.
+- The teacher gets back a `201 Created` with no indication that the assignment failed.
+- **Fix:** Remove the silent `except` pass and return a `400` error if the student lookup fails, or at minimum include a warning field in the response.
+
+#### Bug 7 — `AdminAssignStudentView` double-enrollment check ignores academic year (`projects/views.py`)
+- The check `SProjects.objects.filter(CID=student).exists()` looks across **all years and all projects** — including archived ones from previous years.
+- A 5th year student who was in a project last year would be blocked from being assigned to a new group this year by the admin.
+- **Fix:** Scope the check to active projects in the current academic year: `SProjects.objects.filter(CID=student, PID__year=student.academic_year, PID__archived=False).exists()`.
+
 #### Known Limitation — No end-of-year automation (`projects/views.py`)
 - There is no bulk archive, end-of-year rollover, or automation of any kind.
 - At the end of the year, an admin must manually archive every project one by one.
-- There is also no mechanism to increment student levels, assign specialties to incoming 4th year students, or onboard new 2nd year students in bulk.
+- New 2nd year students **can** be onboarded in bulk via `POST /api/admin/students/upload/` (CSV or XLSX with columns: `CID, email, first_name, last_name, specialty, academic_year`). Each valid row creates an account and emails credentials; invalid rows are skipped and reported without stopping the import.
+- However, there is no mechanism to increment existing student levels or assign specialties to incoming 4th year students at the start of a new academic year.
 - **Recommendation:** Add a dedicated admin endpoint (e.g. `POST /api/admin/year-rollover/`) that bulk-archives all active projects for a given `academic_year` and optionally increments all student levels.
 
 ---
