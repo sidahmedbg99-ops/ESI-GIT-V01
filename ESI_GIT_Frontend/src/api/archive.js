@@ -1,0 +1,22 @@
+import client from './client';
+import { ENDPOINTS } from './config';
+
+export const archiveApi = {
+  // GET /api/projects/projects/archived/ → role-based archived projects list
+  getArchive: async () => {
+    const { data } = await client.get(ENDPOINTS.archive.all);
+    return data;
+  },
+
+  // GET /api/projects/admin/projects/<id>/ → admin gets project detail
+  getById: async (id) => {
+    const { data } = await client.get(ENDPOINTS.archive.byId(id));
+    return data;
+  },
+
+  // PUT /api/projects/admin/projects/<id>/ → admin updates project
+  updateArchiveEntry: async (id, patch) => {
+    const { data } = await client.put(ENDPOINTS.archive.update(id), patch);
+    return data;
+  },
+};

@@ -1,0 +1,25 @@
+from django.urls import path
+from .views import (
+    admin_send_notification,
+    admin_notifications_list,
+    admin_delete_notification,
+    StudentNotificationListView,
+    StudentMarkNotificationReadView,
+    StaffNotificationListView,
+    StaffMarkNotificationReadView,
+)
+
+urlpatterns = [
+    # Admin
+    path("admin/send/",           admin_send_notification),
+    path("admin/list/",           admin_notifications_list),
+    path("admin/<int:pk>/delete/", admin_delete_notification),
+
+    # Student
+    path("",                           StudentNotificationListView.as_view()),
+    path("<int:notification_id>/read/", StudentMarkNotificationReadView.as_view()),
+
+    # Staff / Teacher
+    path("staff/",                           StaffNotificationListView.as_view()),
+    path("staff/<int:notification_id>/read/", StaffMarkNotificationReadView.as_view()),
+]
