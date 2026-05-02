@@ -12,6 +12,7 @@ class Meeting(models.Model):
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
         CONFIRMED = "confirmed", "Confirmed"
+        CANCELLED = "cancelled", "Cancelled"
 
     id = models.AutoField(primary_key=True)
     PID = models.ForeignKey(Projects, on_delete=models.CASCADE, related_name="meetings")
@@ -28,6 +29,7 @@ class Meeting(models.Model):
     status = models.CharField(
         max_length=20, choices=StatusChoices.choices, default="pending"
     )
+    cancellation_reason = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from users.permissions import IsStudent
+from rest_framework.permissions import IsAuthenticated
 from .models import Notification
 from users.models import Student
 
@@ -66,17 +66,18 @@ def admin_delete_notification(request, pk):
 
 class NotificationListView(APIView):
     """
-    GET /api/notifications/  → list all notifications for logged in student
+    GET /api/notifications/  → list all notifications for logged in user
     """
-    permission_classes = [IsStudent]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        student = request.user
-
+        user = request.user
+        is_staff = hasattr(user, 'TID')
+        
         notifications = Notification.objects.filter(
-            recipient_id=student.CID,
-            recipient_type='student'
-        )
+            recipient_id=user.TID if is_staff else user.CID,
+            recipient_type='staff' if is_staff else 'student'
+        ) | Notification.objects.filter(recipient_type='all')
 
         data = [{
             'id': n.id,
@@ -93,16 +94,17 @@ class MarkNotificationReadView(APIView):
     PATCH /api/notifications/<id>/read/
     Marks a notification as read.
     """
-    permission_classes = [IsStudent]
+    permission_classes = [IsAuthenticated]
 
     def patch(self, request, notification_id):
-        student = request.user
+        user = request.user
+        is_staff = hasattr(user, 'TID')
 
         try:
             notification = Notification.objects.get(
                 id=notification_id,
-                recipient_id=student.CID,
-                recipient_type='student'
+                recipient_id=user.TID if is_staff else user.CID,
+                recipient_type='staff' if is_staff else 'student'
             )
         except Notification.DoesNotExist:
             return Response(

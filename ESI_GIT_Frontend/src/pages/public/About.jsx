@@ -64,34 +64,6 @@ export default function About() {
             </FadeIn>
           ))}
         </div>
-
-        <FadeIn>
-          <div style={{
-            padding: '40px', borderRadius: 'var(--radius-2xl)',
-            background: 'var(--primary-subtle)', border: '1px solid rgba(79,70,229,0.2)',
-          }}>
-            <h2 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '12px', color: 'var(--primary)' }}>Accès demo</h2>
-            <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-              Explorez la plateforme avec les comptes de démonstration :
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '20px' }}>
-              {[
-                { role: 'Étudiant', email: 'student@esi.dz', pwd: 'student123' },
-                { role: 'Enseignant', email: 'teacher@esi.dz', pwd: 'teacher123' },
-                { role: 'Admin', email: 'admin@esi.dz', pwd: 'admin123' },
-              ].map((u, i) => (
-                <div key={i} style={{
-                  padding: '14px 16px', borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                }}>
-                  <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{u.role}</p>
-                  <p style={{ fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'monospace' }}>{u.email}</p>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{u.pwd}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </FadeIn>
       </div>
     </PublicLayout>
   );

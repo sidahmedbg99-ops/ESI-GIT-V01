@@ -64,8 +64,12 @@ class AdminProjectSerializer(serializers.ModelSerializer):
         project = Projects.objects.create(**validated_data)
 
         for sid in student_ids:
-            student = Student.objects.get(CID=sid)
-            SProjects.objects.create(PID=project, CID=student)
+            # handle both sid as ID or as object {cid, role}
+            student_id = sid['cid'] if isinstance(sid, dict) else sid
+            student_role = sid.get('role', 'fullstack') if isinstance(sid, dict) else 'fullstack'
+            
+            student = Student.objects.get(CID=student_id)
+            SProjects.objects.create(PID=project, CID=student, role=student_role)
 
         return project
 
@@ -84,8 +88,11 @@ class AdminProjectSerializer(serializers.ModelSerializer):
         if student_ids is not None:
             SProjects.objects.filter(PID=instance).delete()
             for sid in student_ids:
-                student = Student.objects.get(CID=sid)
-                SProjects.objects.create(PID=instance, CID=student)
+                student_id = sid['cid'] if isinstance(sid, dict) else sid
+                student_role = sid.get('role', 'fullstack') if isinstance(sid, dict) else 'fullstack'
+                
+                student = Student.objects.get(CID=student_id)
+                SProjects.objects.create(PID=instance, CID=student, role=student_role)
 
         return instance
 
@@ -408,6 +415,8 @@ class ProjectSerializer(serializers.ModelSerializer):
     # shows full project details including all members
     members = SProjectSerializer(source="team_members", many=True, read_only=True)
     teacher_name = serializers.SerializerMethodField()
+    attachments = serializers.SerializerMethodField()
+    supervisor_request = serializers.SerializerMethodField()
 
     class Meta:
         model = Projects
@@ -421,17 +430,45 @@ class ProjectSerializer(serializers.ModelSerializer):
             "invite_code",
             "github_url",
             "submitted_to_supervisor",
+            "final_submission_approved",
             "supervisor_feedback",
             "status",
             "archived",
             "creation_date",
             "finish_date",
             "members",
+            "attachments",
             "teacher_name",
+            "supervisor_request",
         ]
 
     def get_teacher_name(self, obj):
         return obj.TID.full_name if obj.TID else None
+
+    def get_supervisor_request(self, obj):
+        from .models import SupervisorRequest
+        req = SupervisorRequest.objects.filter(project_id=obj).order_by("-created_at").first()
+        if req:
+            return {
+                "status": req.status,
+                "teacher_name": req.teacher_id.full_name if req.teacher_id else None
+            }
+        return None
+
+    def get_attachments(self, obj):
+        from .models import ProjectAttachment
+        atts = ProjectAttachment.objects.filter(PID=obj)
+        return [
+            {
+                "id": a.id,
+                "filename": a.filename,
+                "url": a.file.url if a.file else None,
+                "attachment_type": a.attachment_type,
+                "is_final": a.is_final,
+                "uploaded_at": a.uploaded_at
+            }
+            for a in atts
+        ]
 
     def get_students(self, obj):
         relations = SProjects.objects.filter(PID=obj)

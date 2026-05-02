@@ -50,7 +50,7 @@ class StudentManager(BaseUserManager):
 
 
 class Student(AbstractBaseUser, PermissionsMixin):
-    CID = models.IntegerField(primary_key=True)  # admin provides this
+    CID = models.BigIntegerField(primary_key=True)  # admin provides this
     email = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -110,7 +110,7 @@ class StaffManager(BaseUserManager):
 
 
 class Staff(AbstractBaseUser):
-    TID = models.IntegerField(primary_key=True) # admin provides this
+    TID = models.BigIntegerField(primary_key=True) # admin provides this
     email = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)

@@ -6,7 +6,7 @@ import { useTeacher } from '../../context/TeacherContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function TeacherMeetings() {
-  const { meetings, acceptMeeting, rejectMeeting } = useTeacher();
+  const { meetings, acceptMeeting, rejectMeeting, cancelMeeting } = useTeacher();
   const { t } = useLanguage();
   const list = meetings || [];
 
@@ -29,7 +29,7 @@ export default function TeacherMeetings() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '4px' }}>
-                    <Badge variant="primary">{m.group}</Badge>
+                    <Badge variant="primary">{m.project_name || m.group}</Badge>
                     <h3 style={{ fontSize: '15px', fontWeight: 600 }}>{m.title}</h3>
                   </div>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📅 {m.date} à {m.time}</p>
@@ -41,8 +41,27 @@ export default function TeacherMeetings() {
                       <button onClick={() => rejectMeeting(m.id)} style={{ padding: '8px 16px', borderRadius: '10px', background: '#FEE2E2', border: 'none', color: '#DC2626', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>✕ {t('Reject')}</button>
                     </>
                   )}
-                  {m.status === 'approved' && <Badge variant="success">{t('Done')}</Badge>}
-                  {m.status === 'rejected' && <Badge variant="danger">{t('Reject')}</Badge>}
+                  {m.status === 'approved' && (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <Badge variant="success">{t('Approve') || 'Approuvée'}</Badge>
+                      <button 
+                        onClick={() => {
+                          const r = prompt("Motif de l'annulation :");
+                          if(r) cancelMeeting(m.id, r);
+                        }} 
+                        style={{ padding: '6px 12px', borderRadius: '8px', background: 'none', border: '1px solid #DC2626', color: '#DC2626', fontSize: '12px', cursor: 'pointer' }}
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  )}
+                  {m.status === 'rejected' && <Badge variant="danger">{t('Reject') || 'Refusée'}</Badge>}
+                  {m.status === 'cancelled' && (
+                    <div style={{ textAlign: 'right' }}>
+                      <Badge variant="danger">Annulée</Badge>
+                      {m.cancellation_reason && <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Motif: {m.cancellation_reason}</p>}
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>

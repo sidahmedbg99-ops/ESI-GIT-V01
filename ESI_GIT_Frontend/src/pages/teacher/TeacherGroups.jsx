@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -21,6 +21,13 @@ export default function TeacherGroups() {
   const list = groups || [];
   const [selected, setSelected] = useState(null);
   const group = selected ? list.find(g => g._id === selected) || null : null;
+  const team = group;
+
+  useEffect(() => {
+    if (team) {
+      setRepoUrl(team.github_url || '');
+    }
+  }, [team]);
 
   // GitHub
   const [repoUrl,    setRepoUrl]    = useState('');
@@ -198,7 +205,6 @@ export default function TeacherGroups() {
   }
 
   // Detail view
-  const team = group;
   return (
     <DashboardLayout>
       <div style={{ borderRadius: 'var(--radius-2xl)', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, #8B5CF6 100%)', padding: '28px 32px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
@@ -213,6 +219,11 @@ export default function TeacherGroups() {
             {team.supervisorApproved ? `✓ ${t('Approve')}` : `⏳ ${t('InProgress')}`}
           </Badge>
           <Badge style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>{(team.members||[]).length} membre(s)</Badge>
+          {team.github_url && (
+            <Badge style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }}>
+              <IoLogoGithub size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }}/> GitHub : Connecté
+            </Badge>
+          )}
           {team.joinCode && (
             <Badge style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
               🔑 {team.joinCode}
@@ -261,12 +272,6 @@ export default function TeacherGroups() {
         <div style={{ height: 10, borderRadius: 5, background: 'var(--border)', overflow: 'hidden' }}>
           <div style={{ width: `${team.progress || 0}%`, height: '100%', background: 'linear-gradient(90deg, var(--primary), #8B5CF6)', borderRadius: 5, transition: 'width 0.4s' }}/>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-          <button onClick={() => updateGroup && updateGroup(team._id, { progress: Math.max(0, (team.progress||0) - 10) })}
-            style={{ padding: '5px 14px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '13px', cursor: 'pointer' }}>-10%</button>
-          <button onClick={() => updateGroup && updateGroup(team._id, { progress: Math.min(100, (team.progress||0) + 10) })}
-            style={{ padding: '5px 14px', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontSize: '13px', cursor: 'pointer' }}>+10%</button>
-        </div>
       </Card>
 
       {/* GitHub & Docs */}
@@ -281,8 +286,16 @@ export default function TeacherGroups() {
               style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}/>
             <button onClick={() => loadGitHub(repoUrl)} disabled={ghLoading}
               style={{ padding: '9px 16px', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', opacity: ghLoading ? 0.6 : 1 }}>
-              {ghLoading ? '...' : t('Load')}
+              {ghLoading ? '...' : (repoUrl === team.github_url ? t('Reload') : t('Load'))}
             </button>
+            {repoUrl !== team.github_url && (
+              <button onClick={async () => {
+                await updateGroup(team._id, { github_url: repoUrl });
+                toast.success('Lien GitHub mis à jour');
+              }} style={{ padding: '9px 16px', borderRadius: '8px', background: 'var(--accent)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                Enregistrer
+              </button>
+            )}
             {repoUrl && (
               <button onClick={() => { navigator.clipboard.writeText(repoUrl); setRepoCopied(true); setTimeout(() => setRepoCopied(false), 1500); }}
                 style={{ padding: '9px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer' }}>
@@ -320,12 +333,20 @@ export default function TeacherGroups() {
             <IoDocumentTextOutline size={18}/>
             <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{t('ProjectDocs')}</h3>
           </div>
-          {team.document ? (
-             <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-               <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Le groupe a soumis un document :</p>
-               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, border: '1px solid rgba(79,70,229,0.2)' }}>
-                 <IoDocumentTextOutline size={16} /> {team.document}
-               </div>
+          {team.attachments && team.attachments.length > 0 ? (
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+               {team.attachments.map((file, i) => (
+                 <div key={i} style={{ padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                     <IoDocumentTextOutline size={18} style={{ color: file.is_final ? '#10B981' : 'var(--primary)' }} />
+                     <div>
+                       <p style={{ fontSize: '13px', fontWeight: 600 }}>{file.filename}</p>
+                       <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{file.attachment_type === 'report' ? 'Rapport Final' : 'Document'}</p>
+                     </div>
+                   </div>
+                   <a href={file.url?.startsWith('http') ? file.url : `http://localhost:8000${file.url || ''}`} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Ouvrir</a>
+                 </div>
+               ))}
              </div>
           ) : (
              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('NoFile')}</p>

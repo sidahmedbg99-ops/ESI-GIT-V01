@@ -7,7 +7,7 @@ import {
   IoArrowForwardOutline, IoArrowBackOutline,
   IoTimeOutline, IoPersonOutline, IoCheckmarkOutline,
   IoAlertCircleOutline, IoSendOutline, IoLogoGithub, IoCopyOutline,
-  IoWarningOutline, IoLogOutOutline, IoSearchOutline,
+  IoWarningOutline, IoLogOutOutline, IoSearchOutline, IoAddOutline, IoRocketOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -359,16 +359,81 @@ export default function Groupe() {
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>{t('CurrentGroup')}</p>
                 <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{team.Name || team.name}</h2>
                 <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>{team.title}</p>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>{t('Supervisor')} : {team.encadreur}</p>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
+                  {t('Supervisor')} : {team.supervisorRequest?.status === 'rejected' 
+                    ? <span style={{ color: '#FECACA' }}>{team.supervisorRequest.teacher_name} (Refusé)</span>
+                    : (team.encadreur || '—')}
+                </p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <Badge style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>
-                  {team.supervisorApproved ? `✓ ${t('Approve')}` : `⏳ ${t('NonApproved_Stat')}`}
-                </Badge>
+                {team.supervisorRequest?.status === 'rejected' ? (
+                  <Badge style={{ background: '#DC2626', color: '#fff', border: 'none' }}>
+                    ❌ Refusé
+                  </Badge>
+                ) : (
+                  <Badge style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>
+                    {team.supervisorApproved ? `✓ ${t('Approve')}` : `⏳ ${t('NonApproved_Stat')}`}
+                  </Badge>
+                )}
                 <Badge style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>{(team.members || []).length}/6 {t('Members').toLowerCase()}</Badge>
               </div>
             </div>
           </Card>
+          
+          {/* Supervisor Management Section */}
+          {!team.supervisorApproved && team.members?.find(m => m.isMe)?.isChef && (
+            <Card style={{ marginBottom: '24px', border: '1.5px dashed var(--primary)', background: 'var(--primary-subtle)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <IoPersonAddOutline size={22} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700 }}>
+                    {team.supervisorRequest?.status === 'rejected' ? '❌ Demande refusée' : 
+                     team.supervisorRequest?.status === 'pending' ? '⏳ Demande en attente' : '🔍 Trouver un encadreur'}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    {team.supervisorRequest?.status === 'rejected' 
+                      ? `${team.supervisorRequest.teacher_name} a refusé votre demande. Vous devez solliciter un autre enseignant.`
+                      : team.supervisorRequest?.status === 'pending'
+                        ? `Votre demande est en cours de révision par ${team.supervisorRequest.teacher_name}.`
+                        : 'Votre groupe n\'a pas encore d\'encadreur. Recherchez un enseignant disponible.'}
+                  </p>
+                </div>
+              </div>
+
+              {(team.supervisorRequest?.status === 'rejected' || !team.supervisorRequest) && (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                  <div style={{ position: 'relative', marginBottom: '12px' }}>
+                    <IoSearchOutline style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      placeholder="Rechercher un enseignant par nom..."
+                      value={teacherSearch}
+                      onChange={(e) => setTeacherSearch(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px 10px 38px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', outline: 'none' }}
+                    />
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', padding: '4px' }}>
+                      {teachers
+                        .filter(t => (t.full_name || t.name || '').toLowerCase().includes(teacherSearch.toLowerCase()))
+                        .slice(0, 5)
+                        .map(t => (
+                          <div key={t.TID || t._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--primary)' }}>
+                                {(t.full_name || t.name || '?').charAt(0)}
+                              </div>
+                              <span style={{ fontSize: '13px', fontWeight: 600 }}>{t.full_name || t.name}</span>
+                            </div>
+                            <Button size="sm" onClick={() => { setSelectedTeacher(t); setShowSupervisorConfirmModal(true); }}>Choisir</Button>
+                          </div>
+                        ))}
+                    </div>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Invite code */}
           <Card style={{ marginBottom: '20px' }}>
@@ -674,16 +739,25 @@ export default function Groupe() {
         </>
       ) : (
         <>
-          <div style={{ marginBottom: '28px' }}>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '4px' }}>Groupe</h1>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Créez ou rejoignez un groupe de projet</p>
+          <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', background: 'linear-gradient(135deg, var(--text-primary) 0%, var(--primary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Espace Projet</h1>
+            <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto' }}>Créez une nouvelle équipe ou rejoignez un groupe existant pour commencer votre PFE.</p>
           </div>
 
-
-
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '28px', background: 'var(--bg-card)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', width: 'fit-content' }}>
-            {[{ id: 'creer', label: t('CreateGroup').split(' ')[0] }, { id: 'rejoindre', label: t('JoinGroup').split(' ')[0] }].map(tVal => (
-              <button key={tVal.id} onClick={() => { setActiveTab(tVal.id); setCreateStep(0); setError(''); }} style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: activeTab === tVal.id ? 'var(--primary)' : 'transparent', color: activeTab === tVal.id ? '#fff' : 'var(--text-secondary)', fontSize: '14px', fontWeight: activeTab === tVal.id ? 600 : 400, cursor: 'pointer', transition: 'all 0.15s' }}>{tVal.label}</button>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '40px', background: 'var(--bg-card)', padding: '6px', borderRadius: '16px', border: '1px solid var(--border)', width: 'fit-content', margin: '0 auto 40px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+            {[{ id: 'creer', label: '✨ Créer un groupe', icon: <IoAddOutline /> }, { id: 'rejoindre', label: '🔗 Rejoindre', icon: <IoEnterOutline /> }].map(tVal => (
+              <button key={tVal.id} onClick={() => { setActiveTab(tVal.id); setCreateStep(0); setError(''); }} 
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '12px 28px', borderRadius: '12px', border: 'none', 
+                  background: activeTab === tVal.id ? 'var(--primary)' : 'transparent', 
+                  color: activeTab === tVal.id ? '#fff' : 'var(--text-secondary)', 
+                  fontSize: '15px', fontWeight: activeTab === tVal.id ? 700 : 500, 
+                  cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: activeTab === tVal.id ? '0 8px 16px rgba(79, 70, 229, 0.25)' : 'none'
+                }}>
+                {tVal.icon} {tVal.label}
+              </button>
             ))}
           </div>
 
@@ -693,12 +767,19 @@ export default function Groupe() {
               {error && <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', fontSize: '14px', marginBottom: '20px' }}>{error}</div>}
 
               {createStep === 0 && (
-                <Card>
-                  <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>Informations du groupe</h2>
-                  <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>Définissez le nom et le sujet de votre PFE.</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <Input label={t('GroupName') || 'Nom du groupe'} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Ex: Team AI / Les Innovateurs" icon={<IoPeopleOutline size={16} />} />
-                    <Input label={t('ProjectTitle')} value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Titre de votre PFE" />
+                <Card style={{ padding: '32px', borderRadius: '24px', border: '1px solid rgba(79, 70, 229, 0.1)', boxShadow: '0 20px 40px -20px rgba(79,70,229,0.15)', background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--bg) 100%)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'var(--primary-subtle)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <IoRocketOutline size={24} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em' }}>Informations du groupe</h2>
+                      <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Définissez le nom et le sujet de votre PFE.</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <Input label={t('GroupName') || 'Nom du groupe'} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Ex: Les Innovateurs" icon={<IoPeopleOutline size={18} />} />
+                    <Input label={t('ProjectTitle')} value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Titre de votre PFE" icon={<IoDocumentTextOutline size={18} />} />
                     <div>
                       <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('ProjectTheme') || 'Thème du projet'}</label>
                       <select value={projectTheme} onChange={e => setProjectTheme(e.target.value)} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
@@ -775,50 +856,54 @@ export default function Groupe() {
 
 
               {createStep === 2 && (
-                <Card>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-                    <button onClick={() => setCreateStep(1)} style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><IoArrowBackOutline size={18} /></button>
-                    <h2 style={{ fontSize: '18px', fontWeight: 700 }}>Récapitulatif</h2>
+                <Card style={{ padding: '32px', borderRadius: '24px', border: '1px solid rgba(16, 185, 129, 0.2)', boxShadow: '0 20px 40px -20px rgba(16,185,129,0.15)', background: 'linear-gradient(145deg, var(--bg-card) 0%, rgba(16,185,129,0.03) 100%)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
+                    <button onClick={() => setCreateStep(1)} style={{ width: 36, height: 36, borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background='var(--primary-subtle)'} onMouseOut={e => e.currentTarget.style.background='var(--bg)'}><IoArrowBackOutline size={18} /></button>
+                    <div>
+                      <h2 style={{ fontSize: '20px', fontWeight: 800 }}>Récapitulatif</h2>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Vérifiez les informations avant de créer votre groupe.</p>
+                    </div>
                   </div>
-                  <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px', paddingLeft: '30px' }}>Vérifiez les informations avant de créer votre groupe.</p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
-                    {[{ label: 'Nom du groupe', value: groupName }, { label: 'Titre du projet', value: projectTitle }, { label: 'Thème', value: projectTheme }, { label: 'Encadreur', value: findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.name || findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.full_name }, { label: 'Votre rôle', value: `⭐ Chef & ${ROLE_MAP[creatorRole]?.label}` }].map((item, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{item.label}</span>
-                        <span style={{ fontSize: '13px', fontWeight: 600 }}>{item.value || '—'}</span>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+                    {[{ label: 'Nom du groupe', value: groupName, icon: '🏷️' }, { label: 'Titre du projet', value: projectTitle, icon: '📄' }, { label: 'Thème', value: projectTheme, icon: '🎯' }, { label: 'Encadreur', value: findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.name || findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.full_name, icon: '👨‍🏫' }, { label: 'Votre rôle', value: `Chef & ${ROLE_MAP[creatorRole]?.label}`, icon: '⭐' }].map((item, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}><span>{item.icon}</span> {item.label}</span>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{item.value || '—'}</span>
                       </div>
                     ))}
                   </div>
-                  <Button onClick={handleCreate} style={{ width: '100%' }}>✓ Créer le groupe</Button>
+                  <Button onClick={handleCreate} style={{ width: '100%', padding: '16px', fontSize: '16px', borderRadius: '14px', boxShadow: '0 8px 20px rgba(16,185,129,0.3)', background: '#10B981' }}>✨ Confirmer et Créer le groupe</Button>
                 </Card>
               )}
             </div>
           )}
 
           {activeTab === 'rejoindre' && (
-            <div style={{ maxWidth: '520px' }}>
-              <Card>
-                <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>{t('JoinGroup')}</h2>
-                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>{t('ReadyToStartSub')}</p>
-                {error && <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', fontSize: '14px', marginBottom: '16px' }}>{error}</div>}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <Input label={t('InviteCode')} value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="XXXXXXXX" icon={<IoEnterOutline size={16} />} />
+            <div style={{ maxWidth: '520px', margin: '0 auto' }} className="animate-fade">
+              <Card style={{ padding: '36px', borderRadius: '24px', border: '1px solid rgba(79, 70, 229, 0.15)', boxShadow: '0 24px 50px -12px rgba(79,70,229,0.2)', background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--primary-subtle) 100%)' }}>
+                <div style={{ width: 56, height: 56, borderRadius: '16px', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', boxShadow: '0 10px 20px rgba(79,70,229,0.3)' }}>
+                  <IoEnterOutline size={28} />
+                </div>
+                <h2 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px', letterSpacing: '-0.02em' }}>{t('JoinGroup')}</h2>
+                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.6 }}>Entrez le code fourni par votre chef d'équipe pour intégrer le projet.</p>
+                {error && <div style={{ padding: '14px 18px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', fontSize: '14px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}><IoAlertCircleOutline size={20}/> {error}</div>}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <Input label={t('InviteCode')} value={joinCode} onChange={e => setJoinCode(e.target.value)} placeholder="Ex: ABCDEFGH" icon={<IoEnterOutline size={18} />} style={{ fontSize: '16px', letterSpacing: '0.1em', textTransform: 'uppercase' }} />
                   <div>
-                    <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '10px' }}>{t('Role')}</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>{t('Role')} souhaité</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       {ROLE_OPTIONS.map(r => (
-                        <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: 'var(--radius-md)', cursor: 'pointer', border: joinRole === r.value ? '2px solid var(--primary)' : '1px solid var(--border)', background: joinRole === r.value ? 'var(--primary-subtle)' : 'var(--bg)', transition: 'all 0.15s' }}>
-                          <input type="radio" name="joinRole" value={r.value} checked={joinRole === r.value} onChange={() => setJoinRole(r.value)} style={{ accentColor: 'var(--primary)' }} />
-                          <span>{r.icon}</span>
-                          <span style={{ fontSize: '12px', fontWeight: 500 }}>{r.label}</span>
+                        <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', cursor: 'pointer', border: joinRole === r.value ? '2px solid var(--primary)' : '1px solid var(--border)', background: joinRole === r.value ? '#fff' : 'var(--bg)', boxShadow: joinRole === r.value ? '0 4px 12px rgba(79,70,229,0.1)' : 'none', transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}>
+                          {joinRole === r.value && <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--primary)' }} />}
+                          <input type="radio" name="joinRole" value={r.value} checked={joinRole === r.value} onChange={() => setJoinRole(r.value)} style={{ display: 'none' }} />
+                          <span style={{ fontSize: '18px', color: joinRole === r.value ? 'var(--primary)' : 'var(--text-muted)' }}>{r.icon}</span>
+                          <span style={{ fontSize: '14px', fontWeight: joinRole === r.value ? 700 : 500, color: joinRole === r.value ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{r.label}</span>
                         </label>
                       ))}
                     </div>
                   </div>
-                  <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>💡 Code de test : <code style={{ fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 700 }}>GRSU5OIL</code></p>
-                  </div>
-                  <Button onClick={handleJoin} disabled={!joinCode || !joinRole}>{t('JoinGroup')}</Button>
+                  <Button onClick={handleJoin} disabled={!joinCode || !joinRole} style={{ padding: '16px', fontSize: '16px', borderRadius: '14px', marginTop: '8px' }}>🚀 Rejoindre l'équipe</Button>
                 </div>
               </Card>
             </div>

@@ -27,6 +27,7 @@ import TeacherMeetings   from '../pages/teacher/TeacherMeetings';
 
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers     from '../pages/admin/Users';
+import AdminStudents  from '../pages/admin/AdminStudents';
 import AdminGroupes   from '../pages/admin/AdminGroupes';
 import AdminArchive   from '../pages/admin/AdminArchive';
 import AdminProfil    from '../pages/admin/AdminProfil';
@@ -101,6 +102,7 @@ export default function AppRoutes() {
         <Route path="/admin"                  element={<Navigate to="/admin/dashboard" replace/>}/>
         <Route path="/admin/dashboard"        element={<AdminDashboard/>}/>
         <Route path="/admin/users"            element={<AdminUsers/>}/>
+        <Route path="/admin/students"         element={<AdminStudents/>}/>
         <Route path="/admin/groupes"          element={<AdminGroupes/>}/>
         <Route path="/admin/analytics"        element={<AdminAnalytics/>}/>
         <Route path="/admin/archive"          element={<AdminArchive/>}/>

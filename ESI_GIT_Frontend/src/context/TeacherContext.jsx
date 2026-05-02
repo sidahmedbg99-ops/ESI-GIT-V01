@@ -166,6 +166,15 @@ export function TeacherProvider({ children }) {
     } catch (e) { console.error(e); toast.error("Erreur refus"); }
   }, [pushActivity]);
 
+  const cancelMeeting = useCallback(async (id, reason) => {
+    try {
+      const u = await meetingsApi.cancelMeeting(id, reason);
+      setMeetings(p => p?.map(m => (m._id === id || m.id === id) ? { ...m, ...u, status: 'cancelled', cancellation_reason: reason } : m) ?? p);
+      pushActivity({ type: 'meeting_cancelled', action: 'Réunion annulée', desc: id, color: '#6B7280' });
+      toast.success('Réunion annulée');
+    } catch (e) { console.error(e); toast.error("Erreur annulation"); }
+  }, [pushActivity]);
+
   // ── Evaluations ────────────────────────────────────────────────────
   // POST /api/teacher/jury/<pid>/evaluate/
   const gradeEvaluation = useCallback(async (pid, grade, feedback) => {
@@ -243,7 +252,7 @@ export function TeacherProvider({ children }) {
     groupsLoading, meetingsLoading, evaluationsLoading, archiveLoading,
     addGroup, updateGroup, archiveGroup, respondToSupervisorRequest,
     assignTask, scheduleMeeting,
-    addMeeting, acceptMeeting, rejectMeeting,
+    addMeeting, acceptMeeting, rejectMeeting, cancelMeeting,
     gradeEvaluation, gradeArchivedProject,
     loadThread, sendMessage, markThreadRead,
     setActiveContact, pushActivity,

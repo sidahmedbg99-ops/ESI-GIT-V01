@@ -34,6 +34,7 @@ class Projects(models.Model):
     supervisor_feedback = models.TextField(null=True, blank=True)
     final_submission_approved = models.BooleanField(default=False)
     final_submission_date = models.DateTimeField(null=True, blank=True)
+    is_public = models.BooleanField(default=True)
 
 
 class SProjects(models.Model):

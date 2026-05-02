@@ -64,4 +64,8 @@ export const meetingsApi = {
     const { data } = await client.patch(ENDPOINTS.meetings.teacherAction(id), { action: 'reject' });
     return data;
   },
+  cancelMeeting: async (id, reason) => {
+    const { data } = await client.patch(ENDPOINTS.meetings.teacherAction(id), { action: 'cancel', reason });
+    return data;
+  },
 };

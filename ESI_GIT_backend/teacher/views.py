@@ -26,6 +26,7 @@ from projects.models import Projects, SProjects, SupervisorRequest, ProjectAttac
 from meetings.models import Meeting
 from tasks.models import Task, TaskAssignment
 from jury.models import ProjectJury, Schedule, Grades
+from notifications.services import NotificationService
 
 from .serializers import (
     TeacherGroupListSerializer,
@@ -466,10 +467,11 @@ class TeacherMeetingActionView(APIView):
     def patch(self, request, meeting_id):
         teacher = get_teacher(request)
         action = request.data.get("action")
+        reason = request.data.get("reason", "")
 
-        if action not in ("accept", "reject"):
+        if action not in ("accept", "reject", "cancel"):
             return Response(
-                {"error": "action must be 'accept' or 'reject'"},
+                {"error": "action must be 'accept', 'reject', or 'cancel'"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -477,16 +479,31 @@ class TeacherMeetingActionView(APIView):
             meeting = Meeting.objects.get(
                 id=meeting_id,
                 PID__TID=teacher,
-                created_by_student__isnull=False,  # only student-created meetings
-                status="pending",
             )
+            
+            # accept/reject only for pending student meetings
+            if action in ("accept", "reject"):
+                if meeting.created_by_student is None or meeting.status != "pending":
+                    return Response({"error": "Only pending student meetings can be accepted/rejected"}, status=400)
+            
+            # cancel only for approved/confirmed meetings
+            if action == "cancel":
+                if meeting.status not in ("approved", "confirmed"):
+                    return Response({"error": "Only approved or confirmed meetings can be cancelled"}, status=400)
         except Meeting.DoesNotExist:
             return Response(
                 {"error": "Meeting not found or not eligible for this action"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        meeting.status = "approved" if action == "accept" else "rejected"
+        if action == "cancel":
+            meeting.status = "cancelled"
+            meeting.cancellation_reason = reason
+            # Send notification
+            NotificationService.notify_meeting_cancelled(meeting, reason)
+        else:
+            meeting.status = "approved" if action == "accept" else "rejected"
+        
         meeting.save()
 
         return Response(

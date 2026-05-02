@@ -469,6 +469,8 @@ export default function AdminUsers() {
   const [detailUser, setDetailUser] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -478,6 +480,30 @@ export default function AdminUsers() {
     return (u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
       && (roleFilter === 'all' || u.role === roleFilter);
   });
+
+  const toggleAll = () => {
+    if (selectedIds.length === paginatedData.length) setSelectedIds([]);
+    else setSelectedIds(paginatedData.map(u => u._id));
+  };
+
+  const toggleOne = (id) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Supprimer ${selectedIds.length} utilisateurs ?`)) return;
+    setIsBulkDeleting(true);
+    try {
+      // Parallel delete
+      await Promise.all(selectedIds.map(id => removeUser(id)));
+      toast.success(`${selectedIds.length} utilisateurs supprimés`);
+      setSelectedIds([]);
+    } catch (e) {
+      toast.error("Erreur lors de la suppression groupée");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const validCurrentPage = Math.min(currentPage, totalPages > 0 ? totalPages : 1);
@@ -502,6 +528,26 @@ export default function AdminUsers() {
   }
 
   const columns = [
+    {
+      key: 'select',
+      label: (
+        <input 
+          type="checkbox" 
+          checked={selectedIds.length > 0 && selectedIds.length === paginatedData.length}
+          onChange={toggleAll}
+          style={{ cursor: 'pointer' }}
+        />
+      ),
+      render: (_, row) => (
+        <input 
+          type="checkbox" 
+          checked={selectedIds.includes(row._id)}
+          onChange={() => toggleOne(row._id)}
+          style={{ cursor: 'pointer' }}
+        />
+      ),
+      align: 'center'
+    },
     {
       key: 'name', label: t('Users'),
       render: (v, row) => (
@@ -581,6 +627,19 @@ export default function AdminUsers() {
             <Button icon={<IoAddOutline size={16}/>} onClick={openAdd}>{t('AddUser')}</Button>
           </div>
         </div>
+
+        {selectedIds.length > 0 && (
+          <div style={{ padding: '12px 16px', background: 'var(--primary-subtle)', borderRadius: '12px', border: '1px solid var(--primary-border)', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', animation: 'slideIn 0.2s ease-out' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)' }}>{selectedIds.length} sélectionnés</span>
+              <button onClick={() => setSelectedIds([])} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }}>Tout désélectionner</button>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Button size="sm" variant="danger" icon={<IoTrashOutline size={14}/>} onClick={handleBulkDelete} loading={isBulkDeleting}>Supprimer la sélection</Button>
+            </div>
+          </div>
+        )}
+
         <Table columns={columns} data={paginatedData}/>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', padding: '0 8px' }}>
@@ -598,6 +657,10 @@ export default function AdminUsers() {
           </div>
         </div>
       </Card>
+
+      <style>{`
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
 
       <UserDetailModal user={detailUser} onClose={() => setDetailUser(null)} onEdit={openEdit}/>
 

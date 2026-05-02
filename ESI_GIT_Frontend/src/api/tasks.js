@@ -38,7 +38,8 @@ export const tasksApi = {
   // PATCH /api/tasks/<id>/state/ → update state (any member, IsStudent)
   // Backend expects: { state: 'todo'|'inprogress'|'done' }
   updateTaskState: async (id, state) => {
-    const { data } = await client.patch(ENDPOINTS.tasks.updateState(id), { state });
+    const backendState = state === 'inprogress' ? 'in_progress' : state;
+    const { data } = await client.patch(ENDPOINTS.tasks.updateState(id), { state: backendState });
     return data;
   },
 

@@ -59,7 +59,7 @@ class CreateStudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             "CID", "email", "first_name", "last_name",
-            "specialty", "academic_year", "is_active", "password"
+            "specialty", "academic_year", "level", "is_active", "password"
         ]
         extra_kwargs = {
             "CID": {"read_only": False, "required": True},

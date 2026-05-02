@@ -201,7 +201,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
   const toggleStudent = (s) => {
     setSelectedStudents(prev => {
       if (prev.find(x => x.cid === s._id)) return prev.filter(x => x.cid !== s._id);
-      if (prev.length < 6) return [...prev, { cid: s._id, name: s.name, role: 'développeur' }];
+      if (prev.length < 6) return [...prev, { cid: s._id, name: s.name, role: 'fullstack' }];
       return prev;
     });
   };
@@ -218,8 +218,12 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
         Name: projectTitle,
         title: projectTitle,
         groupCode: groupCode,
+        type: 'PFE', // Required field
+        specialty: selectedStudents[0]?.specialite || 'Informatique',
+        year: new Date().getFullYear().toString(),
         teacherId: selectedTeacher,
         TID: selectedTeacher,
+        status: 'approved',
         supervisorApproved: true,
         members: selectedStudents,
         studentIds: selectedStudents.map(s => s.cid),
@@ -272,12 +276,11 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
                   <input type="checkbox" checked={!!sel} onChange={() => toggleStudent(s)} style={{ cursor: 'pointer' }}/>
                   <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{s.name} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>— {s.specialite} {s.promo}</span></span>
                   {sel && (
-                    <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '12px', padding: '4px', borderRadius: '4px', border: '1px solid var(--border)' }}>
-                      <option value="développeur">Développeur</option>
+                    <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '12px', padding: '4px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)' }}>
+                      <option value="fullstack">Fullstack</option>
                       <option value="frontend">Frontend</option>
                       <option value="backend">Backend</option>
-                      <option value="designer">Designer</option>
-                      <option value="chef">Chef de projet</option>
+                      <option value="design">Design</option>
                     </select>
                   )}
                 </div>
@@ -334,21 +337,26 @@ export default function AdminGroupes() {
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('GroupManagement')}</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: t('TotalGroups_Stat'),    value: realGroups.length,                                    color: 'var(--primary)' },
-          { label: t('Active_Stat'),           value: realGroups.filter(g=>g.status==='active').length,      color: '#10B981' },
-          { label: t('NonApproved_Stat'),    value: realGroups.filter(g=>!g.supervisorApproved).length,    color: '#F59E0B' },
-          { label: t('StudentsWithoutGroup'), value: withoutGroup.length,                             color: '#EF4444' },
-        ].map((c, i) => (
-          <div key={i} style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{c.label}</span>
-            <span style={{ fontSize: '15px', fontWeight: 800, color: c.color }}>{c.value}</span>
-          </div>
+          { label: t('TotalGroups_Stat'),    value: realGroups.length,                                    icon: <IoPeopleOutline size={22}/>, color: 'var(--primary)' },
+          { label: t('Active_Stat'),           value: realGroups.filter(g=>g.status==='active').length,      icon: <IoCheckmarkCircleOutline size={22}/>, color: '#10B981' },
+          { label: t('NonApproved_Stat'),    value: realGroups.filter(g=>!g.supervisorApproved).length,    icon: <IoTimeOutline size={22}/>, color: '#F59E0B' },
+          { label: t('StudentsWithoutGroup'), value: withoutGroup.length,                             icon: <IoSchoolOutline size={22}/>, color: '#EF4444' },
+        ].map((s, i) => (
+          <Card key={i} style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '10px', background: `${s.color}15`, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {s.icon}
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>{s.label}</span>
+            </div>
+            <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>{s.value}</div>
+          </Card>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px', alignItems: 'start' }}>
+      <div>
 
         <div>
           <Card>
@@ -361,111 +369,75 @@ export default function AdminGroupes() {
                   {f === 'all' ? t('All') : f === 'active' ? t('Active_Stat') : t('NonApproved_Stat')}
                 </button>
               ))}
+              <Button onClick={() => setCreateGrp(true)} icon={<IoAddOutline size={16}/>} style={{ marginLeft: 'auto' }}>{t('CreateGroup')}</Button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'grid', gap: '16px' }}>
               {filtered.map(g => {
                 const teacher = safeUsers.find(u => u._id === g.teacherId);
                 const hasJury = (g.jury || []).length > 0;
                 return (
-                  <div key={g._id} style={{ padding: '14px 16px', borderRadius: '12px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                        <p style={{ fontSize: '14px', fontWeight: 700 }}>{g.groupCode ?? g.title}</p>
-                        <Badge variant={g.archived ? 'warning' : 'success'}>{g.archived ? t('Archive') : t('Active_Stat')}</Badge>
-                        {(!g.supervisorApproved && g.status !== 'approved') && <Badge variant="warning">{t('NonApproved_Stat')}</Badge>}
-                        {g.final_submission_approved && <Badge variant="success">Prêt pour Soutenance ✓</Badge>}
-                        {hasJury && <Badge variant="primary">Jury ✓</Badge>}
+                  <div key={g._id} style={{ padding: '16px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)', transition: 'all 0.2s', cursor: 'pointer' }} 
+                       onClick={() => setDetailGrp(g)}
+                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>{g.groupCode ?? g.title}</h3>
+                          <Badge variant={g.archived ? 'warning' : 'success'}>{g.archived ? t('Archive') : t('Active_Stat')}</Badge>
+                        </div>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{g.title}</p>
                       </div>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.title}</p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        👤 {teacher?.name || g.teacher_name || g.encadreur || '—'} · {g.Student_count || 0} {t('Members').toLowerCase()}
-                      </p>
+                      <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
+                        <button 
+                          disabled={!g.final_submission_approved}
+                          onClick={() => setJuryGrp(g)} 
+                          title={!g.final_submission_approved ? "Attente validation finale du superviseur" : "Assigner Jury"}
+                          style={{ 
+                            width: 34, height: 34, borderRadius: '10px', 
+                            background: !g.final_submission_approved ? 'var(--bg)' : (hasJury ? 'var(--primary-subtle)' : 'var(--bg)'), 
+                            border: `1px solid ${!g.final_submission_approved ? 'var(--border)' : (hasJury ? 'var(--primary)' : 'var(--border)')}`, 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                            cursor: !g.final_submission_approved ? 'not-allowed' : 'pointer', 
+                            color: !g.final_submission_approved ? 'var(--text-muted)' : (hasJury ? 'var(--primary)' : 'var(--text-muted)'),
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          <IoRibbonOutline size={16}/>
+                        </button>
+                        <button onClick={() => setDetailGrp(g)} style={{ width: 34, height: 34, borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}>
+                          <IoEyeOutline size={16}/>
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                      <button onClick={() => setDetailGrp(g)} style={{ width: 30, height: 30, borderRadius: '8px', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}>
-                        <IoEyeOutline size={14}/>
-                      </button>
-                      <button 
-                        disabled={!g.final_submission_approved}
-                        onClick={() => setJuryGrp(g)} 
-                        title={!g.final_submission_approved ? "Attente validation finale du superviseur" : "Assigner Jury"}
-                        style={{ 
-                          width: 30, height: 30, borderRadius: '8px', 
-                          background: !g.final_submission_approved ? '#F3F4F6' : (hasJury ? 'var(--primary-subtle)' : 'var(--bg-card)'), 
-                          border: `1px solid ${!g.final_submission_approved ? '#E5E7EB' : (hasJury ? 'var(--primary)' : 'var(--border)')}`, 
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                          cursor: !g.final_submission_approved ? 'not-allowed' : 'pointer', 
-                          color: !g.final_submission_approved ? '#9CA3AF' : (hasJury ? 'var(--primary)' : 'var(--text-muted)') 
-                        }}
-                      >
-                        <IoRibbonOutline size={14}/>
-                      </button>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-subtle)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
+                          {(teacher?.name || g.teacher_name || 'E').charAt(0)}
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{teacher?.name || g.teacher_name || g.encadreur || '—'}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
+                        <IoPeopleOutline size={14}/>
+                        <span style={{ fontSize: '12px' }}>{g.Student_count || 0} {t('Members').toLowerCase()}</span>
+                      </div>
+                      {g.final_submission_approved && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--success)', fontSize: '12px', fontWeight: 700, marginLeft: 'auto' }}>
+                          <IoCheckmarkCircleOutline size={14}/> Prêt
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               })}
               {filtered.length === 0 && (
-                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <IoPeopleOutline size={36} style={{ marginBottom: '10px', opacity: 0.3 }}/>
-                  <p>{t('NoGroups')}</p>
+                <div style={{ padding: '60px 40px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+                  <IoPeopleOutline size={48} style={{ marginBottom: '16px', opacity: 0.2 }}/>
+                  <p style={{ fontWeight: 600 }}>{t('NoGroups')}</p>
                 </div>
               )}
-            </div>
-          </Card>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Card style={{ border: withoutGroup.length > 0 ? '1.5px solid #FCA5A5' : undefined }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }}/>
-                <h3 style={{ fontSize: '14px', fontWeight: 700 }}>{t('StudentsWithoutGroup')} ({withoutGroup.length})</h3>
-              </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <Button variant="ghost" size="sm" onClick={() => window.location.href = '/admin/users'} icon={<IoPersonOutline size={14}/>}>{t('AddUser').split(' ')[0]}</Button>
-                <Button onClick={() => setCreateGrp(true)} icon={<IoAddOutline size={14}/>}>{t('CreateGroup').split(' ')[0]}</Button>
-              </div>
-            </div>
-            {withoutGroup.length === 0 ? (
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px' }}>{t('AllStudentsInGroup')}</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
-                {withoutGroup.map(s => (
-                  <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA' }}>
-                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                      {s.name?.charAt(0)}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{s.specialite} · {s.promo}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-
-          <Card>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981' }}/>
-              <h3 style={{ fontSize: '14px', fontWeight: 700 }}>{t('Members')} ({withGroup.length})</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
-              {withGroup.map(s => {
-                const grp = safeGroups.find(g => (g.studentIds || g.members?.map(m => m.cid || m._id) || []).includes(s._id));
-                return (
-                  <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                      {s.name?.charAt(0)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
-                      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{grp?.name || grp?.groupCode || '—'}</p>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </Card>
         </div>

@@ -206,7 +206,7 @@ def archived_projects(request):
                 {"error": "Archived projects are hidden for students"}, status=403
             )
 
-        projects = Projects.objects.filter(archived=True).order_by("-creation_date")
+        projects = Projects.objects.filter(archived=True, is_public=True).order_by("-creation_date")
         serializer = StudentProjectSerializer(projects, many=True)
         return Response(serializer.data)
 

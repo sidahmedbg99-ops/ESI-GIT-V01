@@ -27,7 +27,7 @@ class TaskListCreateView(APIView):
 
         try:
             membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
+                CID=student, PID__archived=False
             )
         except SProjects.DoesNotExist:
             return Response(
@@ -45,7 +45,7 @@ class TaskListCreateView(APIView):
 
         try:
             membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
+                CID=student, PID__archived=False
             )
         except SProjects.DoesNotExist:
             return Response(

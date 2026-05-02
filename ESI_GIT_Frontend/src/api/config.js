@@ -122,6 +122,7 @@ export const ENDPOINTS = {
     },
     academicStructure: 'admin/academic-structure/',
     specialties: 'admin/specialties/',
+    specialtyDetail: (id) => `admin/specialties/${id}/`,
     departments: 'admin/departments/',
     gradeFormula: 'admin/grade-formula/',
     gradeFormulaActive: 'admin/grade-formula/active/',

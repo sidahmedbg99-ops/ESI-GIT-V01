@@ -30,6 +30,7 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
     progress = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
     final_report_url = serializers.SerializerMethodField()
+    attachments = serializers.SerializerMethodField()
 
     class Meta:
         model = Projects
@@ -37,7 +38,7 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
             "PID", "name", "invite_code", "specialty", "year",
             "status", "member_count", "progress", "members",
             "submitted_to_supervisor", "final_submission_approved",
-            "final_report_url",
+            "final_report_url", "github_url", "attachments",
         ]
 
     def get_final_report_url(self, obj):
@@ -65,6 +66,22 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
         ]
 
 
+    def get_attachments(self, obj):
+        from projects.models import ProjectAttachment
+        attachments = ProjectAttachment.objects.filter(PID=obj)
+        return [
+            {
+                "id": a.id,
+                "filename": a.filename,
+                "attachment_type": a.attachment_type,
+                "is_final": a.is_final,
+                "url": a.file.url if a.file else None,
+                "uploaded_at": a.uploaded_at,
+            }
+            for a in attachments
+        ]
+
+
 class TeacherGroupDetailSerializer(serializers.ModelSerializer):
     """Full group detail used on the group detail page."""
     members = serializers.SerializerMethodField()
@@ -78,7 +95,8 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
         fields = [
             "PID", "name", "invite_code", "type", "specialty",
             "academic_level", "year", "status", "archived",
-            "creation_date", "finish_date",
+            "creation_date", "finish_date", "github_url",
+            "submitted_to_supervisor", "final_submission_approved",
             "members", "progress", "tasks", "meetings", "attachments",
         ]
 
@@ -140,6 +158,7 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
                 "filename": a.filename,
                 "attachment_type": a.attachment_type,
                 "is_final": a.is_final,
+                "url": a.file.url if a.file else None,
                 "uploaded_at": a.uploaded_at,
             }
             for a in attachments

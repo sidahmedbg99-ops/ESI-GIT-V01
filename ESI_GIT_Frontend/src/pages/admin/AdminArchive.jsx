@@ -33,7 +33,7 @@ function ChipBar({ values, active, onSelect }) {
 }
 
 export default function AdminArchive() {
-  const { archive, archiveLoading, restoreGroup, deleteArchiveProject } = useAdmin();
+  const { archive, archiveLoading, restoreGroup, deleteArchiveProject, toggleProjectVisibility } = useAdmin();
   const projects = archive || [];
 
   const [search,      setSearch]      = useState('');
@@ -141,6 +141,12 @@ export default function AdminArchive() {
                     </div>
                     <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
                       <Badge variant={p.status === 'mention' ? 'success' : 'info'}>{p.status === 'mention' ? '🏅 Mention' : '✓ Validé'}</Badge>
+                      <button 
+                        onClick={() => toggleProjectVisibility(p._id || p.PID, !p.is_public)}
+                        style={{ padding: '4px 8px', borderRadius: '6px', background: p.is_public ? '#DCFCE7' : '#F3F4F6', border: 'none', color: p.is_public ? '#16A34A' : '#6B7280', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        {p.is_public ? '👁️ Public' : '🔒 Privé'}
+                      </button>
                       <Button size="sm" variant="outline" onClick={() => { if(window.confirm('Supprimer définitivement ce projet ?')) deleteArchiveProject(p._id); }} icon={<IoTrashOutline size={12}/>} style={{ height: '24px', padding: '0 8px', fontSize: '10px', borderColor: '#FCA5A5', color: '#DC2626' }}>Supprimer</Button>
                     </div>
                   </div>

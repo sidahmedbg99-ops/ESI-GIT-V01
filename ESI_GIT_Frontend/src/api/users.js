@@ -74,11 +74,28 @@ export const usersApi = {
     const endpoint = isStudent ? ENDPOINTS.admin.student.update(id) : ENDPOINTS.admin.staff.update(id);
     
     let payload = { ...patch };
+    
+    // Parse name
+    if (payload.name) {
+      const nameParts = payload.name.trim().split(' ');
+      payload.first_name = nameParts[0] || '';
+      payload.last_name = nameParts.slice(1).join(' ') || nameParts[0] || '';
+      delete payload.name;
+    }
+    
+    // Remove empty password so it doesn't overwrite
+    if (!payload.password) {
+      delete payload.password;
+    }
+
     if (isStudent) {
       const levelMap = { 'L1': 1, 'L2': 2, 'L3': 3, 'M1': 4, 'M2': 5 };
+      payload.CID = patch.cid || patch.id;
       if (patch.specialite) payload.specialty = patch.specialite;
       if (patch.promo)      payload.academic_year = patch.promo;
       if (patch.year)       payload.level = levelMap[patch.year] || 3;
+    } else {
+      payload.TID = patch.tid || patch.id;
     }
     
     const { data } = await client.put(endpoint, payload);

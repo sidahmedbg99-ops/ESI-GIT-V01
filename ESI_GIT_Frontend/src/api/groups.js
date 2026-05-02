@@ -20,6 +20,10 @@ export const groupApi = {
       invite_code: groupData.groupCode,
       teacher_id:  parseInt(groupData.teacherId || groupData.TID),
       student_ids: (groupData.studentIds || []).map(id => parseInt(id)),
+      type:        groupData.type || 'PFE',
+      specialty:   groupData.specialty || 'Informatique',
+      year:        groupData.year || new Date().getFullYear().toString(),
+      status:      groupData.status || 'approved',
     };
     const { data } = await client.post('/projects/admin/projects/', payload);
     return data;

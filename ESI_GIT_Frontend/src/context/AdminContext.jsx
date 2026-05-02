@@ -156,7 +156,14 @@ export function AdminProvider({ children }) {
       return normalized;
     } catch (e) {
       console.error(e);
-      toast.error(e?.response?.data?.error || e?.response?.data?.email?.[0] || 'Erreur lors de la création');
+      const data = e?.response?.data;
+      let msg = 'Erreur lors de la création';
+      if (data) {
+        // Try to get the first error message from any field
+        const firstErr = Object.values(data)[0];
+        msg = Array.isArray(firstErr) ? firstErr[0] : (data.error || data.detail || msg);
+      }
+      toast.error(msg);
     }
   }, [pushActivity]);
 
@@ -463,6 +470,14 @@ export function AdminProvider({ children }) {
     return data;
   });
 
+  const toggleProjectVisibility = useCallback(async (id, isPublic) => {
+    try {
+      await archiveApi.updateArchiveEntry(id, { is_public: isPublic });
+      setArchive(p => p?.map(g => (g._id === id || g.PID === id) ? { ...g, is_public: isPublic } : g) ?? p);
+      toast.success(isPublic ? 'Projet rendu public' : 'Projet rendu privé');
+    } catch (e) { toast.error("Erreur de visibilité"); }
+  }, []);
+
   useEffect(() => {
     if (user?._id && user.role === 'admin') {
       fetchAnalytics();
@@ -487,7 +502,7 @@ export function AdminProvider({ children }) {
     stats: currentStats, analytics,
     usersLoading, groupsLoading, archiveLoading,
     addUser, updateUser, removeUser, blockUser, unblockUser,
-    addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup, deleteArchiveProject,
+    addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup, deleteArchiveProject, toggleProjectVisibility,
     updatePlatformSettings, fetchAdvancedAnalytics,
     assignJury,
     addMeeting, updateMeetingStatus,

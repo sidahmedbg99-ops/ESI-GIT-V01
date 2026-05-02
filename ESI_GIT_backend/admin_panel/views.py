@@ -244,7 +244,7 @@ def update_student(request, student_id: int):
     Response 404: student not found
     """
     student = get_object_or_404(Student, CID=student_id)
-    serializer = CreateStudentSerializer(student, data=request.data)
+    serializer = CreateStudentSerializer(student, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response({"message": "Student updated successfully."})
@@ -408,7 +408,7 @@ def update_staff(request, staff_id: int):
     Full update of a staff member's editable fields.
     """
     staff = get_object_or_404(Staff, TID=staff_id)
-    serializer = CreateStaffSerializer(staff, data=request.data)
+    serializer = CreateStaffSerializer(staff, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response({"message": "Staff updated successfully."})

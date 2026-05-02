@@ -70,9 +70,15 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!user) return;
-    client.get(ENDPOINTS.notifications.list)
-      .then(res => setNotifications(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setNotifications([]));
+    const fetchNotifs = () => {
+      client.get(ENDPOINTS.notifications.list)
+        .then(res => setNotifications(Array.isArray(res.data) ? res.data : []))
+        .catch(() => setNotifications([]));
+    };
+    
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 30000); // 30s polling
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -192,6 +198,30 @@ export default function Navbar() {
             </button>
           )}
 
+          {user?.is_admin && (
+            <button
+              onClick={handleSwitchRole}
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'var(--primary-subtle)',
+                color: 'var(--primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                border: 'none',
+                cursor: 'pointer',
+                marginRight: '8px'
+              }}
+              className="nav-utility-btn"
+              title={user.role === 'admin' ? t('SwitchToTeacher') : t('SwitchToAdmin')}
+            >
+              <IoSwapHorizontalOutline size={20} />
+            </button>
+          )}
+
           {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
@@ -233,7 +263,8 @@ export default function Navbar() {
           </button>
 
           {/* Notifications */}
-          <div style={{ position: 'relative' }}>
+          {user?.role !== 'admin' && (
+            <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowNotifs(!showNotifs)}
               style={{
@@ -291,6 +322,7 @@ export default function Navbar() {
               </div>
             )}
           </div>
+          )}
 
           {/* Profile */}
           <button

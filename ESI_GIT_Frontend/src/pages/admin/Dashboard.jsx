@@ -74,25 +74,7 @@ export default function AdminDashboard() {
     grade: tp.avg_given,
   }));
 
-  const exportToCSV = () => {
-    const headers = ["Catégorie", "Valeur"];
-    const rows = [
-      ["Étudiants Actifs", advancedAnalytics?.student_stats?.active],
-      ["Étudiants Inactifs", advancedAnalytics?.student_stats?.inactive],
-      ["Étudiants à Risque", advancedAnalytics?.student_stats?.at_risk],
-      ["Taux de Réussite", `${advancedAnalytics?.performance?.pass_rate}%`],
-      ["Taux d'Achèvement des Tâches", `${advancedAnalytics?.operations?.task_completion_rate}%`],
-    ];
-    
-    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `rapport_analytique_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+
 
   return (
     <DashboardLayout>
@@ -269,85 +251,7 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Advanced Analytics Section */}
-      <div style={{ marginTop: '32px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <IoBarChartOutline size={20} style={{ color: 'var(--primary)' }}/>
-          <h2 style={{ fontSize: '20px', fontWeight: 800 }}>Analyses Avancées</h2>
-        </div>
-        <button 
-          onClick={exportToCSV}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
-        >
-          <IoDownloadOutline size={16}/> Exporter Rapport (CSV)
-        </button>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-        <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Tendances des Notes</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={gradeTrendsData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 20]}/>
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
-              <Line type="monotone" dataKey="grade" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)' }} name="Moyenne"/>
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Activité des Étudiants</h3>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <PieChart width={160} height={160}>
-              <Pie data={activeVsInactiveData} cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
-                <Cell fill="var(--primary)"/>
-                <Cell fill="var(--border)"/>
-              </Pie>
-              <Tooltip/>
-            </PieChart>
-            <div style={{ flex: 1, paddingLeft: '20px' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Étudiants Actifs</p>
-                <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)' }}>{advancedAnalytics?.student_stats?.active ?? 0}</p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Étudiants Inactifs</p>
-                <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-secondary)' }}>{advancedAnalytics?.student_stats?.inactive ?? 0}</p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Patterns de Notation (Enseignants)</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={teacherPatternsData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)"/>
-              <XAxis type="number" domain={[0, 20]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80}/>
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
-              <Bar dataKey="grade" fill="var(--accent)" radius={[0, 4, 4, 0]} name="Moyenne donnée"/>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Tendances d'Utilisation du Système</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={usageTrendsData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
-              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
-              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
-              <Bar dataKey="projects" fill="#10B981" radius={[4, 4, 0, 0]} name="Nouveaux Projets"/>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
     </DashboardLayout>
   );
 }
