@@ -21,7 +21,7 @@ export const usersApi = {
 
   // GET /api/projects/available-supervisors/ — filtered: available=True, not blocked, is_teacher=True
   getAvailableSupervisors: async () => {
-    const { data } = await client.get(ENDPOINTS.auth.availableSupervisors);
+    const { data } = await client.get(ENDPOINTS.groups.availableSupervisors);
     return data.map(t => ({
       ...t,
       _id:  t._id  ?? t.TID,

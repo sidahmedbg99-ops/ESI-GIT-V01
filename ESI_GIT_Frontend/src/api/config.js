@@ -15,7 +15,6 @@ export const ENDPOINTS = {
     me: '/me/',                             // GET   → user info
     changePassword: '/change-password/',    // POST  { old_password, new_password }
     teachers: '/teachers/',                 // GET   → list of teachers
-    availableSupervisors: '/projects/available-supervisors/', // GET → filtered: available=True, not blocked
   },
 
   // ── Groups / Projects ─────────────────────────────────────────────
@@ -38,6 +37,7 @@ export const ENDPOINTS = {
     leave: '/projects/leave/',                      // POST
     leader: '/projects/leader/',                    // PATCH { action, target_cid }
     supervisorRequest: '/projects/supervisor-request/', // GET/POST
+    availableSupervisors: '/projects/available-supervisors/', // GET → filtered: available=True, not blocked
 
     // Teacher
     byTeacher: () => `/teacher/groups/`,            // GET
