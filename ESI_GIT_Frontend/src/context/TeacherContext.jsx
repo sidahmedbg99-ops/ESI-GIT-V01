@@ -177,13 +177,30 @@ export function TeacherProvider({ children }) {
 
   // ── Evaluations ────────────────────────────────────────────────────
   // POST /api/teacher/jury/<pid>/evaluate/
-  const gradeEvaluation = useCallback(async (pid, grade, feedback) => {
+  const gradeEvaluation = useCallback(async (pid, data) => {
     try {
-      const u = await evaluationsApi.gradeEvaluation(pid, { grade, feedback });
-      setEvaluations(p => p?.map(e => (e._id === pid || e.id === pid) ? { ...e, ...u } : e) ?? p);
+      // data is { presentation, document, demo, validate_cpi, comments }
+      const u = await evaluationsApi.gradeEvaluation(pid, data);
+      
+      // Update local state: find the defense in evaluations and update it
+      setEvaluations(p => {
+        if (!p?.defenses) return p;
+        return {
+          ...p,
+          defenses: p.defenses.map(d => (d.PID_id === pid || d.id === pid) ? { ...d, is_evaluated: true } : d),
+          evaluees: (p.evaluees || 0) + 1,
+          a_evaluer: Math.max(0, (p.a_evaluer || 0) - 1)
+        };
+      });
+
       pushActivity({ type: 'livrable_graded', action: 'Livrable noté', desc: pid, color: '#10B981' });
-      toast.success('Note enregistrée !'); return u;
-    } catch (e) { console.error(e); toast.error("Erreur notation"); }
+      toast.success('Note enregistrée !');
+      return u;
+    } catch (e) {
+      console.error(e);
+      const msg = e?.response?.data?.detail || e?.response?.data?.error || "Erreur notation";
+      toast.error(msg);
+    }
   }, [pushActivity]);
 
   const gradeArchivedProject = useCallback(async (archiveId, grade, feedback) => {

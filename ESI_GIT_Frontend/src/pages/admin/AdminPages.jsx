@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../api/config';
 import { useApi } from '../../hooks/useApi';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const data = [
   { month: 'Sep', projects: 120, submissions: 340 },
@@ -176,11 +177,26 @@ function PanelYears({ onBack }) {
 
   const save = async () => {
     if (year !== platformSettings?.current_academic_year) {
-      if (!window.confirm("Changer l'année académique va ARCHIVER tous les projets actuels. Continuer ?")) return;
+      // Logic handled via modal in AdminSettings
+      return;
     }
     setLoading(true);
     await updatePlatformSettings({ current_academic_year: year });
     setLoading(false);
+  };
+
+  const handleYearChange = () => {
+    window.showConfirm({
+      title: "Changer l'année ?",
+      message: "Changer l'année académique va ARCHIVER tous les projets actuels. Cette action est irréversible.",
+      confirmText: "Changer & Archiver",
+      type: "warning",
+      onConfirm: async () => {
+        setLoading(true);
+        await updatePlatformSettings({ current_academic_year: year });
+        setLoading(false);
+      }
+    });
   };
 
   return (
@@ -199,9 +215,15 @@ function PanelYears({ onBack }) {
               <button onClick={() => setPromos(pr => pr.filter(x => x !== p))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '16px', padding: 0, lineHeight: 1 }}>×</button>
             </div>
           ))}
-          <button onClick={() => { const v = prompt('Nouvelle promotion:'); if (v) setPromos(p => [...p, v.trim()]); }} style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px dashed var(--border)', background: 'none', fontSize: '13px', cursor: 'pointer', color: 'var(--text-muted)' }}>+ Ajouter</button>
+          <button onClick={() => { 
+            window.showPrompt({
+              title: "Nouvelle promotion",
+              message: "Entrez le nom de la promotion (ex: IASD)",
+              onConfirm: (v) => { if (v) setPromos(p => [...p, v.trim()]); }
+            });
+          }} style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px dashed var(--border)', background: 'none', fontSize: '13px', cursor: 'pointer', color: 'var(--text-muted)' }}>+ Ajouter</button>
         </div>
-        <Button onClick={save} loading={loading} icon={<IoSaveOutline size={16}/>}>
+        <Button onClick={year === platformSettings?.current_academic_year ? save : handleYearChange} loading={loading} icon={<IoSaveOutline size={16}/>}>
           Sauvegarder
         </Button>
         <div style={{ marginTop: '16px', padding: '12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', fontSize: '12px', color: '#92400E' }}>
@@ -432,6 +454,15 @@ const MENUS = [
 export function AdminSettings() {
   const { t } = useLanguage();
   const [activeMenu, setActiveMenu] = useState('years');
+  const [modal, setModal] = useState({ isOpen: false, type: 'warning', title: '', message: '', onConfirm: () => {}, initialValue: '' });
+
+  // Expose modal globally for child panels
+  useEffect(() => {
+    window.showConfirm = (cfg) => setModal({ ...cfg, isOpen: true, type: cfg.type || 'warning' });
+    window.showPrompt = (cfg) => setModal({ ...cfg, isOpen: true, type: 'prompt' });
+    return () => { delete window.showConfirm; delete window.showPrompt; };
+  }, []);
+
   const Panel = PANELS[activeMenu];
 
   const menuStyle = (id) => ({
@@ -486,6 +517,21 @@ export function AdminSettings() {
         </main>
 
       </div>
+
+      <ConfirmModal 
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        onConfirm={(val) => {
+          modal.onConfirm(val);
+          setModal({ ...modal, isOpen: false });
+        }}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        confirmText={modal.confirmText}
+        initialValue={modal.initialValue}
+        loading={modal.loading}
+      />
       
       <style>{`
         @keyframes fadeIn {

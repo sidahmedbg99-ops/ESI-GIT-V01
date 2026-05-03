@@ -383,10 +383,18 @@ class TeacherSupervisorRequestActionView(APIView):
             req.status = "accepted"
             req.save()
 
+            # Notify students
+            NotificationService.notify_supervisor_request_status(req)
+
             # auto-reject all other pending requests for this project
-            SupervisorRequest.objects.filter(
+            other_reqs = SupervisorRequest.objects.filter(
                 project_id=project, status="pending"
-            ).exclude(id=req_id).update(status="rejected")
+            ).exclude(id=req_id)
+            
+            for other in other_reqs:
+                other.status = "rejected"
+                other.save()
+                NotificationService.notify_supervisor_request_status(other)
 
             return Response(
                 {"message": "Request accepted. You are now supervising this project."}
@@ -395,6 +403,7 @@ class TeacherSupervisorRequestActionView(APIView):
         else:  # reject
             req.status = "rejected"
             req.save()
+            NotificationService.notify_supervisor_request_status(req)
             return Response({"message": "Request rejected."})
 
 
@@ -501,8 +510,14 @@ class TeacherMeetingActionView(APIView):
             meeting.cancellation_reason = reason
             # Send notification
             NotificationService.notify_meeting_cancelled(meeting, reason)
-        else:
-            meeting.status = "approved" if action == "accept" else "rejected"
+        elif action == "accept":
+            meeting.status = "approved"
+            # Notify group members their meeting was accepted
+            NotificationService.notify_meeting_accepted(meeting)
+        else:  # reject
+            meeting.status = "rejected"
+            # Notify group members their meeting was rejected
+            NotificationService.notify_meeting_rejected(meeting, reason)
         
         meeting.save()
 

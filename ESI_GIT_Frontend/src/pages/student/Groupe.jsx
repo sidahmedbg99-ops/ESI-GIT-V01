@@ -59,6 +59,9 @@ export default function Groupe() {
   const [ghData, setGhData] = useState(null);
   const [ghLoading, setGhLoading] = useState(false);
   const [documentFiles, setDocumentFiles] = useState([]);
+  const [studentDirectory, setStudentDirectory] = useState([]);
+  const [dirLoading, setDirLoading] = useState(false);
+  const [dirSearch, setDirSearch] = useState('');
 
   useEffect(() => {
     if (team) {
@@ -745,8 +748,16 @@ export default function Groupe() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '40px', background: 'var(--bg-card)', padding: '6px', borderRadius: '16px', border: '1px solid var(--border)', width: 'fit-content', margin: '0 auto 40px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-            {[{ id: 'creer', label: '✨ Créer un groupe', icon: <IoAddOutline /> }, { id: 'rejoindre', label: '🔗 Rejoindre', icon: <IoEnterOutline /> }].map(tVal => (
-              <button key={tVal.id} onClick={() => { setActiveTab(tVal.id); setCreateStep(0); setError(''); }} 
+            {[{ id: 'creer', label: '✨ Créer un groupe', icon: <IoAddOutline /> }, { id: 'rejoindre', label: '🔗 Rejoindre', icon: <IoEnterOutline /> }, { id: 'repertoire', label: '👥 Répertoire', icon: <IoPeopleOutline /> }].map(tVal => (
+              <button key={tVal.id} onClick={() => { 
+                setActiveTab(tVal.id); 
+                setCreateStep(0); 
+                setError(''); 
+                if(tVal.id === 'repertoire') {
+                  setDirLoading(true);
+                  groupApi.getStudentsStatus().then(setStudentDirectory).finally(() => setDirLoading(false));
+                }
+              }} 
                 style={{ 
                   display: 'flex', alignItems: 'center', gap: '8px',
                   padding: '12px 28px', borderRadius: '12px', border: 'none', 
@@ -879,6 +890,65 @@ export default function Groupe() {
             </div>
           )}
 
+          {activeTab === 'repertoire' && (
+            <div style={{ maxWidth: '800px', margin: '0 auto' }} className="animate-fade">
+              <Card style={{ padding: '24px', borderRadius: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '20px', fontWeight: 800 }}>👥 Répertoire des Étudiants</h2>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Consultez la liste des étudiants de votre promotion et leur statut.</p>
+                  </div>
+                  <div style={{ position: 'relative', width: '300px' }}>
+                    <IoSearchOutline style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      placeholder="Rechercher un étudiant..."
+                      value={dirSearch}
+                      onChange={(e) => setDirSearch(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px 10px 38px', borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)', fontSize: '13px', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+
+                {dirLoading ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Chargement du répertoire...</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
+                    {studentDirectory
+                      .filter(s => s.full_name.toLowerCase().includes(dirSearch.toLowerCase()) || s.email.toLowerCase().includes(dirSearch.toLowerCase()))
+                      .map((s, i) => (
+                        <div key={i} style={{ 
+                          padding: '16px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)',
+                          display: 'flex', alignItems: 'center', gap: '14px'
+                        }}>
+                          <div style={{ 
+                            width: 40, height: 40, borderRadius: '12px', background: s.has_group ? 'var(--primary-subtle)' : '#DCFCE7', 
+                            color: s.has_group ? 'var(--primary)' : '#16A34A', 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px'
+                          }}>
+                            {s.full_name.charAt(0)}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.full_name}</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.email}</p>
+                          </div>
+                          <div style={{ flexShrink: 0 }}>
+                            {s.has_group ? (
+                              <Badge style={{ background: 'rgba(79,70,229,0.1)', color: 'var(--primary)', border: 'none', fontSize: '10px' }}>En groupe</Badge>
+                            ) : (
+                              <Badge style={{ background: 'rgba(22,163,74,0.1)', color: '#16A34A', border: 'none', fontSize: '10px' }}>Disponible</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+                
+                {!dirLoading && studentDirectory.length === 0 && (
+                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Aucun étudiant trouvé.</div>
+                )}
+              </Card>
+            </div>
+          )}
           {activeTab === 'rejoindre' && (
             <div style={{ maxWidth: '520px', margin: '0 auto' }} className="animate-fade">
               <Card style={{ padding: '36px', borderRadius: '24px', border: '1px solid rgba(79, 70, 229, 0.15)', boxShadow: '0 24px 50px -12px rgba(79,70,229,0.2)', background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--primary-subtle) 100%)' }}>

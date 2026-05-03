@@ -112,9 +112,9 @@ function GroupDetailModal({ group: g, users, onClose, onAssignJury }) {
     });
   } else if (g.jury && typeof g.jury === 'object') {
     // Handle real backend object format
-    if (g.jury.president) juryMembers.push({ name: g.jury.president, role: 'Président' });
-    if (g.jury.examiner1) juryMembers.push({ name: g.jury.examiner1, role: 'Examinateur' });
-    if (g.jury.examiner2) juryMembers.push({ name: g.jury.examiner2, role: 'Examinateur' });
+    if (g.jury.president) juryMembers.push({ name: g.jury.president, role: 'Président', grade: g.grades?.grade1 });
+    if (g.jury.examiner1) juryMembers.push({ name: g.jury.examiner1, role: 'Examinateur', grade: g.grades?.grade2 });
+    if (g.jury.examiner2) juryMembers.push({ name: g.jury.examiner2, role: 'Examinateur', grade: g.grades?.grade3 });
   }
 
   return (
@@ -157,11 +157,19 @@ function GroupDetailModal({ group: g, users, onClose, onAssignJury }) {
         <div style={{ padding: '14px', borderRadius: '10px', background: juryMembers.length ? 'var(--primary-subtle)' : 'var(--bg)', border: `1px solid ${juryMembers.length ? 'var(--primary)' : 'var(--border)'}` }}>
           <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>{t('JuryAssigned')}</p>
           {juryMembers.length > 0 ? (
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {juryMembers.map((member, i) => (
-                <span key={i} style={{ padding: '4px 10px', borderRadius: '20px', background: 'var(--primary)', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
-                  {member.name} {member.role ? `(${member.role})` : ''}
-                </span>
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', borderRadius: '10px', background: 'rgba(255,255,255,0.5)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600 }}>{member.name}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({member.role})</span>
+                  </div>
+                  {member.grade !== undefined && member.grade !== null ? (
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>{member.grade}/20</span>
+                  ) : (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Pas encore noté</span>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
@@ -375,7 +383,7 @@ export default function AdminGroupes() {
             <div style={{ display: 'grid', gap: '16px' }}>
               {filtered.map(g => {
                 const teacher = safeUsers.find(u => u._id === g.teacherId);
-                const hasJury = (g.jury || []).length > 0;
+                const hasJury = g.jury && (Array.isArray(g.jury) ? g.jury.length > 0 : Object.keys(g.jury).length > 0);
                 return (
                   <div key={g._id} style={{ padding: '16px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)', transition: 'all 0.2s', cursor: 'pointer' }} 
                        onClick={() => setDetailGrp(g)}

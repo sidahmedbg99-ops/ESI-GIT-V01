@@ -60,6 +60,7 @@ export const groupApi = {
   uploadAttachment: async (formData) => { const { data } = await client.post('/projects/attachments/', formData, { headers: { 'Content-Type': 'multipart/form-data' } }); return data; },
   getAttachments:    async ()         => { const { data } = await client.get('/projects/attachments/'); return data; },
   deleteAttachment:  async (id)         => { const { data } = await client.delete('/projects/attachments/', { data: { attachment_id: id } }); return data; },
+  getStudentsStatus: async ()         => { const { data } = await client.get(ENDPOINTS.groups.studentGroupStatus); return data; },
 
   // ── Teacher side ───────────────────────────────────────────────
   getTeacherGroups: async ()          => { const { data } = await client.get(ENDPOINTS.teacher.groups);              return data; },

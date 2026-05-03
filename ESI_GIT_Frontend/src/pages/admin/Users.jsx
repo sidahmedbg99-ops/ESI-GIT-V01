@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 import {
   IoAddOutline, IoSearchOutline, IoPencilOutline,
   IoTrashOutline, IoPersonOutline, IoMailOutline,
@@ -18,6 +19,7 @@ import { useAdmin } from '../../context/AdminContext';
 import { useLanguage } from '../../context/LanguageContext';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../api/config';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const ROLE_VARIANTS = { student: 'gray', teacher: 'info', admin: 'primary' };
 const SPECIALITES   = ['ISI', 'IASD', 'GL', 'SIQ', 'SIT'];
@@ -230,6 +232,22 @@ function UserForm({ initial, onSave, onCancel }) {
   );
 }
 
+// ── Error Boundary ───────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return <div style={{ padding: '20px', color: 'red', background: '#fee' }}>
+        <h3>Error in Component</h3>
+        <pre>{this.state.error.toString()}</pre>
+        <pre>{this.state.error.stack}</pre>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
+
 // ── View detail modal ──────────────────────────────────────────────
 function UserDetailModal({ user: u, onClose, onEdit }) {
   const { t } = useLanguage();
@@ -301,7 +319,10 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
   const handleFile = (f) => {
     if (!f) return;
     const ext = f.name.split('.').pop().toLowerCase();
-    if (!['csv', 'xlsx', 'xls'].includes(ext)) { alert('Fichier CSV ou Excel uniquement (.csv, .xlsx, .xls)'); return; }
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) { 
+      toast.error('Fichier CSV ou Excel uniquement (.csv, .xlsx, .xls)'); 
+      return; 
+    }
     setFile(f);
     setResult(null);
   };
@@ -471,6 +492,7 @@ export default function AdminUsers() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [modal, setModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {}, type: 'warning' });
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -490,19 +512,26 @@ export default function AdminUsers() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`Supprimer ${selectedIds.length} utilisateurs ?`)) return;
-    setIsBulkDeleting(true);
-    try {
-      // Parallel delete
-      await Promise.all(selectedIds.map(id => removeUser(id)));
-      toast.success(`${selectedIds.length} utilisateurs supprimés`);
-      setSelectedIds([]);
-    } catch (e) {
-      toast.error("Erreur lors de la suppression groupée");
-    } finally {
-      setIsBulkDeleting(false);
-    }
+  const handleBulkDelete = () => {
+    setModal({
+      isOpen: true,
+      title: "Supprimer la sélection ?",
+      message: `Êtes-vous sûr de vouloir supprimer définitivement ces ${selectedIds.length} utilisateurs ?`,
+      type: "warning",
+      onConfirm: async () => {
+        setIsBulkDeleting(true);
+        try {
+          await Promise.all(selectedIds.map(id => removeUser(id)));
+          toast.success(`${selectedIds.length} utilisateurs supprimés`);
+          setSelectedIds([]);
+        } catch (e) {
+          toast.error("Erreur lors de la suppression groupée");
+        } finally {
+          setIsBulkDeleting(false);
+          setModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -579,7 +608,16 @@ export default function AdminUsers() {
           <button onClick={() => openEdit(row)} style={{ width: 30, height: 30, borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}>
             <IoPencilOutline size={14}/>
           </button>
-          <button onClick={() => setConfirmDel(row._id)} style={{ width: 30, height: 30, borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#DC2626' }}>
+          <button onClick={() => setModal({
+            isOpen: true,
+            title: t('Confirm'),
+            message: t('ConfirmDeleteUser'),
+            type: "warning",
+            onConfirm: () => {
+              removeUser(row._id);
+              setModal(prev => ({ ...prev, isOpen: false }));
+            }
+          })} style={{ width: 30, height: 30, borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#DC2626' }}>
             <IoTrashOutline size={14}/>
           </button>
         </div>
@@ -588,7 +626,8 @@ export default function AdminUsers() {
   ];
 
   return (
-    <DashboardLayout>
+    <ErrorBoundary>
+      <DashboardLayout>
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '4px' }}>{t('UserManagement')}</h1>
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('ReadyToStartSub')}</p>
@@ -662,21 +701,22 @@ export default function AdminUsers() {
         @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
-      <UserDetailModal user={detailUser} onClose={() => setDetailUser(null)} onEdit={openEdit}/>
-
-      {confirmDel && (
-        <Modal isOpen onClose={() => setConfirmDel(null)} title={t('Confirm')}>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>
-            {t('ConfirmDeleteUser')}
-          </p>
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button variant="ghost" onClick={() => setConfirmDel(null)}>{t('Cancel')}</Button>
-            <Button variant="danger" onClick={() => { removeUser(confirmDel); setConfirmDel(null); }} icon={<IoTrashOutline size={16}/>}>{t('Delete')}</Button>
-          </div>
-        </Modal>
-      )}
+      <ErrorBoundary>
+        <UserDetailModal user={detailUser} onClose={() => setDetailUser(null)} onEdit={openEdit}/>
+      </ErrorBoundary>
 
       <ExcelImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImported={() => window.location.reload()} />
+
+      <ConfirmModal 
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        loading={isBulkDeleting}
+      />
     </DashboardLayout>
+    </ErrorBoundary>
   );
 }

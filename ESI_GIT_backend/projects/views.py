@@ -753,6 +753,15 @@ class SupervisorRequestView(APIView):
             project_id=project, teacher_id=teacher, message=message, status="pending"
         )
 
+        # Send notification to teacher
+        from notifications.models import Notification
+        Notification.objects.create(
+            recipient_id=teacher.TID,
+            recipient_type='staff',
+            title="Nouvelle demande d'encadrement",
+            message=f"Le groupe {project.name} vous a envoyé une demande d'encadrement."
+        )
+
         from .serializers import SupervisorRequestSerializer
 
         return Response(
@@ -842,5 +851,32 @@ class StudentAttachmentView(APIView):
             return Response({"error": "Attachment not found"}, status=404)
         except SProjects.DoesNotExist:
             return Response({"error": "Permission denied"}, status=403)
+
+
+class StudentGroupStatusView(APIView):
+    """
+    GET /api/projects/students/status/
+    Returns a list of all students in the same year/specialty 
+    with their group status (has group or not).
+    """
+    permission_classes = [IsStudent]
+
+    def get(self, request):
+        me = request.user
+        students = Student.objects.filter(academic_year=me.academic_year, specialty=me.specialty)
+        
+        # Get set of CIDs that are in a non-archived project
+        cids_with_group = set(SProjects.objects.filter(PID__archived=False).values_list('CID_id', flat=True))
+        
+        data = []
+        for s in students:
+            data.append({
+                "CID": s.CID,
+                "full_name": s.full_name,
+                "email": s.email,
+                "has_group": s.CID in cids_with_group,
+            })
+            
+        return Response(data)
 
 

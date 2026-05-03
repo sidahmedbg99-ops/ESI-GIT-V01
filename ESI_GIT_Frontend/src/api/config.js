@@ -37,6 +37,7 @@ export const ENDPOINTS = {
     leave: 'projects/leave/',                      // POST
     leader: 'projects/leader/',                    // PATCH { action, target_cid }
     supervisorRequest: 'projects/supervisor-request/', // GET/POST
+    studentGroupStatus: 'projects/students/status/', // GET
 
     // Teacher
     byTeacher: () => `teacher/groups/`,            // GET

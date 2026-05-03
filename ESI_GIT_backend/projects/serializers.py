@@ -14,6 +14,7 @@ class AdminProjectSerializer(serializers.ModelSerializer):
     teacher_name = serializers.SerializerMethodField()
     Student = serializers.SerializerMethodField()
     jury = serializers.SerializerMethodField()
+    grades = serializers.SerializerMethodField()
 
     student_ids = serializers.ListField(write_only=True, required=False)
 
@@ -22,6 +23,22 @@ class AdminProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = "__all__"
+
+    def get_grades(self, obj):
+        try:
+            from jury.models import Grades
+            grades = Grades.objects.filter(PID=obj).first()
+            if not grades:
+                return None
+            return {
+                "grade1": grades.grade1,
+                "grade2": grades.grade2,
+                "grade3": grades.grade3,
+                "final_grade": grades.final_grade,
+                "comments": grades.comments,
+            }
+        except Exception:
+            return None
 
     def generate_invite_code(self):
         while True:
@@ -189,6 +206,9 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
                 return None
 
             return {
+                "grade1": grades.grade1,
+                "grade2": grades.grade2,
+                "grade3": grades.grade3,
                 "final_grade": grades.final_grade,
                 "feedback": grades.comments,
             }
@@ -385,6 +405,39 @@ class AdminTaskSerializer(serializers.ModelSerializer):
 class StudentProjectSerializer(serializers.ModelSerializer):
     teacher_name = serializers.SerializerMethodField()
     students = serializers.SerializerMethodField()
+    grades = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Projects
+        fields = [
+            "PID",
+            "name",
+            "type",
+            "specialty",
+            "year",
+            "teacher_name",
+            "students",
+            "grades",
+        ]
+
+    def get_teacher_name(self, obj):
+        return obj.TID.full_name if obj.TID else "—"
+
+    def get_students(self, obj):
+        relations = SProjects.objects.filter(PID=obj)
+        return [rel.CID.full_name for rel in relations]
+
+    def get_grades(self, obj):
+        try:
+            from jury.models import Grades
+            grades = Grades.objects.filter(PID=obj).first()
+            if not grades:
+                return None
+            return {
+                "final_grade": grades.final_grade,
+            }
+        except Exception:
+            return None
 
 
 # ─────────────────────────────────────────
@@ -456,18 +509,18 @@ class ProjectSerializer(serializers.ModelSerializer):
         return None
 
     def get_attachments(self, obj):
-        from .models import ProjectAttachment
-        atts = ProjectAttachment.objects.filter(PID=obj)
+        from projects.models import ProjectAttachment
+        attachments = ProjectAttachment.objects.filter(PID=obj.PID)
         return [
             {
                 "id": a.id,
                 "filename": a.filename,
-                "url": a.file.url if a.file else None,
                 "attachment_type": a.attachment_type,
                 "is_final": a.is_final,
-                "uploaded_at": a.uploaded_at
+                "url": a.file.url if a.file else None,
+                "uploaded_at": a.uploaded_at,
             }
-            for a in atts
+            for a in attachments
         ]
 
     def get_students(self, obj):

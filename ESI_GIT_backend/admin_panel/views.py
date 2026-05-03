@@ -26,7 +26,8 @@ Every view requires the ``IsAdmin`` permission (authenticated Staff with
 from datetime import datetime, timedelta
 from typing import cast
 
-from django.db.models import Count, Q
+from django.db import models
+from django.db.models import Count, Q, Avg
 from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -641,7 +642,7 @@ class AdvancedAnalyticsAPI(APIView):
             Grades.objects.filter(final_grade__isnull=False)
             .annotate(month=TruncMonth('PID__creation_date'))
             .values('month')
-            .annotate(avg_grade=models.Avg('final_grade'))
+            .annotate(avg_grade=Avg('final_grade'))
             .order_by('month')
         )
 
@@ -649,7 +650,7 @@ class AdvancedAnalyticsAPI(APIView):
         specialty_performance = (
             Projects.objects.filter(grades__final_grade__isnull=False)
             .values('specialty')
-            .annotate(avg_grade=models.Avg('grades__final_grade'), count=Count('PID'))
+            .annotate(avg_grade=Avg('grades__final_grade'), count=Count('PID'))
             .order_by('-avg_grade')
         )
 
@@ -666,12 +667,10 @@ class AdvancedAnalyticsAPI(APIView):
         late_tasks_count = Task.objects.filter(deadline__lt=now.date()).exclude(state='done').count()
 
         # 8. Teacher Grading Patterns (Average grade given)
-        # We need to aggregate across g1, g2, g3 based on ProjectJury
-        # This is complex, let's do a simpler version first
         teacher_patterns = (
             Staff.objects.filter(is_teacher=True)
             .annotate(
-                avg_given=models.Avg('jury_as_president__PID__grades__final_grade')
+                avg_given=Avg('jury_as_president__PID__grades__final_grade')
             )
             .values('TID', 'first_name', 'last_name', 'avg_given')
             .filter(avg_given__isnull=False)

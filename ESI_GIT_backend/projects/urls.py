@@ -21,6 +21,7 @@ from .views import (
     LeaveProjectView,
     SupervisorRequestView,
     StudentAttachmentView,
+    StudentGroupStatusView,
 )
 
 urlpatterns = [
@@ -52,4 +53,5 @@ urlpatterns = [
         name="supervisor-request",
     ),
     path("attachments/", StudentAttachmentView.as_view(), name="project-attachments"),
+    path("students/status/", StudentGroupStatusView.as_view(), name="students-status"),
 ]

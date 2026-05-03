@@ -1,275 +1,245 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import {
   IoGitBranchOutline, IoShieldCheckmarkOutline, IoAnalyticsOutline,
   IoPeopleOutline, IoCalendarOutline, IoCheckboxOutline,
-  IoArrowForwardOutline, IoSchoolOutline, IoGlobeOutline
+  IoArrowForwardOutline, IoSchoolOutline, IoGlobeOutline,
+  IoSunnyOutline, IoMoonOutline, IoArrowUpOutline
 } from 'react-icons/io5';
 import PublicLayout from '../../layouts/PublicLayout';
 import Button from '../../components/ui/Button';
 import { useLanguage } from '../../context/LanguageContext';
-
 import { useTheme } from '../../context/ThemeContext';
-import { IoSunnyOutline, IoMoonOutline } from 'react-icons/io5';
-
-function FadeIn({ children }) {
-  return <>{children}</>;
-}
 
 export default function Home() {
   const { t, lang, toggleLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const [navVisible, setNavVisible] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Navbar visibility logic
+      if (currentScrollY < 50) {
+        setNavVisible(true);
+      } else if (currentScrollY > lastScrollY.current) {
+        setNavVisible(false); // Scrolling down
+      } else {
+        setNavVisible(true); // Scrolling up
+      }
+      
+      // Scroll to top button visibility
+      setShowScrollTop(currentScrollY > 400);
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const features = [
-    { icon: <IoGitBranchOutline size={28} />, title: t('Feature1Title'), desc: t('Feature1Desc'), color: 'var(--primary)' },
-    { icon: <IoPeopleOutline size={28} />, title: t('Feature2Title'), desc: t('Feature2Desc'), color: 'var(--accent)' },
-    { icon: <IoCalendarOutline size={28} />, title: t('Feature3Title'), desc: t('Feature3Desc'), color: 'var(--primary)' },
-    { icon: <IoCheckboxOutline size={28} />, title: t('Feature4Title'), desc: t('Feature4Desc'), color: 'var(--accent)' },
-    { icon: <IoAnalyticsOutline size={28} />, title: t('Feature5Title'), desc: t('Feature5Desc'), color: 'var(--primary)' },
-    { icon: <IoShieldCheckmarkOutline size={28} />, title: t('Feature6Title'), desc: t('Feature6Desc'), color: 'var(--accent)' },
-  ];
-
-  const stats = [
-    { value: '2,400+', label: t('StatsActiveStudents') },
-    { value: '180+', label: t('StatsProjects') },
-    { value: '95', label: t('StatsTeachers') },
-    { value: '99.9%', label: t('StatsUptime') },
+    { icon: <IoGitBranchOutline size={28} />, title: t('Feature1Title'), desc: t('Feature1Desc'), color: '#2EC4B6' },
+    { icon: <IoPeopleOutline size={28} />, title: t('Feature2Title'), desc: t('Feature2Desc'), color: '#3B82F6' },
+    { icon: <IoCalendarOutline size={28} />, title: t('Feature3Title'), desc: t('Feature3Desc'), color: '#8B5CF6' },
+    { icon: <IoCheckboxOutline size={28} />, title: t('Feature4Title'), desc: t('Feature4Desc'), color: '#F59E0B' },
+    { icon: <IoAnalyticsOutline size={28} />, title: t('Feature5Title'), desc: t('Feature5Desc'), color: '#10B981' },
+    { icon: <IoShieldCheckmarkOutline size={28} />, title: t('Feature6Title'), desc: t('Feature6Desc'), color: '#EF4444' },
   ];
 
   return (
     <PublicLayout>
-      {/* Full Navbar */}
+      {/* --- Minimalist Navbar --- */}
       <nav style={{
-        position: 'fixed', top: '15px', left: '50%', transform: 'translateX(-50%)', zIndex: 100,
+        position: 'fixed', top: navVisible ? '20px' : '-100px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '10px 24px', background: 'rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-        borderRadius: '24px', width: '90%', maxWidth: '1200px', height: '70px'
+        padding: '0 24px', width: '90%', maxWidth: '1200px', height: '72px',
+        background: 'transparent', transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img src="/image.png" alt="ESI-GIT Logo" style={{ height: '50px', objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/image.png" alt="ESI-GIT" style={{ height: '48px', filter: theme === 'dark' ? 'none' : 'invert(0.1)' }} />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button onClick={toggleTheme} style={{
-            background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px',
-            padding: '10px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s',
+            background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '14px',
+            width: '44px', height: '44px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.3s',
+            backdropFilter: 'blur(10px)'
           }}>
             {theme === 'light' ? <IoMoonOutline size={22} /> : <IoSunnyOutline size={22} />}
           </button>
           
           <button onClick={toggleLanguage} style={{
-            background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px',
-            padding: '10px 16px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, fontSize: '14px', transition: 'all 0.2s',
+            background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '14px',
+            width: '44px', height: '44px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.3s',
+            backdropFilter: 'blur(10px)'
           }}>
-            <IoGlobeOutline size={18} /> {lang.toUpperCase()}
+            <IoGlobeOutline size={22} />
           </button>
           
-          <Link to="/login" style={{ textDecoration: 'none' }}>
+          <Link to="/login">
             <button style={{
-              background: '#fff', border: 'none', borderRadius: '12px',
-              padding: '10px 20px', color: 'var(--primary)', cursor: 'pointer', fontWeight: 700, fontSize: '14px',
-              transition: 'all 0.2s', boxShadow: '0 4px 14px rgba(255,255,255,0.15)'
+              background: 'var(--primary)', border: 'none', borderRadius: '14px',
+              width: '44px', height: '44px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 10px 20px -5px rgba(46, 196, 182, 0.4)', transition: '0.3s',
             }}>
-              {t('LoginBtn')}
+              <IoSchoolOutline size={22} />
             </button>
           </Link>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section
+      {/* --- Scroll to Top Button (Bottom Left) --- */}
+      <button 
+        onClick={scrollToTop}
         style={{
-          minHeight: '100vh',
-          paddingTop: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          textAlign: 'center',
-          backgroundImage: 'url(/new-bg.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          position: 'fixed', bottom: '30px', left: showScrollTop ? '30px' : '-80px', zIndex: 1000,
+          width: '56px', height: '56px', borderRadius: '18px', background: 'var(--primary)',
+          color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          boxShadow: '0 10px 25px rgba(46, 196, 182, 0.4)',
         }}
+        onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px) scale(1.1)'}
+        onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0) scale(1)'}
       >
-        {/* Background decoration & overlay with blur */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.7) 100%)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)' }} />
+        <IoArrowUpOutline size={24} />
+      </button>
 
-        <div style={{ maxWidth: '860px', padding: '0 24px', position: 'relative', zIndex: 1, marginTop: '60px' }}>
-          {/* Badge */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+      {/* --- Hero Section --- */}
+      <section style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative', overflow: 'hidden', textAlign: 'center',
+        backgroundImage: 'url(/esi_background.jpg)', backgroundSize: 'cover', backgroundPosition: 'center',
+      }}>
+        {/* Overlay with subtle blur for better text isolation */}
+        <div style={{ 
+          position: 'absolute', inset: 0, 
+          background: theme === 'dark' ? 'linear-gradient(135deg, rgba(11, 17, 32, 0.8) 0%, rgba(15, 23, 42, 0.7) 100%)' : 'linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.5) 100%)', 
+          backdropFilter: 'blur(5px)' 
+        }} />
+
+        <div style={{ maxWidth: '900px', padding: '0 24px', position: 'relative', zIndex: 1 }} className="animate-fade">
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '32px' }}>
             <span style={{
               padding: '8px 20px', borderRadius: 'var(--radius-full)',
-              background: 'rgba(46, 196, 182, 0.2)', color: 'var(--primary-light)',
-              fontSize: '14px', fontWeight: 600, border: '1px solid rgba(46, 196, 182, 0.4)', backdropFilter: 'blur(5px)'
+              background: 'rgba(46, 196, 182, 0.15)', color: 'var(--primary)',
+              fontSize: '13px', fontWeight: 700, border: '1px solid rgba(46, 196, 182, 0.3)', textTransform: 'uppercase', letterSpacing: '0.05em'
             }}>
               {t('HomeBadge')}
             </span>
           </div>
 
-          <h1
-            style={{
-              fontSize: 'clamp(44px, 7vw, 84px)',
-              fontWeight: 800,
-              letterSpacing: '-0.04em',
-              lineHeight: 1.1,
-              marginBottom: '24px',
-              color: '#fff',
-              textShadow: '0 4px 20px rgba(0,0,0,0.3)',
-            }}
-          >
+          <h1 style={{ fontSize: 'clamp(48px, 8vw, 88px)', fontWeight: 800, marginBottom: '24px', letterSpacing: '-0.05em', lineHeight: 1 }}>
             {t('HomeTitle')}<br />
-            <span style={{ 
-              background: 'linear-gradient(to right, var(--primary), var(--accent))', 
-              WebkitBackgroundClip: 'text', 
-              WebkitTextFillColor: 'transparent',
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))'
-            }}>ESI-GIT</span>
+            <span className="text-gradient">ESI-GIT</span>
           </h1>
 
-          <p
-            style={{
-              fontSize: '18px', color: '#cbd5e1',
-              lineHeight: 1.7, marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px',
-            }}
-          >
+          <p style={{ fontSize: '20px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '48px', maxWidth: '640px', margin: '0 auto 48px' }}>
             {t('HomeSubtitle')}
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link to="/login">
-              <Button size="lg" iconRight={<IoArrowForwardOutline size={18} />}>
+              <Button size="lg" iconRight={<IoArrowForwardOutline size={18} />} style={{ borderRadius: '16px', padding: '0 36px', height: '56px' }}>
                 {t('GetStarted')}
               </Button>
             </Link>
             <Link to="/about">
               <button style={{
-                 padding: '0 24px', height: '48px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', fontSize: '15px', fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(5px)'
-              }}>
+                padding: '0 32px', height: '56px', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: '15px', fontWeight: 600, transition: '0.3s'
+              }} className="glass hover-lift">
                 {t('LearnMore')}
               </button>
             </Link>
           </div>
         </div>
+
+        {/* Abstract Floating Shapes */}
+        <div style={{ position: 'absolute', top: '20%', left: '10%', width: '120px', height: '120px', borderRadius: '30%', background: 'var(--primary-subtle)', filter: 'blur(40px)', opacity: 0.4 }} className="animate-float" />
+        <div style={{ position: 'absolute', bottom: '15%', right: '15%', width: '180px', height: '180px', borderRadius: '50%', background: 'var(--accent-light)', filter: 'blur(60px)', opacity: 0.3 }} className="animate-float" />
       </section>
 
-      {/* Stats */}
-      <section style={{
-        padding: '70px 24px',
-        background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-        position: 'relative',
-      }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '32px', position: 'relative', zIndex: 1 }}>
-          {stats.map((s, i) => (
-            <FadeIn key={i}>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '44px', fontWeight: 800, fontFamily: 'Syne', color: '#fff', letterSpacing: '-0.02em' }}>{s.value}</p>
-                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '15px', marginTop: '6px' }}>{s.label}</p>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section style={{ padding: '100px 24px', background: 'var(--bg)', position: 'relative' }}>
+      {/* --- Features Section --- */}
+      <section style={{ padding: '120px 24px', background: 'var(--bg)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <FadeIn>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+            <h2 style={{ fontSize: 'clamp(32px, 5vw, 48px)', fontWeight: 800, marginBottom: '20px' }}>
               {t('FeaturesTitle')}
             </h2>
-            <p style={{ fontSize: '17px', color: 'var(--text-secondary)', maxWidth: '540px', margin: '0 auto' }}>
+            <div style={{ width: '60px', height: '4px', background: 'var(--primary)', margin: '0 auto 24px', borderRadius: '2px' }} />
+            <p style={{ fontSize: '18px', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto' }}>
               {t('FeaturesSubtitle')}
             </p>
           </div>
-        </FadeIn>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-          {features.map((f, i) => (
-            <FadeIn key={i}>
-              <div>
-                <div style={{ 
-                  padding: '32px', 
-                  borderRadius: '24px', 
-                  background: 'var(--bg-card)', 
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
-                  boxShadow: '0 10px 30px -10px rgba(0, 0, 0, 0.1)',
-                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                  cursor: 'default',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: '100%',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 20px 40px -10px rgba(0, 0, 0, 0.15)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 10px 30px -10px rgba(0, 0, 0, 0.1)';
-                }}
-                >
-                  <div style={{
-                    width: 56, height: 56, borderRadius: '16px',
-                    background: `linear-gradient(135deg, ${f.color}22, ${f.color}11)`,
-                    border: `1px solid ${f.color}33`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: f.color, marginBottom: '20px',
-                    boxShadow: `0 4px 12px ${f.color}15`
-                  }}>
-                    {f.icon}
-                  </div>
-                  <h3 style={{ fontSize: '19px', fontWeight: 700, marginBottom: '12px' }}>{f.title}</h3>
-                  <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f.desc}</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
+            {features.map((f, i) => (
+              <div key={i} style={{
+                padding: '40px', borderRadius: '28px', background: 'var(--bg-card)', border: '1px solid var(--border)',
+                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)', position: 'relative', overflow: 'hidden'
+              }} className="hover-lift">
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '20px',
+                  background: `linear-gradient(135deg, ${f.color}15, ${f.color}08)`,
+                  border: `1px solid ${f.color}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: f.color, marginBottom: '28px',
+                }}>
+                  {f.icon}
                 </div>
+                <h3 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '16px' }}>{f.title}</h3>
+                <p style={{ fontSize: '16px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f.desc}</p>
+                <div style={{ position: 'absolute', bottom: '-10px', right: '-10px', width: '40px', height: '40px', borderRadius: '50%', background: f.color, opacity: 0.05, filter: 'blur(20px)' }} />
               </div>
-            </FadeIn>
-          ))}
-        </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section style={{
-        padding: '100px 24px',
-        textAlign: 'center',
-        background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
+      {/* --- CTA Section --- */}
+      <section style={{ padding: '100px 24px', background: 'var(--bg)' }}>
         <div style={{
-          position: 'absolute', top: '-50%', left: '-10%',
-          width: '600px', height: '600px', borderRadius: '50%',
-          background: 'rgba(255,255,255,0.06)', pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '-30%', right: '-5%',
-          width: '400px', height: '400px', borderRadius: '50%',
-          background: 'rgba(255,255,255,0.04)', pointerEvents: 'none',
-        }} />
-        <FadeIn>
-          <IoSchoolOutline size={48} style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }} />
-          <h2 style={{ fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 800, color: '#fff', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-            {t('ReadyToStart')}
-          </h2>
-          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.75)', marginBottom: '32px' }}>
-            {t('ReadyToStartSub')}
-          </p>
-          <Link to="/login">
-            <Button size="lg" style={{ background: '#fff', color: 'var(--primary)', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
-              {t('LoginBtn')}
-            </Button>
-          </Link>
-        </FadeIn>
+          maxWidth: '1200px', margin: '0 auto', padding: '80px 24px', borderRadius: '40px',
+          background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)',
+          textAlign: 'center', position: 'relative', overflow: 'hidden',
+          boxShadow: '0 30px 60px -12px rgba(31, 58, 95, 0.3)'
+        }}>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <IoSchoolOutline size={56} style={{ color: 'rgba(255,255,255,0.3)', marginBottom: '24px' }} />
+            <h2 style={{ fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 800, color: '#fff', marginBottom: '20px' }}>
+              {t('ReadyToStart')}
+            </h2>
+            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.8)', marginBottom: '40px', maxWidth: '500px', margin: '0 auto 40px' }}>
+              {t('ReadyToStartSub')}
+            </p>
+            <Link to="/login">
+              <button style={{
+                background: '#fff', color: 'var(--primary)', padding: '0 48px', height: '60px',
+                borderRadius: '18px', border: 'none', fontWeight: 800, fontSize: '16px',
+                transition: '0.3s', boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+              }} onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(0,0,0,0.2)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)'; }}>
+                {t('LoginBtn')}
+              </button>
+            </Link>
+          </div>
+          
+          {/* Decorative Circles */}
+          <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+          <div style={{ position: 'absolute', bottom: '-15%', right: '-5%', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{
-        background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
-        padding: '32px 24px', textAlign: 'center',
-      }}>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+      {/* --- Footer --- */}
+      <footer style={{ padding: '48px 24px', background: 'var(--bg)', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+        <img src="/image.png" alt="ESI-GIT" style={{ height: '32px', margin: '0 auto 24px', opacity: 0.5, filter: 'grayscale(1)' }} />
+        <p style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 500 }}>
           © {new Date().getFullYear()} {t('FooterText')}
         </p>
       </footer>

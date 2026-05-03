@@ -256,8 +256,8 @@ export default function Login() {
               )}
             </div>
 
-            <Modal 
-              isOpen={showForgotModal} 
+            <Modal
+              isOpen={showForgotModal}
               onClose={() => setShowForgotModal(false)}
               title="Mot de passe oublié ?"
             >
@@ -271,7 +271,7 @@ export default function Login() {
                 <div style={{ padding: '12px', borderRadius: '12px', background: 'var(--bg)', border: '1px solid var(--border)', fontWeight: 700, color: 'var(--primary)', fontSize: '16px', marginBottom: '24px' }}>
                   admin@esi.dz
                 </div>
-                <button 
+                <button
                   onClick={() => setShowForgotModal(false)}
                   style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
                 >

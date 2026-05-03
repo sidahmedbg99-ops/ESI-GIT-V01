@@ -19,26 +19,26 @@ import { ENDPOINTS } from '../../api/config';
 const navByRole = {
   student: [
     { path: '/student/dashboard', labelKey: 'Dashboard', icon: <IoGridOutline /> },
-    { path: '/student/groupe',    labelKey: 'Groups',    icon: <IoPeopleOutline /> },
-    { path: '/student/reunions',  labelKey: 'Meetings',  icon: <IoCalendarOutline /> },
-    { path: '/student/taches',    labelKey: 'Tasks',     icon: <IoCheckboxOutline /> },
-    { path: '/student/archive',   labelKey: 'Archive',   icon: <IoArchiveOutline /> },
+    { path: '/student/groupe', labelKey: 'Groups', icon: <IoPeopleOutline /> },
+    { path: '/student/reunions', labelKey: 'Meetings', icon: <IoCalendarOutline /> },
+    { path: '/student/taches', labelKey: 'Tasks', icon: <IoCheckboxOutline /> },
+    { path: '/student/archive', labelKey: 'Archive', icon: <IoArchiveOutline /> },
   ],
   teacher: [
     { path: '/teacher/dashboard', labelKey: 'Dashboard', icon: <IoGridOutline /> },
-    { path: '/teacher/groupes',   labelKey: 'Groups',    icon: <IoPeopleOutline /> },
-    { path: '/teacher/reunions',  labelKey: 'Meetings',  icon: <IoCalendarOutline /> },
-    { path: '/teacher/requests',  labelKey: 'Requests',  icon: <IoNotificationsOutline /> },
-    { path: '/teacher/jury',      labelKey: 'Juries',    icon: <IoRibbonOutline /> },
-    { path: '/teacher/archive',   labelKey: 'Archive',   icon: <IoArchiveOutline /> },
+    { path: '/teacher/groupes', labelKey: 'Groups', icon: <IoPeopleOutline /> },
+    { path: '/teacher/reunions', labelKey: 'Meetings', icon: <IoCalendarOutline /> },
+    { path: '/teacher/requests', labelKey: 'Requests', icon: <IoNotificationsOutline /> },
+    { path: '/teacher/jury', labelKey: 'Juries', icon: <IoRibbonOutline /> },
+    { path: '/teacher/archive', labelKey: 'Archive', icon: <IoArchiveOutline /> },
   ],
   admin: [
-    { path: '/admin/dashboard',   labelKey: 'Dashboard', icon: <IoGridOutline /> },
-    { path: '/admin/users',       labelKey: 'Users',     icon: <IoPeopleOutline /> },
-    { path: '/admin/groupes',     labelKey: 'Groups',    icon: <IoBookOutline /> },
-    { path: '/admin/analytics',   labelKey: 'Projects',  icon: <IoBarChartOutline /> },
-    { path: '/admin/archive',     labelKey: 'Archive',   icon: <IoArchiveOutline /> },
-    { path: '/admin/settings',    labelKey: 'Settings',  icon: <IoSettingsOutline /> },
+    { path: '/admin/dashboard', labelKey: 'Dashboard', icon: <IoGridOutline /> },
+    { path: '/admin/users', labelKey: 'Users', icon: <IoPeopleOutline /> },
+    { path: '/admin/groupes', labelKey: 'Groups', icon: <IoBookOutline /> },
+    { path: '/admin/analytics', labelKey: 'Projects', icon: <IoBarChartOutline /> },
+    { path: '/admin/archive', labelKey: 'Archive', icon: <IoArchiveOutline /> },
+    { path: '/admin/settings', labelKey: 'Settings', icon: <IoSettingsOutline /> },
   ]
 };
 
@@ -49,15 +49,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Visibility logic
-  const hideArchive = localStorage.getItem('hideStudentArchive') === 'true';
-  const hideJury    = localStorage.getItem('hideTeacherJury') === 'true';
-
-  const nav = (navByRole[user?.role] || navByRole.student).filter(item => {
-    if (user?.role === 'student' && item.labelKey === 'Archive' && hideArchive) return false;
-    if (user?.role === 'teacher' && item.labelKey === 'Juries' && hideJury) return false;
-    return true;
-  });
+  const nav = (navByRole[user?.role] || navByRole.student);
 
   const [isVisible, setIsVisible] = useState(true);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -75,14 +67,14 @@ export default function Navbar() {
         .then(res => setNotifications(Array.isArray(res.data) ? res.data : []))
         .catch(() => setNotifications([]));
     };
-    
+
     fetchNotifs();
     const interval = setInterval(fetchNotifs, 30000); // 30s polling
     return () => clearInterval(interval);
   }, [user]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
-  const goToProfile  = () => navigate(`/${user?.role}/profil`);
+  const goToProfile = () => navigate(`/${user?.role}/profil`);
 
   const handleSwitchRole = () => {
     if (switchRole) {
@@ -95,13 +87,13 @@ export default function Navbar() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-      
+
       if (currentScroll > lastScrollTop && currentScroll > 100) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
       }
-      
+
       setShowScrollBtn(currentScroll > 400);
       setLastScrollTop(currentScroll <= 0 ? 0 : currentScroll);
     };
@@ -265,63 +257,63 @@ export default function Navbar() {
           {/* Notifications */}
           {user?.role !== 'admin' && (
             <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowNotifs(!showNotifs)}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
-                background: showNotifs ? 'var(--primary-subtle)' : 'transparent',
-                color: showNotifs ? 'var(--primary)' : 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                transition: 'all 0.2s',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-              className="nav-utility-btn"
-              title={t('Notifications')}
-            >
-              <IoNotificationsOutline size={20} />
-              {unseenCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '10px',
-                  right: '10px',
-                  width: '8px',
-                  height: '8px',
-                  background: 'var(--danger)',
-                  borderRadius: '50%',
-                  border: '2px solid var(--bg-nav)'
-                }} />
-              )}
-            </button>
-            
-            {showNotifs && (
-              <div style={{
-                position: 'absolute', top: '50px', right: '-80px', width: '320px',
-                background: 'var(--bg-card)', border: '1px solid var(--border)',
-                borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                padding: '16px', zIndex: 1000
-              }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>Notifications</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
-                  {notifications.length === 0 ? (
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: '20px 0' }}>Aucune notification</p>
-                  ) : (
-                    notifications.map(n => (
-                      <div key={n.id || n.NID} style={{ padding: '10px', background: (n.is_read || n.IsRead) ? 'transparent' : 'var(--primary-subtle)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                        <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.4 }}>{n.message || n.Message}</p>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>{new Date(n.created_at || n.CreatedAt).toLocaleDateString()}</span>
-                      </div>
-                    ))
-                  )}
+              <button
+                onClick={() => setShowNotifs(!showNotifs)}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
+                  background: showNotifs ? 'var(--primary-subtle)' : 'transparent',
+                  color: showNotifs ? 'var(--primary)' : 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  transition: 'all 0.2s',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+                className="nav-utility-btn"
+                title={t('Notifications')}
+              >
+                <IoNotificationsOutline size={20} />
+                {unseenCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    width: '8px',
+                    height: '8px',
+                    background: 'var(--danger)',
+                    borderRadius: '50%',
+                    border: '2px solid var(--bg-nav)'
+                  }} />
+                )}
+              </button>
+
+              {showNotifs && (
+                <div style={{
+                  position: 'absolute', top: '50px', right: '-80px', width: '320px',
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  borderRadius: '16px', boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                  padding: '16px', zIndex: 1000
+                }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>Notifications</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                    {notifications.length === 0 ? (
+                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', margin: '20px 0' }}>Aucune notification</p>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id || n.NID} style={{ padding: '10px', background: (n.is_read || n.IsRead) ? 'transparent' : 'var(--primary-subtle)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                          <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.4 }}>{n.message || n.Message}</p>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>{new Date(n.created_at || n.CreatedAt).toLocaleDateString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           )}
 
           {/* Profile */}
@@ -342,12 +334,12 @@ export default function Navbar() {
             }}
             title={user?.name || user?.email}
           >
-            <div style={{ 
-              width: '100%', 
-              height: '100%', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
+            <div style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               background: 'linear-gradient(135deg, var(--primary), var(--primary-light))',
               color: '#fff',
               fontSize: '16px',
@@ -424,7 +416,7 @@ export default function Navbar() {
       `}</style>
 
       {/* Back to Top Button */}
-      <button 
+      <button
         className={`scroll-top-btn ${showScrollBtn ? 'visible' : ''}`}
         onClick={scrollToTop}
         title={t('BackToTop')}

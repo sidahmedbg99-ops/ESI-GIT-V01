@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useAdmin } from '../../context/AdminContext';
 import { TECH_COLORS } from '../../constants';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const FILTER_CATEGORIES = [
   { key: 'year',       label: 'Année' },
@@ -39,6 +40,7 @@ export default function AdminArchive() {
   const [search,      setSearch]      = useState('');
   const [filterCat,   setFilterCat]   = useState(null);
   const [filterValue, setFilterValue] = useState('all');
+  const [modal, setModal] = useState({ isOpen: false, projectId: null });
 
   const years      = [...new Set(projects.map(p => p.year))].filter(Boolean).sort().reverse();
   const encadreurs = [...new Set(projects.map(p => p.encadreur))].filter(Boolean).sort();
@@ -137,7 +139,9 @@ export default function AdminArchive() {
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <IoStarOutline size={13} style={{ color: '#F59E0B' }}/>
-                      <span style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B' }}>{p.grade || p.final_grade || 0}/20</span>
+                      <span style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B' }}>
+                        {(p.grades?.final_grade ?? p.grade ?? p.final_grade ?? 0).toFixed(1)}/20
+                      </span>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
                       <Badge variant={p.status === 'mention' ? 'success' : 'info'}>{p.status === 'mention' ? '🏅 Mention' : '✓ Validé'}</Badge>
@@ -147,7 +151,7 @@ export default function AdminArchive() {
                       >
                         {p.is_public ? '👁️ Public' : '🔒 Privé'}
                       </button>
-                      <Button size="sm" variant="outline" onClick={() => { if(window.confirm('Supprimer définitivement ce projet ?')) deleteArchiveProject(p._id); }} icon={<IoTrashOutline size={12}/>} style={{ height: '24px', padding: '0 8px', fontSize: '10px', borderColor: '#FCA5A5', color: '#DC2626' }}>Supprimer</Button>
+                      <Button size="sm" variant="outline" onClick={() => setModal({ isOpen: true, projectId: p._id })} icon={<IoTrashOutline size={12}/>} style={{ height: '24px', padding: '0 8px', fontSize: '10px', borderColor: '#FCA5A5', color: '#DC2626' }}>Supprimer</Button>
                     </div>
                   </div>
                 </div>
@@ -177,6 +181,18 @@ export default function AdminArchive() {
           </div>
         </>
       )}
+      <ConfirmModal 
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ isOpen: false, projectId: null })}
+        onConfirm={() => {
+          deleteArchiveProject(modal.projectId);
+          setModal({ isOpen: false, projectId: null });
+        }}
+        title="Supprimer le projet ?"
+        message="Cette action est irréversible. Le projet sera définitivement supprimé de l'archive."
+        confirmText="Supprimer"
+        type="warning"
+      />
     </DashboardLayout>
   );
 }

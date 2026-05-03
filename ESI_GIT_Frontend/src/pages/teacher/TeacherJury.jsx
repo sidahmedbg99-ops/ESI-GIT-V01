@@ -111,6 +111,17 @@ export default function TeacherJury() {
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px' }}>
                     {(j.members || []).map((m, i) => <span key={i} style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', background: 'var(--bg)', border: '1px solid var(--border)' }}>{m.name}</span>)}
                   </div>
+                  
+                  {(j.attachments || []).length > 0 && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                      {j.attachments.map(att => (
+                        <a key={att.id} href={att.url} target="_blank" rel="noreferrer" 
+                           style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, textDecoration: 'none' }}>
+                          📎 {att.filename} {att.is_final ? '(Final)' : ''}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                   {graded ? (
@@ -122,11 +133,6 @@ export default function TeacherJury() {
                       style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
                       🎓 {t('Evaluate')}
                     </button>
-                  )}
-                  {j.document && (
-                    <a href={j.document.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
-                      📎 {t('Deliverables').split(' ')[0]}
-                    </a>
                   )}
                 </div>
               </div>
@@ -142,10 +148,17 @@ export default function TeacherJury() {
             {gradeModal?.schedule && (
                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{gradeModal.schedule.date} à {gradeModal.schedule.time} — {gradeModal.schedule.room}</p>
             )}
-            {gradeModal?.document && (
-              <a href={gradeModal.document.url} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--primary)', marginTop: '8px', fontWeight: 600, textDecoration: 'underline' }}>
-                📎 Document: {gradeModal.document.filename}
-              </a>
+            
+            {(gradeModal?.attachments || []).length > 0 && (
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Documents :</p>
+                {gradeModal.attachments.map(att => (
+                  <a key={att.id} href={att.url} target="_blank" rel="noreferrer" 
+                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
+                    📎 {att.filename} {att.is_final ? '(Final)' : ''}
+                  </a>
+                ))}
+              </div>
             )}
           </div>
 

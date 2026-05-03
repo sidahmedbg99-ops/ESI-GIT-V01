@@ -14,9 +14,9 @@ export const archiveApi = {
     return data;
   },
 
-  // PUT /api/projects/admin/projects/<id>/ → admin updates project
+  // PATCH /api/projects/admin/projects/<id>/ → admin partially updates project (e.g. is_public)
   updateArchiveEntry: async (id, patch) => {
-    const { data } = await client.put(ENDPOINTS.archive.update(id), patch);
+    const { data } = await client.patch(ENDPOINTS.archive.update(id), patch);
     return data;
   },
 

@@ -268,13 +268,13 @@ class TeacherJurySerializer(serializers.ModelSerializer):
     schedule = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
     is_evaluated = serializers.SerializerMethodField()
-    document = serializers.SerializerMethodField()
+    attachments = serializers.SerializerMethodField()
 
     class Meta:
         model = ProjectJury
         fields = [
             "PID_id", "project_name", "group_code", "specialty",
-            "schedule", "members", "is_evaluated", "document",
+            "schedule", "members", "is_evaluated", "attachments",
         ]
 
     def get_schedule(self, obj):
@@ -299,12 +299,20 @@ class TeacherJurySerializer(serializers.ModelSerializer):
         graded_pids = self.context.get("graded_pids", set())
         return obj.PID_id in graded_pids
 
-    def get_document(self, obj):
+    def get_attachments(self, obj):
         from projects.models import ProjectAttachment
-        att = ProjectAttachment.objects.filter(PID=obj.PID, is_final=True).first()
-        if att:
-            return {"filename": att.filename, "url": att.file.url if att.file else None}
-        return None
+        attachments = ProjectAttachment.objects.filter(PID=obj.PID)
+        return [
+            {
+                "id": a.id,
+                "filename": a.filename,
+                "attachment_type": a.attachment_type,
+                "is_final": a.is_final,
+                "url": a.file.url if a.file else None,
+                "uploaded_at": a.uploaded_at,
+            }
+            for a in attachments
+        ]
 
 
 class TeacherEvaluationSerializer(serializers.Serializer):
