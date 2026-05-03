@@ -212,7 +212,6 @@ class TeacherAssignTaskSerializer(serializers.Serializer):
     deadline = serializers.DateField(required=False)
     Deadline = serializers.DateField(required=False)
     State = serializers.CharField(required=False)
-    student_cid = serializers.IntegerField(required=False)
 
     def validate(self, data):
         # Normalize PascalCase → lowercase

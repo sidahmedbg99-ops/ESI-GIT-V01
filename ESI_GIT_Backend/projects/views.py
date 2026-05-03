@@ -44,7 +44,7 @@ def Students_without_group(request):
         return Response({"error": "Admin only"}, status=403)
 
     students = Student.objects.exclude(
-        CID__in=SProjects.objects.values_list("CID", flat=True)
+        CID__in=SProjects.objects.filter(PID__archived=False).values_list("CID", flat=True)
     )
 
     serializer = StudentWithoutGroupSerializer(students, many=True)
@@ -367,8 +367,12 @@ class AdminAssignStudentView(APIView):
         except Student.DoesNotExist:
             return Response({"error": "Student not found"}, status=404)
 
-        if SProjects.objects.filter(CID=student).exists():
-            return Response({"error": "Student is already in a group"}, status=400)
+        if SProjects.objects.filter(
+            CID=student,
+            PID__year=student.academic_year,
+            PID__archived=False,
+        ).exists():
+            return Response({"error": "Student is already in an active group this year"}, status=400)
 
         if SProjects.objects.filter(PID=project).count() >= 6:
             return Response({"error": "Group is full (max 6)"}, status=400)
@@ -421,13 +425,19 @@ class CreateProjectView(APIView):
         student = request.user
 
         # business rule: one project per student per year
-        already_in_project = SProjects.objects.filter(
-            CID=student, PID__year=student.academic_year
-        ).exists()
-
-        if already_in_project:
+        if SProjects.objects.filter(
+            CID=student, PID__year=student.academic_year, PID__archived=False
+        ).exists():
             return Response(
-                {"error": "You are already in a project this year."},
+                {"error": "You are already in an active project this year."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if SProjects.objects.filter(
+            CID=student, PID__year=student.academic_year, PID__archived=True
+        ).exists():
+            return Response(
+                {"error": "You already participated in a project during this academic year. Please contact the admin."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -485,22 +495,29 @@ class JoinProjectView(APIView):
                 {"error": "This project is archived"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        
-        # check student's level matches the project's level
+
+        # check student level matches project level
         if project.academic_level != student.level:
             return Response(
-                {"error": "You cannot join a project outside your current level"},
+                {"error": "You cannot join a project outside your current level."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # check student isn't already in a project this year
-        already_in_project = SProjects.objects.filter(
-            CID=student, PID__year=student.academic_year
-        ).exists()
-
-        if already_in_project:
+        # check student isn't already in an active project this year
+        if SProjects.objects.filter(
+            CID=student, PID__year=student.academic_year, PID__archived=False
+        ).exists():
             return Response(
-                {"error": "You are already in a project this year"},
+                {"error": "You are already in an active project this year."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # check if student already participated in a project this year (e.g. redid year)
+        if SProjects.objects.filter(
+            CID=student, PID__year=student.academic_year, PID__archived=True
+        ).exists():
+            return Response(
+                {"error": "You already participated in a project during this academic year. Please contact the admin."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -550,7 +567,7 @@ class MyProjectView(APIView):
         # find student's membership in a project this year
         try:
             membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
+                CID=student, PID__year=student.academic_year, PID__archived=False
             )
         except SProjects.DoesNotExist:
             return Response(
@@ -577,7 +594,7 @@ class LeaderActionsView(APIView):
         # check student is a leader
         try:
             membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
+                CID=student, PID__year=student.academic_year, PID__archived=False
             )
         except SProjects.DoesNotExist:
             return Response(
@@ -669,7 +686,7 @@ class LeaveProjectView(APIView):
 
         try:
             membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
+                CID=student, PID__year=student.academic_year, PID__archived=False
             )
         except SProjects.DoesNotExist:
             return Response(
@@ -686,10 +703,16 @@ class LeaveProjectView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+        project = membership.PID
         membership.delete()
+
+        # if no members remain, delete the project entirely
+        if not SProjects.objects.filter(PID=project).exists():
+            project.delete()
+
         return Response({"message": "You have left the project"})
 
-    # Leader can leave if he is alone , if he does the group is deleted
+    # Leader can leave if he is alone, if he does the group is deleted
 
 
 class SupervisorRequestView(APIView):
@@ -710,7 +733,7 @@ class SupervisorRequestView(APIView):
         # get student's current project
         try:
             membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
+                CID=student, PID__year=student.academic_year, PID__archived=False
             )
         except SProjects.DoesNotExist:
             return Response(
@@ -742,7 +765,7 @@ class SupervisorRequestView(APIView):
         # get student's current project
         try:
             membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
+                CID=student, PID__year=student.academic_year, PID__archived=False
             )
         except SProjects.DoesNotExist:
             return Response(

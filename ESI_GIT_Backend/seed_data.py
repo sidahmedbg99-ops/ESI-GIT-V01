@@ -8,7 +8,8 @@ Creates:
   - Departments & Specialties
   - 1 Admin
   - 3 Teachers
-  - 8 Students
+  - 10 Students across all 4 levels (2nd, 3rd, 4th, 5th year)
+    including 1 student who redid their year
 
 All passwords are auto-generated and printed at the end.
 """
@@ -52,9 +53,8 @@ created_staff = []
 
 def make_staff(email, first, last, is_admin=False):
     if Staff.objects.filter(email=email).exists():
-        s = Staff.objects.get(email=email)
         created_staff.append((f"{first} {last}", email, "Admin" if is_admin else "Teacher", "(already exists)"))
-        return s
+        return Staff.objects.get(email=email)
     plain = generate_password()
     s = Staff(
         email=email,
@@ -72,10 +72,10 @@ def make_staff(email, first, last, is_admin=False):
     created_staff.append((f"{first} {last}", email, "Admin" if is_admin else "Teacher", plain))
     return s
 
-make_staff("admin@esi.dz",     "Ali",    "Benali",  is_admin=True)
-make_staff("karim@esi.dz",     "Karim",  "Meziani")
-make_staff("sara@esi.dz",      "Sara",   "Hamidi")
-make_staff("youcef@esi.dz",    "Youcef", "Brahim")
+make_staff("admin@esi.dz",   "Ali",    "Benali",  is_admin=True)
+make_staff("karim@esi.dz",   "Karim",  "Meziani")
+make_staff("sara@esi.dz",    "Sara",   "Hamidi")
+make_staff("youcef@esi.dz",  "Youcef", "Brahim")
 
 print("✅ Staff created")
 
@@ -86,11 +86,10 @@ from users.models import Student
 
 created_students = []
 
-def make_student(cid, email, first, last, level=4, specialty="ISI", year="2024/2025"):
+def make_student(cid, email, first, last, level, specialty, year, note=""):
     if Student.objects.filter(CID=cid).exists():
-        s = Student.objects.get(CID=cid)
-        created_students.append((f"{first} {last}", email, specialty, "(already exists)"))
-        return s
+        created_students.append((f"{first} {last}", email, level, specialty or "-", year, "(already exists)"))
+        return Student.objects.get(CID=cid)
     plain = generate_password()
     s = Student(
         CID=cid,
@@ -106,17 +105,30 @@ def make_student(cid, email, first, last, level=4, specialty="ISI", year="2024/2
     )
     s.set_password(plain)
     s.save()
-    created_students.append((f"{first} {last}", email, specialty, plain))
+    created_students.append((f"{first} {last}", email, level, specialty or "-", year, plain + (f"  ← {note}" if note else "")))
     return s
 
-make_student(20010001, "amina@student.esi.dz",   "Amina",   "Khelil",  specialty="ISI")
-make_student(20010002, "riad@student.esi.dz",    "Riad",    "Touati",  specialty="ISI")
-make_student(20010003, "lina@student.esi.dz",    "Lina",    "Ait",     specialty="ISI")
-make_student(20010004, "omar@student.esi.dz",    "Omar",    "Ferhat",  specialty="ISI")
-make_student(20010005, "nadia@student.esi.dz",   "Nadia",   "Bensalem",specialty="SIW")
-make_student(20010006, "mehdi@student.esi.dz",   "Mehdi",   "Rahmani", specialty="SIW")
-make_student(20010007, "yasmine@student.esi.dz", "Yasmine", "Meziane", specialty="IASD")
-make_student(20010008, "sami@student.esi.dz",    "Sami",    "Bouzid",  specialty="IASD")
+# 2nd year — no specialty, promo 2023/2024
+make_student(20230001, "farid@student.esi.dz",   "Farid",   "Amrani",   level=2, specialty=None, year="2023/2024")
+make_student(20230002, "hana@student.esi.dz",    "Hana",    "Boudiaf",  level=2, specialty=None, year="2023/2024")
+
+# 3rd year — no specialty, promo 2022/2023
+make_student(20220001, "tarek@student.esi.dz",   "Tarek",   "Morsli",   level=3, specialty=None, year="2022/2023")
+make_student(20220002, "rima@student.esi.dz",    "Rima",    "Saadi",    level=3, specialty=None, year="2022/2023")
+
+# 3rd year but redid — same promo as 3rd years but level 4
+# tests that they CANNOT join a 3rd year project despite sharing the promo
+make_student(20220003, "bilal@student.esi.dz",   "Bilal",   "Cherif",   level=4, specialty="ISI", year="2022/2023", note="redid year")
+
+# 4th year — specialty assigned, promo 2021/2022
+make_student(20210001, "amina@student.esi.dz",   "Amina",   "Khelil",   level=4, specialty="ISI",  year="2021/2022")
+make_student(20210002, "riad@student.esi.dz",    "Riad",    "Touati",   level=4, specialty="SIW",  year="2021/2022")
+make_student(20210003, "nadia@student.esi.dz",   "Nadia",   "Bensalem", level=4, specialty="IASD", year="2021/2022")
+
+# 5th year — specialty assigned, promo 2020/2021
+make_student(20200001, "omar@student.esi.dz",    "Omar",    "Ferhat",   level=5, specialty="ISI",  year="2020/2021")
+make_student(20200002, "yasmine@student.esi.dz", "Yasmine", "Meziane",  level=5, specialty="CYS",  year="2020/2021")
+make_student(20200003, "sami@student.esi.dz",    "Sami",    "Bouzid",   level=5, specialty="IASD", year="2020/2021")
 
 print("✅ Students created")
 
@@ -124,9 +136,9 @@ print("✅ Students created")
 # PRINT ALL CREDENTIALS
 # ──────────────────────────────────────────────────────────────
 print()
-print("=" * 65)
+print("=" * 75)
 print("  CREDENTIALS — save these, they won't be shown again")
-print("=" * 65)
+print("=" * 75)
 
 print()
 print("  STAFF")
@@ -137,12 +149,14 @@ for name, email, role, pwd in created_staff:
 
 print()
 print("  STUDENTS")
-print(f"  {'Name':<20} {'Email':<30} {'Specialty':<8} Password")
-print(f"  {'-'*20} {'-'*30} {'-'*8} {'-'*12}")
-for name, email, spec, pwd in created_students:
-    print(f"  {name:<20} {email:<30} {spec:<8} {pwd}")
+print(f"  {'Name':<20} {'Email':<30} {'Lvl':<5} {'Specialty':<8} {'Promo':<12} Password")
+print(f"  {'-'*20} {'-'*30} {'-'*5} {'-'*8} {'-'*12} {'-'*12}")
+for name, email, level, spec, year, pwd in created_students:
+    print(f"  {name:<20} {email:<30} {level:<5} {spec:<8} {year:<12} {pwd}")
 
 print()
-print("  NOTE: All users have is_first_login=True")
-print("        They will be asked to change their password on first login.")
-print("=" * 65)
+print("  NOTES:")
+print("  - All users have is_first_login=True (password change required on first login)")
+print("  - Bilal Cherif (20220003) is a level 4 student with promo 2022/2023 — redid year")
+print("  - 2nd/3rd year students have no specialty (null)")
+print("=" * 75)

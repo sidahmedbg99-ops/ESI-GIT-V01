@@ -589,16 +589,9 @@ class TeacherAssignTaskView(APIView):
     POST /api/teacher/groups/<pid>/tasks/
     body: {
         "title": "...", "description": "...", "type": "...",
-        "priority": 1|2|3, "deadline": "YYYY-MM-DD",
-        "student_cid": <optional — assign to a specific student>
+        "priority": 1|2|3, "deadline": "YYYY-MM-DD"
     }
-
-    Note: Task.created_by is a required Student FK on the model.
-    Since teachers cannot create tasks directly per the model constraint,
-    we create the task as if the group leader created it (on behalf of teacher).
-    If you want to support teacher-created tasks properly, add:
-        created_by_staff = ForeignKey(Staff, null=True, blank=True)
-    to the Task model.
+    Teacher creates a task for the group. Members decide among themselves who takes it.
     """
 
     permission_classes = [IsStaff]
@@ -606,7 +599,6 @@ class TeacherAssignTaskView(APIView):
     def post(self, request, pid):
         teacher = get_teacher(request)
 
-        # verify teacher supervises this group
         try:
             project = Projects.objects.get(PID=pid, TID=teacher, archived=False)
         except Projects.DoesNotExist:
@@ -616,16 +608,6 @@ class TeacherAssignTaskView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         data = cast(Dict[str, Any], serializer.validated_data)
-
-        # find the group leader to set as created_by
-        try:
-            leader_membership = SProjects.objects.get(PID=project, is_leader=True)
-            leader = leader_membership.CID
-        except SProjects.DoesNotExist:
-            return Response(
-                {"error": "Group has no leader; cannot assign task"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         task = Task.objects.create(
             PID=project,
@@ -637,22 +619,18 @@ class TeacherAssignTaskView(APIView):
             created_by_supervisor=True,
         )
 
-        # optional: assign to a specific student
-        student_cid = data.get("student_cid")
-        if student_cid:
-            from users.models import Student
-
-            try:
-                student = Student.objects.get(CID=student_cid)
-                # verify student is in this project
-                SProjects.objects.get(CID=student, PID=project)
-                TaskAssignment.objects.create(task_id=task, CID=student)
-            except (Student.DoesNotExist, SProjects.DoesNotExist):
-                # task created, assignment skipped silently
-                pass
+        from notifications.utils import notify
+        members = SProjects.objects.filter(PID=project).select_related('CID')
+        for m in members:
+            notify(
+                recipient_type='student',
+                recipient_id=m.CID.CID,
+                title='New task created',
+                message=f'Your supervisor created a new task "{task.title}" that needs to be assigned.',
+            )
 
         return Response(
-            {"message": "Task assigned successfully", "task_id": task.id},
+            {"message": "Task created successfully", "task_id": task.id},
             status=status.HTTP_201_CREATED,
         )
 
