@@ -89,41 +89,7 @@ def admin_group_details(request, pk):
     return Response(serializer.data)
 
 
-@api_view(["POST"])
-def assign_jury(request, pk):
-    if not IsAdmin().has_permission(request, None):
-        return Response({"error": "Admin only"}, status=403)
 
-    try:
-        project = Projects.objects.get(pk=pk)
-    except Projects.DoesNotExist:
-        return Response({"error": "Project not found"}, status=404)
-
-    data = cast(Dict[str, Any], request.data)
-
-    try:
-        teacher1 = Staff.objects.get(TID=data.get("teacher1_id"))
-        teacher2 = Staff.objects.get(TID=data.get("teacher2_id"))
-        teacher3 = Staff.objects.get(TID=data.get("teacher3_id"))
-    except Staff.DoesNotExist:
-        return Response({"error": "Teacher not found"}, status=404)
-
-    jury, created = ProjectJury.objects.update_or_create(
-        PID=project,
-        defaults={
-            "teacher1_id": teacher1,
-            "teacher2_id": teacher2,
-            "teacher3_id": teacher3,
-        },
-    )
-
-    return Response(
-        {
-            "message": "Jury assigned successfully",
-            "created": created,
-        },
-        status=status.HTTP_200_OK,
-    )
 
 
 @api_view(["GET"])
@@ -877,7 +843,8 @@ class AttachmentView(APIView):
 
     def get(self, request):
         try:
-            membership = SProjects.objects.get(CID=request.user)
+            membership = SProjects.objects.get(CID=request.user, PID__year=request.user.academic_year, PID__archived=False)
+
             attachments = ProjectAttachment.objects.filter(PID=membership.PID)
             data = [
                 {
@@ -899,7 +866,8 @@ class AttachmentView(APIView):
 
     def post(self, request):
         try:
-            membership = SProjects.objects.get(CID=request.user)
+            membership = SProjects.objects.get(CID=request.user, PID__year=request.user.academic_year, PID__archived=False)
+
         except SProjects.DoesNotExist:
             return Response({"error": "You are not in a project"}, status=404)
 

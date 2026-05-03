@@ -9,37 +9,46 @@ from projects.models import SProjects
 
 
 @api_view(["POST"])
-def assign_jury(request):
-    # Admin assigns which teachers form the jury for a project
+def assign_jury(request, pk):
     if not IsAdmin().has_permission(request, None):
         return Response({"error": "Admin only"}, status=403)
 
-    serializer = ProjectJurySerializer(data=request.data)
-    if serializer.is_valid():
-        jury = serializer.save()
+    try:
+        from projects.models import Projects
+        project = Projects.objects.get(pk=pk)
+    except Projects.DoesNotExist:
+        return Response({"error": "Project not found"}, status=404)
 
-        # notify all three jury members (staff)
+    serializer = ProjectJurySerializer(data={**request.data, "PID": pk})
+    if serializer.is_valid():
+        jury, created = ProjectJury.objects.update_or_create(
+            PID=project,
+            defaults={
+                "teacher1_id": serializer.validated_data["teacher1_id"],
+                "teacher2_id": serializer.validated_data["teacher2_id"],
+                "teacher3_id": serializer.validated_data["teacher3_id"],
+            },
+        )
+
         for teacher in [jury.teacher1_id, jury.teacher2_id, jury.teacher3_id]:
             notify(
                 recipient_type="staff",
                 recipient_id=teacher.TID,
                 title="Jury assignment",
-                message=f'You have been assigned as a jury member for the project "{jury.PID.name}".',
+                message=f'You have been assigned as a jury member for the project "{project.name}".',
             )
 
-        # notify project members (students)
-        members = SProjects.objects.filter(PID=jury.PID).select_related("CID")
+        members = SProjects.objects.filter(PID=project).select_related("CID")
         for m in members:
             notify(
                 recipient_type="student",
                 recipient_id=m.CID.CID,
                 title="Jury assigned",
-                message=f'A jury has been assigned to your project "{jury.PID.name}".',
+                message=f'A jury has been assigned to your project "{project.name}".',
             )
 
-        return Response({"message": "Jury assigned successfully"}, status=201)
+        return Response({"message": "Jury assigned successfully", "created": created}, status=201)
     return Response(serializer.errors, status=400)
-
 
 @api_view(["GET"])
 def list_juries(request):

@@ -27,9 +27,7 @@ class TaskListCreateView(APIView):
         student = request.user
 
         try:
-            membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
-            )
+            membership = SProjects.objects.get(CID=student, PID__year=student.academic_year, PID__archived=False)
         except SProjects.DoesNotExist:
             return Response(
                 {"error": "You are not in any project this year"},
@@ -44,9 +42,7 @@ class TaskListCreateView(APIView):
 
         # any member of the project can create tasks (business rule)
         try:
-            membership = SProjects.objects.get(
-                CID=student, PID__year=student.academic_year
-            )
+            membership = SProjects.objects.get(CID=student, PID__year=student.academic_year, PID__archived=False)
         except SProjects.DoesNotExist:
             return Response(
                 {"error": "You are not in any project this year"},

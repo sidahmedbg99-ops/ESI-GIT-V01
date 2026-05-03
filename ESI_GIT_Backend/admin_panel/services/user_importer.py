@@ -15,7 +15,7 @@ Both functions:
 
 Expected CSV/XLSX columns
 --------------------------
-Students : CID, email, first_name, last_name, specialty, academic_year
+Students : CID, email, first_name, last_name, specialty, academic_year, level
 Staff    : email, first_name, last_name, is_admin, is_teacher
 """
 
@@ -53,6 +53,7 @@ def import_Student_from_file(file) -> tuple:
             "last_name":     row.get("last_name"),
             "specialty":     row.get("specialty"),
             "academic_year": row.get("academic_year"),
+            "level":         row.get("level"),
         }
 
         serializer = CreateStudentSerializer(data=data)
