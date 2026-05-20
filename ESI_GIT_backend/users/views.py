@@ -8,6 +8,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 
 from .models import Student, Staff
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 def get_tokens(user, role):
@@ -46,7 +51,13 @@ class LoginView(APIView):
 
         if user.is_blocked:
             return Response(
-                {"error": "Your account has been blocked. Contact admin."},
+                {"error": "Votre compte a été bloqué par l'administration. Veuillez les contacter."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not user.is_active:
+            return Response(
+                {"error": "Votre compte n'est pas encore activé. Veuillez contacter l'administration."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -61,6 +72,11 @@ class LoginView(APIView):
                         "email": user.email,
                         "first_name": user.first_name,
                         "last_name": user.last_name,
+                        "full_name": f"{user.first_name} {user.last_name}",
+                        "academic_year": user.academic_year,
+                        "level": user.level,
+                        "specialty": user.specialty,
+                        "department": user.department,
                     },
                     **tokens,
                 }
@@ -77,8 +93,11 @@ class LoginView(APIView):
                         "email": user.email,
                         "first_name": user.first_name,
                         "last_name": user.last_name,
+                        "full_name": f"{user.first_name} {user.last_name}",
                         "is_admin": user.is_admin,
                         "is_teacher": user.is_teacher,
+                        "department": user.department,
+                        "specialty": user.specialty,
                     },
                     **tokens,
                 }
@@ -138,7 +157,12 @@ class MeView(APIView):
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
+                    "full_name": f"{user.first_name} {user.last_name}",
                     "is_first_login": user.is_first_login,
+                    "academic_year": user.academic_year,
+                    "level": user.level,
+                    "specialty": user.specialty,
+                    "department": user.department,
                 }
             )
 
@@ -150,9 +174,12 @@ class MeView(APIView):
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
+                    "full_name": f"{user.first_name} {user.last_name}",
                     "is_admin": user.is_admin,
                     "is_teacher": user.is_teacher,
                     "is_first_login": user.is_first_login,
+                    "department": user.department,
+                    "specialty": user.specialty,
                 }
             )
 
@@ -167,7 +194,7 @@ class TeacherListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        teachers = Staff.objects.filter(is_teacher=True, is_active=True)
+        teachers = Staff.objects.filter(is_teacher=True, is_active=True, is_first_login=False)
         data = [
             {
                 "TID": t.TID,
@@ -184,3 +211,72 @@ class TeacherListView(APIView):
             for t in teachers
         ]
         return Response(data)
+
+
+class ForgotPasswordView(APIView):
+    """
+    POST /api/users/forgot-password/
+    { "email": "..." }
+    """
+
+    def post(self, request):
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required"}, status=400)
+
+        # Try to find user in both models
+        user = Student.objects.filter(email=email).first()
+        if not user:
+            user = Staff.objects.filter(email=email).first()
+
+        if not user:
+            # We return 200 for security reasons (don't reveal if email exists)
+            return Response({"message": "If an account exists with this email, a reset link has been sent."})
+
+        # Generate token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
+
+        subject = "ESI-GIT Password Reset"
+        message = f"Hello,\n\nYou requested a password reset. Click the link below to set a new password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email."
+        
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+        except Exception as e:
+            print("Failed to send reset email:", e)
+            return Response({"error": "Failed to send email"}, status=500)
+
+        return Response({"message": "If an account exists with this email, a reset link has been sent."})
+
+
+class ResetPasswordConfirmView(APIView):
+    """
+    POST /api/users/reset-password/
+    { "uid": "...", "token": "...", "new_password": "..." }
+    """
+
+    def post(self, request):
+        uidb64 = request.data.get("uid")
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+
+        if not all([uidb64, token, new_password]):
+            return Response({"error": "All fields are required"}, status=400)
+
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = Student.objects.filter(pk=uid).first()
+            if not user:
+                user = Staff.objects.filter(pk=uid).first()
+
+            if user and default_token_generator.check_token(user, token):
+                user.set_password(new_password)
+                user.is_first_login = False
+                user.save()
+                return Response({"message": "Password has been reset successfully"})
+            else:
+                return Response({"error": "Invalid or expired token"}, status=400)
+        except Exception as e:
+            return Response({"error": "Invalid request"}, status=400)

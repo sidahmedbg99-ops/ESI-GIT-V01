@@ -18,7 +18,7 @@ export default function Profil() {
       <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '20px' }}>
         {/* Avatar card */}
         <Card style={{ textAlign: 'center', alignSelf: 'start' }}>
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '10px' }}>
             <div style={{ width: 88, height: 88, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--primary-light))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', fontWeight: 700, color: '#fff', margin: '0 auto 14px', boxShadow: '0 6px 20px rgba(79,70,229,0.28)' }}>
               {(user?.name || user?.email || '?').charAt(0).toUpperCase()}
             </div>
@@ -26,18 +26,6 @@ export default function Profil() {
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'capitalize', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
               <IoRibbonOutline size={13}/>{user?.role}
             </p>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[
-              { label: t('Promotion'), value: user?.promo || '2024', color: 'var(--primary)', icon: <IoCalendarOutline size={13}/> },
-              { label: t('Year'),      value: user?.year || 'L3', color: 'var(--accent)', icon: <IoSchoolOutline size={13}/> },
-              { label: t('Specialty'), value: user?.specialite || 'ISI', color: '#F59E0B', icon: <IoSchoolOutline size={13}/> },
-            ].map((s, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderRadius: '8px', background: 'var(--bg)' }}>
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>{s.icon}{s.label}</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: s.color }}>{s.value}</span>
-              </div>
-            ))}
           </div>
         </Card>
 
@@ -47,11 +35,12 @@ export default function Profil() {
             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px' }}>{t('PersonalInfo')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                { label: t('FullName'), value: user?.name || '—', icon: <IoPersonOutline size={16}/> },
-                { label: t('Email'), value: user?.email || '—', icon: <IoMailOutline size={16}/> },
-                { label: t('Year'),      value: user?.year || 'L3', icon: <IoSchoolOutline size={16}/> },
-                { label: t('Specialty'), value: user?.specialite || 'ISI', icon: <IoSchoolOutline size={16}/> },
-                { label: t('Promotion'), value: user?.promo || '2024', icon: <IoCalendarOutline size={16}/> },
+                { label: t('FullName'), value: user?.full_name || user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '—', icon: <IoPersonOutline size={16}/> },
+                { label: t('Email'),   value: user?.email || '—', icon: <IoMailOutline size={16}/> },
+                { label: t('Year'),    value: (['L1', 'L2', 'L3', 'M1', 'M2'][Number(user?.level) - 1]) || (user?.level ? `Niveau ${user.level}` : '—'), icon: <IoSchoolOutline size={16}/> },
+                { label: t('Specialty'), value: user?.specialty || '—', icon: <IoSchoolOutline size={16}/> },
+                { label: 'Département', value: user?.department || '—', icon: <IoSchoolOutline size={16}/> },
+                { label: t('Promotion'), value: user?.academic_year || '—', icon: <IoCalendarOutline size={16}/> },
               ].map((field, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
                   <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>{field.icon}</div>

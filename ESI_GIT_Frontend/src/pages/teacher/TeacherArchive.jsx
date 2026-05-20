@@ -3,7 +3,7 @@ import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Input from '../../components/ui/Input';
-import { IoSearchOutline, IoStarOutline } from 'react-icons/io5';
+import { IoSearchOutline, IoStarOutline, IoPeopleOutline, IoGitBranchOutline, IoArchiveOutline, IoFunnelOutline } from 'react-icons/io5';
 import { archiveApi } from '../../api/archive';
 import { useApi } from '../../hooks/useApi';
 import { useLanguage } from '../../context/LanguageContext';
@@ -36,8 +36,8 @@ export default function TeacherArchive() {
     return !search || p.name?.toLowerCase().includes(q) || p.group?.toLowerCase().includes(q) || p.encadreur?.toLowerCase().includes(q);
   });
 
-  const avgGrade = allProjects.length ? (allProjects.reduce((a, p) => a + (p.grade || 0), 0) / allProjects.length).toFixed(1) : 0;
-  const mentions = allProjects.filter(p => p.status === 'mention').length;
+  const avgGrade = allProjects.length ? (allProjects.reduce((a, p) => a + Number(p.grades?.final_grade ?? p.grade ?? 0), 0) / allProjects.length).toFixed(1) : 0;
+  const mentions = allProjects.filter(p => Number(p.grades?.final_grade ?? p.grade ?? 0) >= 12).length;
 
   return (
     <DashboardLayout>
@@ -72,7 +72,7 @@ export default function TeacherArchive() {
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>{t('FilterBy')}</span>
               {FILTER_CATEGORIES.map(cat => (
                 <button key={cat.key} onClick={() => { setFilterCat(filterCat === cat.key ? null : cat.key); setFilterValue('all'); }}
-                  style={{ padding: '7px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: filterCat === cat.key ? 'var(--primary)' : 'var(--bg)', color: filterCat === cat.key ? '#fff' : 'var(--text-secondary)', border: filterCat === cat.key ? 'none' : '1px solid var(--border)' }}>
+                   style={{ padding: '7px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: filterCat === cat.key ? 'var(--primary)' : 'var(--bg)', color: filterCat === cat.key ? '#fff' : 'var(--text-secondary)', border: filterCat === cat.key ? 'none' : '1px solid var(--border)' }}>
                   {cat.label}
                 </button>
               ))}
@@ -101,27 +101,44 @@ export default function TeacherArchive() {
               <Card key={p._id} hover style={{ padding: '22px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', gap: '10px' }}>
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{p.group} · {p.year} · {p.specialite}</p>
+                    <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{p.group} · {p.year} · {p.specialite || p.specialty}</p>
                     <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{p.name}</h3>
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
                       <IoStarOutline size={13} style={{ color: '#F59E0B' }}/>
-                      <span style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B' }}>{p.grade}/20</span>
+                      <span style={{ fontSize: '18px', fontWeight: 800, color: '#F59E0B' }}>
+                        {Number(p.grades?.final_grade ?? p.grade ?? 0).toFixed(1)}/20
+                      </span>
                     </div>
-                    <Badge variant={p.status === 'mention' ? 'success' : 'info'}>{p.status === 'mention' ? `🏅 ${t('Mentions').slice(0,-1)}` : `✓ ${t('Validated')}`}</Badge>
+                    {Number(p.grades?.final_grade ?? p.grade ?? 0) >= 12 ? (
+                      <Badge variant="success">🏅 {Number(p.grades?.final_grade ?? p.grade ?? 0) >= 16 ? 'Très Bien' : Number(p.grades?.final_grade ?? p.grade ?? 0) >= 14 ? 'Bien' : 'Assez Bien'}</Badge>
+                    ) : (
+                      <Badge variant="info">✓ {t('Validated')}</Badge>
+                    )}
                   </div>
                 </div>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '12px' }}>{p.description}</p>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
                   {(p.tech||[]).map((tValue, i) => <span key={i} style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: (TECH_COLORS[tValue]||'#6B7280')+'18', color: TECH_COLORS[tValue]||'#6B7280', fontWeight: 600 }}>{tValue}</span>)}
                 </div>
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{(p.members||[]).join(', ')}</p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{t('Supervisor')} : {p.encadreur}</p>
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <IoPeopleOutline size={13}/>{(p.members || []).join(', ')}
+                  </div>
+                  <a href={p.repo ? (p.repo.startsWith('http') ? p.repo : `https://${p.repo}`) : '#'} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontFamily: 'monospace' }}>
+                    <IoGitBranchOutline size={13}/>{p.repo ? p.repo.split('/').slice(-1)[0] : 'No Repo'}
+                  </a>
                 </div>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>{t('Supervisor')} : {p.encadreur || '—'}</p>
               </Card>
             ))}
+            {filtered.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+                <IoArchiveOutline size={40} style={{ marginBottom: '12px', opacity: 0.3 }}/>
+                <p>{t('NoGroups')}</p>
+              </div>
+            )}
           </div>
         </>
       )}

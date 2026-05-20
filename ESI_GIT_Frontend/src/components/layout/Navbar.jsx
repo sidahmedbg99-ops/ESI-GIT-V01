@@ -84,6 +84,18 @@ export default function Navbar() {
     }
   };
 
+  const markAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.is_read && !n.IsRead);
+    if (unread.length === 0) return;
+
+    try {
+      await Promise.all(unread.map(n => client.patch(ENDPOINTS.notifications.markRead(n.id || n.NID))));
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true, IsRead: true })));
+    } catch (err) {
+      console.error('Failed to mark as read', err);
+    }
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
@@ -107,7 +119,8 @@ export default function Navbar() {
   };
 
   return (
-    <nav style={{
+    <>
+      <nav style={{
       position: 'fixed',
       top: '20px',
       left: '50%',
@@ -258,7 +271,11 @@ export default function Navbar() {
           {user?.role !== 'admin' && (
             <div style={{ position: 'relative' }}>
               <button
-                onClick={() => setShowNotifs(!showNotifs)}
+                onClick={() => {
+                  const newState = !showNotifs;
+                  setShowNotifs(newState);
+                  if (newState) markAllAsRead();
+                }}
                 style={{
                   width: '40px',
                   height: '40px',
@@ -395,7 +412,7 @@ export default function Navbar() {
           color: var(--primary);
           display: flex;
           align-items: center;
-          justifyContent: center;
+          justify-content: center;
           cursor: pointer;
           z-index: 999;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -415,6 +432,8 @@ export default function Navbar() {
         }
       `}</style>
 
+      </nav>
+
       {/* Back to Top Button */}
       <button
         className={`scroll-top-btn ${showScrollBtn ? 'visible' : ''}`}
@@ -423,6 +442,6 @@ export default function Navbar() {
       >
         <IoArrowUpOutline size={22} />
       </button>
-    </nav>
+    </>
   );
 }

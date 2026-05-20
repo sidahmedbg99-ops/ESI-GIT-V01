@@ -16,16 +16,17 @@ Both functions:
 Expected CSV/XLSX columns
 --------------------------
 Students : CID, email, first_name, last_name, specialty, academic_year
-Staff    : email, first_name, last_name, is_admin, is_teacher
+Staff    : TID, email, first_name, last_name, is_admin, is_teacher
 """
 
 from admin_panel.serializers import CreateStudentSerializer, CreateStaffSerializer
 from admin_panel.services.email_service import send_account_email
+from users.models import Student, Staff
 
 
 def import_Student_from_file(file) -> tuple:
     """
-    Bulk-create students from an uploaded CSV or XLSX file.
+    Bulk-create or update students from an uploaded CSV or XLSX file.
 
     Returns:
         Tuple[int, list, list]: (count, errors, imported_list)
@@ -48,27 +49,55 @@ def import_Student_from_file(file) -> tuple:
             "academic_year": row.get("academic_year"),
         }
 
-        serializer = CreateStudentSerializer(data=data)
+        cid = data.get("CID")
+        email = data.get("email")
 
-        if serializer.is_valid():
-            student, password = serializer.save()
-            send_account_email(student.email, password, "student")
-            created += 1
-            imported_list.append({
-                "email": student.email,
-                "password": password,
-                "name": f"{student.first_name} {student.last_name}",
-                "role": "student"
-            })
+        student = None
+        if cid:
+            try:
+                student = Student.objects.filter(CID=cid).first()
+            except Exception:
+                pass
+        if not student and email:
+            try:
+                student = Student.objects.filter(email=str(email).lower()).first()
+            except Exception:
+                pass
+
+        if student:
+            serializer = CreateStudentSerializer(student, data=data, partial=True)
+            if serializer.is_valid():
+                student = serializer.save()
+                created += 1
+                imported_list.append({
+                    "email": student.email,
+                    "password": "(updated)",
+                    "name": f"{student.first_name} {student.last_name}",
+                    "role": "student"
+                })
+            else:
+                errors.append({"row": data, "errors": serializer.errors})
         else:
-            errors.append({"row": data, "errors": serializer.errors})
+            serializer = CreateStudentSerializer(data=data)
+            if serializer.is_valid():
+                student, password = serializer.save()
+                send_account_email(student.email, password, "student")
+                created += 1
+                imported_list.append({
+                    "email": student.email,
+                    "password": password,
+                    "name": f"{student.first_name} {student.last_name}",
+                    "role": "student"
+                })
+            else:
+                errors.append({"row": data, "errors": serializer.errors})
 
     return created, errors, imported_list
 
 
 def import_staff_from_file(file) -> tuple:
     """
-    Bulk-create staff members from an uploaded CSV or XLSX file.
+    Bulk-create or update staff members from an uploaded CSV or XLSX file.
 
     Returns:
         Tuple[int, list, list]: (count, errors, imported_list)
@@ -83,6 +112,7 @@ def import_staff_from_file(file) -> tuple:
 
     for _, row in df.iterrows():
         data = {
+            "TID":        row.get("TID"),
             "email":      row.get("email"),
             "first_name": row.get("first_name"),
             "last_name":  row.get("last_name"),
@@ -90,19 +120,47 @@ def import_staff_from_file(file) -> tuple:
             "is_teacher": row.get("is_teacher", True),
         }
 
-        serializer = CreateStaffSerializer(data=data)
+        tid = data.get("TID")
+        email = data.get("email")
 
-        if serializer.is_valid():
-            staff, password = serializer.save()
-            send_account_email(staff.email, password, "staff")
-            created += 1
-            imported_list.append({
-                "email": staff.email,
-                "password": password,
-                "name": f"{staff.first_name} {staff.last_name}",
-                "role": "admin" if staff.is_admin else "teacher"
-            })
+        staff = None
+        if tid:
+            try:
+                staff = Staff.objects.filter(TID=tid).first()
+            except Exception:
+                pass
+        if not staff and email:
+            try:
+                staff = Staff.objects.filter(email=str(email).lower()).first()
+            except Exception:
+                pass
+
+        if staff:
+            serializer = CreateStaffSerializer(staff, data=data, partial=True)
+            if serializer.is_valid():
+                staff = serializer.save()
+                created += 1
+                imported_list.append({
+                    "email": staff.email,
+                    "password": "(updated)",
+                    "name": f"{staff.first_name} {staff.last_name}",
+                    "role": "admin" if staff.is_admin else "teacher"
+                })
+            else:
+                errors.append({"row": data, "errors": serializer.errors})
         else:
-            errors.append({"row": data, "errors": serializer.errors})
+            serializer = CreateStaffSerializer(data=data)
+            if serializer.is_valid():
+                staff, password = serializer.save()
+                send_account_email(staff.email, password, "staff")
+                created += 1
+                imported_list.append({
+                    "email": staff.email,
+                    "password": password,
+                    "name": f"{staff.first_name} {staff.last_name}",
+                    "role": "admin" if staff.is_admin else "teacher"
+                })
+            else:
+                errors.append({"row": data, "errors": serializer.errors})
 
     return created, errors, imported_list

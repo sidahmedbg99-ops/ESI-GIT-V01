@@ -8,6 +8,10 @@ from projects.models import Projects
 class ProjectJury(models.Model):
 
     PID = models.OneToOneField(Projects, on_delete=models.CASCADE, primary_key=True)
+    # Supervisor is auto-added from the project's TID
+    supervisor_id = models.ForeignKey(
+        Staff, on_delete=models.SET_NULL, null=True, blank=True, related_name="jury_as_supervisor"
+    )
     teacher1_id = models.ForeignKey(
         Staff, on_delete=models.CASCADE, related_name="jury_as_president"
     )
@@ -47,9 +51,10 @@ class Schedule(models.Model):
 class Grades(models.Model):
 
     PID = models.OneToOneField(Projects, on_delete=models.CASCADE, primary_key=True)
-    grade1 = models.FloatField(null=True, blank=True)
-    grade2 = models.FloatField(null=True, blank=True)
-    grade3 = models.FloatField(null=True, blank=True)
+    grade1 = models.FloatField(null=True, blank=True)  # president
+    grade2 = models.FloatField(null=True, blank=True)  # examiner1
+    grade3 = models.FloatField(null=True, blank=True)  # examiner2
+    grade4 = models.FloatField(null=True, blank=True)  # supervisor
     final_grade = models.FloatField(null=True, blank=True)
     comments = models.TextField(blank=True)
 
@@ -64,24 +69,25 @@ class Grades(models.Model):
         """
         When jury submits grades:
         - Pull active formula
-        - Calculate final grade
+        - Calculate final grade using g1/g2/g3/g4 (supervisor grade)
         - Save result permanently
         """
 
         # 👇 Lazy import to avoid circular import
         from jury.services.grading_engine import calculate_final_grade
 
-        if (
+        grades_ready = (
             self.grade1 is not None
             and self.grade2 is not None
             and self.grade3 is not None
-        ):
+        )
+        if grades_ready:
             grades_dict = {
                 "g1": float(self.grade1),
                 "g2": float(self.grade2),
                 "g3": float(self.grade3),
+                "g4": float(self.grade4) if self.grade4 is not None else None,
             }
-
             final, formula = calculate_final_grade(grades_dict)
             self.final_grade = final
 

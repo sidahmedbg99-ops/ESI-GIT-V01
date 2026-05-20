@@ -14,12 +14,11 @@ export const groupApi = {
   // ── Admin: create a group directly (bypasses student flow) ────
   adminCreateGroup: async (groupData) => {
     // POST /api/projects/admin/projects/
-    // Backend expects: { name, invite_code, TID (int), student_ids: [int, ...] }
     const payload = {
-      name:        groupData.title || groupData.Name,
-      invite_code: groupData.groupCode,
-      teacher_id:  parseInt(groupData.teacherId || groupData.TID),
-      student_ids: (groupData.studentIds || []).map(id => parseInt(id)),
+      name:        groupData.name || groupData.title || groupData.Name,
+      teacher_id:  groupData.teacher_id,
+      student_ids: groupData.student_ids,
+      leader_id:   groupData.leader_id,
       type:        groupData.type || 'PFE',
       specialty:   groupData.specialty || 'Informatique',
       year:        groupData.year || new Date().getFullYear().toString(),
@@ -31,6 +30,7 @@ export const groupApi = {
 
   // ── Student side ───────────────────────────────────────────────
   getStudentGroup:  async ()          => { const { data } = await client.get(ENDPOINTS.groups.myProject);             return data; },
+  getPublicSettings: async ()          => { const { data } = await client.get(ENDPOINTS.groups.publicSettings);         return data; },
   
   createGroup:      async (groupData) => { 
     const { data: project } = await client.post(ENDPOINTS.groups.create, groupData);
@@ -41,8 +41,9 @@ export const groupApi = {
           teacher_id: groupData.teacherId, 
           message: groupData.requestMessage || '' 
         });
-      } catch (err) {
-        console.error("Failed to send supervisor request after group creation:", err);
+      } catch (e) {
+        console.error("Failed to send initial supervisor request:", e);
+        toast.error("Erreur lors de l'envoi de la demande à l'encadreur");
       }
     }
     return project; 
@@ -54,7 +55,7 @@ export const groupApi = {
   
   // Supervisor Requests (Student side)
   getSupervisorRequests: async ()      => { const { data } = await client.get(ENDPOINTS.groups.supervisorRequest);  return data; },
-  sendSupervisorRequest: async (TID, msg) => { const { data } = await client.post(ENDPOINTS.groups.supervisorRequest, { teacher_id: TID, message: msg }); return data; },
+  sendSupervisorRequest: async (TID, msg) => { const { data } = await client.post(ENDPOINTS.groups.supervisorRequest, { teacher_id: parseInt(TID), message: msg }); return data; },
 
   // Project Attachments
   uploadAttachment: async (formData) => { const { data } = await client.post('/projects/attachments/', formData, { headers: { 'Content-Type': 'multipart/form-data' } }); return data; },

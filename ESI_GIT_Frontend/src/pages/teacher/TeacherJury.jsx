@@ -6,10 +6,11 @@ import Modal from '../../components/ui/Modal';
 import { IoRibbonOutline } from 'react-icons/io5';
 import { useLanguage } from '../../context/LanguageContext';
 import { useTeacher } from '../../context/TeacherContext';
+import { getFileUrl } from '../../api/config';
 
 export default function TeacherJury() {
   const { t } = useLanguage();
-  const { evaluations, evaluationsLoading, gradeEvaluation } = useTeacher();
+  const { evaluations, evaluationsLoading, gradeEvaluation, platformSettings } = useTeacher();
   
   const stats = evaluations || { assignees: 0, a_evaluer: 0, evaluees: 0 };
   const defenses = evaluations?.defenses || [];
@@ -27,7 +28,11 @@ export default function TeacherJury() {
   const [is2CpiProject, setIs2CpiProject] = useState(false);
 
   const calculateFinalGrade = () => {
-    const formulaConfig = { presentationWeight: 0.2, documentWeight: 0.3, demoWeight: 0.5 };
+    const formulaConfig = { 
+      presentationWeight: (platformSettings?.presentation_weight || 20) / 100, 
+      documentWeight: (platformSettings?.document_weight || 30) / 100, 
+      demoWeight: (platformSettings?.demo_weight || 50) / 100 
+    };
     const p = parseFloat(evalMarks.presentation) || 0;
     const doc = parseFloat(evalMarks.document) || 0;
     const d = parseFloat(evalMarks.demo) || 0;
@@ -115,7 +120,7 @@ export default function TeacherJury() {
                   {(j.attachments || []).length > 0 && (
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
                       {j.attachments.map(att => (
-                        <a key={att.id} href={att.url} target="_blank" rel="noreferrer" 
+                        <a key={att.id} href={getFileUrl(att.url)} target="_blank" rel="noreferrer" 
                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, textDecoration: 'none' }}>
                           📎 {att.filename} {att.is_final ? '(Final)' : ''}
                         </a>
@@ -153,7 +158,7 @@ export default function TeacherJury() {
               <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Documents :</p>
                 {gradeModal.attachments.map(att => (
-                  <a key={att.id} href={att.url} target="_blank" rel="noreferrer" 
+                  <a key={att.id} href={getFileUrl(att.url)} target="_blank" rel="noreferrer" 
                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
                     📎 {att.filename} {att.is_final ? '(Final)' : ''}
                   </a>
@@ -171,17 +176,17 @@ export default function TeacherJury() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Présentation (20%)</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Présentation ({platformSettings?.presentation_weight || 20}%)</label>
               <input type="number" min="0" max="20" step="0.5" value={evalMarks.presentation} onChange={e => setEvalMarks({...evalMarks, presentation: e.target.value})} placeholder="/20"
                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none' }}/>
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Document (30%)</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Document ({platformSettings?.document_weight || 30}%)</label>
               <input type="number" min="0" max="20" step="0.5" value={evalMarks.document} onChange={e => setEvalMarks({...evalMarks, document: e.target.value})} placeholder="/20"
                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none' }}/>
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Démo (50%)</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Démo ({platformSettings?.demo_weight || 50}%)</label>
               <input type="number" min="0" max="20" step="0.5" value={evalMarks.demo} onChange={e => setEvalMarks({...evalMarks, demo: e.target.value})} placeholder="/20"
                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none' }}/>
             </div>

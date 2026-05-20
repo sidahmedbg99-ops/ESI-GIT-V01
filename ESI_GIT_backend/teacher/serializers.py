@@ -296,8 +296,23 @@ class TeacherJurySerializer(serializers.ModelSerializer):
         ]
 
     def get_is_evaluated(self, obj):
-        graded_pids = self.context.get("graded_pids", set())
-        return obj.PID_id in graded_pids
+        teacher = self.context.get("teacher")
+        if not teacher:
+            return False
+            
+        try:
+            grades = Grades.objects.get(PID=obj.PID)
+            if obj.teacher1_id == teacher:
+                return grades.grade1 is not None
+            elif obj.teacher2_id == teacher:
+                return grades.grade2 is not None
+            elif obj.teacher3_id == teacher:
+                return grades.grade3 is not None
+            elif obj.supervisor_id == teacher:
+                return grades.grade4 is not None
+        except Grades.DoesNotExist:
+            return False
+        return False
 
     def get_attachments(self, obj):
         from projects.models import ProjectAttachment

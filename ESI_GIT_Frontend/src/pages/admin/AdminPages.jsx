@@ -4,6 +4,7 @@ import {
   IoArrowBackOutline, IoSettingsOutline, IoSaveOutline,
   IoSchoolOutline, IoFolderOutline, IoPeopleOutline,
   IoMailOutline, IoCheckmarkOutline, IoDownloadOutline, IoTimeOutline,
+  IoCloudDownloadOutline, IoSearchOutline,
 } from 'react-icons/io5';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import DashboardLayout from '../../layouts/DashboardLayout';
@@ -60,45 +61,73 @@ export function AdminAnalytics() {
     { name: 'Inactifs', value: adv.student_stats?.inactive ?? 0 },
   ];
 
-  const exportToCSV = () => {
-    const headers = ["Catégorie", "Valeur"];
-    const rows = [
-      ["Étudiants Actifs", adv.student_stats?.active],
-      ["Étudiants Inactifs", adv.student_stats?.inactive],
-      ["Étudiants à Risque", adv.student_stats?.at_risk],
-      ["Taux de Réussite", `${adv.performance?.pass_rate}%`],
-      ["Taux d'Achèvement des Tâches", `${adv.operations?.task_completion_rate}%`],
-    ];
-    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
+  const [studentSearch, setStudentSearch] = useState('');
+
+  const exportToCSV = (type = 'summary') => {
+    let headers, rows, filename;
+    
+    if (type === 'summary') {
+      headers = ["Catégorie", "Valeur"];
+      rows = [
+        ["Étudiants Actifs", adv.student_stats?.active],
+        ["Étudiants Inactifs", adv.student_stats?.inactive],
+        ["Étudiants à Risque", adv.student_stats?.at_risk],
+        ["Taux de Réussite", `${adv.performance?.pass_rate}%`],
+        ["Taux d'Achèvement des Tâches", `${adv.operations?.task_completion_rate}%`],
+      ];
+      filename = `rapport_analytique_${new Date().toISOString().split('T')[0]}.csv`;
+    } else {
+      headers = ["Nom Étudiant", "Projet", "Encadreur", "Note"];
+      rows = (adv.student_list || []).map(s => [
+        s.student_name,
+        s.project_name,
+        s.supervisor,
+        s.grade
+      ]);
+      filename = `liste_etudiants_notes_${new Date().toISOString().split('T')[0]}.csv`;
+    }
+
+    let csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `rapport_analytique_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const filteredStudents = (adv.student_list || []).filter(s => 
+    s.student_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.project_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.supervisor?.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+
+
   return (
     <DashboardLayout>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>Analyses de la Plateforme</h1>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Données consolidées de l'année en cours</p>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>{t('PlatformAnalytics')}</h1>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('ConsolidatedData')}</p>
         </div>
-        <Button onClick={exportToCSV} icon={<IoDownloadOutline size={18}/>}>Exporter Rapport (CSV)</Button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Button variant="outline" onClick={() => exportToCSV('summary')} icon={<IoDownloadOutline size={18}/>}>{t('Summary')}</Button>
+          <Button onClick={() => exportToCSV('students')} icon={<IoCloudDownloadOutline size={18}/>}>{t('StudentList')}</Button>
+        </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'Projets actifs',          value: a.activeGroups || 0, icon: <IoBarChartOutline size={22}/>, color: 'var(--primary)' },
-          { label: 'Taux de réussite',        value: adv.performance?.pass_rate || 0, icon: <IoTrendingUpOutline size={22}/>, color: '#10B981', suffix: '%' },
-          { label: 'Complétion des tâches',    value: adv.operations?.task_completion_rate || 0,  icon: <IoGlobeOutline size={22}/>, color: '#F59E0B', suffix: '%' },
-          { label: 'Étudiants à risque',      value: adv.student_stats?.at_risk || 0, icon: <IoPeopleOutline size={22}/>, color: '#EF4444' },
+          { label: t('Active_Stat'),          value: a.activeGroups || 0, icon: <IoBarChartOutline size={22}/>, color: 'var(--primary)' },
+          { label: t('SuccessRate'),        value: adv.performance?.pass_rate || 0, icon: <IoTrendingUpOutline size={22}/>, color: '#10B981', suffix: '%' },
+          { label: t('OverallProgress'),    value: adv.operations?.task_completion_rate || 0,  icon: <IoGlobeOutline size={22}/>, color: '#F59E0B', suffix: '%' },
+          { label: t('StudentsAtRisk'),      value: adv.student_stats?.at_risk || 0, icon: <IoPeopleOutline size={22}/>, color: '#EF4444' },
         ].map((s, i) => <div key={i}><StatCard {...s} /></div>)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Tendances des Notes</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('GradeTrends')}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={gradeTrendsData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
@@ -111,7 +140,7 @@ export function AdminAnalytics() {
         </Card>
 
         <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Activité des Étudiants</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('StudentActivity')}</h3>
           <div style={{ display: 'flex', alignItems: 'center', height: '250px' }}>
             <PieChart width={200} height={200}>
               <Pie data={activeVsInactiveData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
@@ -136,7 +165,7 @@ export function AdminAnalytics() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Patterns de Notation (Enseignants)</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('NotationPatterns')}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={teacherPatternsData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)"/>
@@ -149,7 +178,7 @@ export function AdminAnalytics() {
         </Card>
 
         <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Tendances d'Utilisation du Système</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('UsageTrends')}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={usageTrendsData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
@@ -161,27 +190,80 @@ export function AdminAnalytics() {
           </ResponsiveContainer>
         </Card>
       </div>
+
+      <Card style={{ marginTop: '24px', padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t('StudentList')} & {t('Grades')}</h3>
+          <div style={{ width: '300px' }}>
+            <Input 
+              placeholder={t('Search') + "..."} 
+              value={studentSearch} 
+              onChange={e => setStudentSearch(e.target.value)}
+              icon={<IoSearchOutline size={18}/>}
+            />
+          </div>
+        </div>
+        
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Student')}</th>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Project')}</th>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Supervisor')}</th>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'right' }}>{t('Grade')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredStudents.length > 0 ? filteredStudents.map((s, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <td style={{ padding: '12px 8px', fontWeight: 600 }}>{s.student_name}</td>
+                  <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.project_name}</td>
+                  <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.supervisor}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 800, color: s.grade !== '—' ? 'var(--primary)' : 'var(--text-muted)' }}>
+                    {s.grade !== '—' ? (typeof s.grade === 'number' ? s.grade.toFixed(2) : s.grade) : '—'}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>{t('NoResults')}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </DashboardLayout>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────
 // Each setting panel rendered inline when a card is clicked
 // ─────────────────────────────────────────────────────────
 
 function PanelYears({ onBack }) {
+  const { t } = useLanguage();
   const { platformSettings, updatePlatformSettings } = useAdmin();
   const [year, setYear] = useState(platformSettings?.current_academic_year || '2024-2025');
-  const [promos, setPromos] = useState(['ISI', 'IASD', 'GL', 'SIQ']);
+  const [types, setTypes] = useState(platformSettings?.project_types ? platformSettings.project_types.split(',') : ['PFE', 'Stage', 'Projet']);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (platformSettings) {
+      setYear(platformSettings.current_academic_year);
+      setTypes(platformSettings.project_types ? platformSettings.project_types.split(',') : ['PFE', 'Stage', 'Projet']);
+    }
+  }, [platformSettings]);
 
   const save = async () => {
     if (year !== platformSettings?.current_academic_year) {
-      // Logic handled via modal in AdminSettings
+      // Logic handled via handleYearChange
+      handleYearChange();
       return;
     }
     setLoading(true);
-    await updatePlatformSettings({ current_academic_year: year });
+    await updatePlatformSettings({ current_academic_year: year, project_types: types.join(',') });
     setLoading(false);
   };
 
@@ -193,7 +275,7 @@ function PanelYears({ onBack }) {
       type: "warning",
       onConfirm: async () => {
         setLoading(true);
-        await updatePlatformSettings({ current_academic_year: year });
+        await updatePlatformSettings({ current_academic_year: year, project_types: types.join(',') });
         setLoading(false);
       }
     });
@@ -202,32 +284,34 @@ function PanelYears({ onBack }) {
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>🎓 Années académiques</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>🎓 {t('AcademicYears')} & Types</h2>
       </div>
       <div style={{ maxWidth: 420 }}>
-        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Année active</label>
+        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{t('ActiveYear')}</label>
         <Input value={year} onChange={e => setYear(e.target.value)} placeholder="ex: 2024-2025" style={{ marginBottom: '16px' }} />
-        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Promotions actives</label>
+        
+        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Types de Projet</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-          {promos.map(p => (
+          {types.map(p => (
             <div key={p} style={{ padding: '6px 14px', borderRadius: '20px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
               {p}
-              <button onClick={() => setPromos(pr => pr.filter(x => x !== p))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '16px', padding: 0, lineHeight: 1 }}>×</button>
+              <button onClick={() => setTypes(pr => pr.filter(x => x !== p))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '16px', padding: 0, lineHeight: 1 }}>×</button>
             </div>
           ))}
           <button onClick={() => { 
             window.showPrompt({
-              title: "Nouvelle promotion",
-              message: "Entrez le nom de la promotion (ex: IASD)",
-              onConfirm: (v) => { if (v) setPromos(p => [...p, v.trim()]); }
+              title: "Nouveau type",
+              message: "Entrez le nom du type (ex: Master)",
+              onConfirm: (v) => { if (v) setTypes(p => [...p, v.trim()]); }
             });
           }} style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px dashed var(--border)', background: 'none', fontSize: '13px', cursor: 'pointer', color: 'var(--text-muted)' }}>+ Ajouter</button>
         </div>
-        <Button onClick={year === platformSettings?.current_academic_year ? save : handleYearChange} loading={loading} icon={<IoSaveOutline size={16}/>}>
-          Sauvegarder
+        
+        <Button onClick={save} loading={loading} icon={<IoSaveOutline size={16}/>}>
+          {t('Save')}
         </Button>
         <div style={{ marginTop: '16px', padding: '12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', fontSize: '12px', color: '#92400E' }}>
-          ⚠️ Changer l'année active archivera automatiquement tous les projets en cours pour repartir sur une nouvelle année.
+          {t('ChangeYearWarning')}
         </div>
       </div>
     </Card>
@@ -235,6 +319,7 @@ function PanelYears({ onBack }) {
 }
 
 function PanelCategories() {
+  const { t } = useLanguage();
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(false);
   
@@ -266,7 +351,7 @@ function PanelCategories() {
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>📂 Spécialités académiques</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>📂 {t('SpecialtiesThemes')}</h2>
       </div>
       <div style={{ maxWidth: 420 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
@@ -278,8 +363,8 @@ function PanelCategories() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <Input id="catInput" placeholder="Nouvelle spécialité..." style={{ flex: 1 }} />
-          <Button variant="ghost" onClick={() => { const el = document.getElementById('catInput'); if (el?.value.trim()) { handleAdd(el.value.trim()); el.value = ''; } }}>Ajouter</Button>
+          <Input id="catInput" placeholder={`${t('NewTask').split(' ')[1]}...`} style={{ flex: 1 }} />
+          <Button variant="ghost" onClick={() => { const el = document.getElementById('catInput'); if (el?.value.trim()) { handleAdd(el.value.trim()); el.value = ''; } }}>{t('AddUser').split(' ')[0]}</Button>
         </div>
       </div>
     </Card>
@@ -328,12 +413,13 @@ function PanelVisibility() {
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>👁️ Visibilité & Accès</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>👁️ {t('VisibilityAccess')}</h2>
       </div>
       <div style={{ maxWidth: 500 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
           {[
-            { key: 'students_can_see_archived_projects', label: 'Afficher l\'archive aux étudiants', desc: 'Permet aux étudiants de consulter les anciens projets.' },
+            { key: 'students_can_see_archived_projects', label: t('ShowArchiveStudents'), desc: t('ShowArchiveStudents_Desc') },
+            { key: 'students_can_see_jury_column', label: 'Afficher la colonne jury pour les étudiants', desc: 'Permet aux étudiants de voir les notes détaillées de chaque juré' },
           ].map(s => (
             <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
               <div style={{ flex: 1, marginRight: '16px' }}>
@@ -346,6 +432,49 @@ function PanelVisibility() {
             </div>
           ))}
         </div>
+
+        {/* Email de contact pour mot de passe oublié */}
+        <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', marginTop: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '6px' }}>
+            E-mail de contact (Mot de passe oublié)
+          </label>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Cette adresse sera affichée dans la boîte de dialogue d'aide lorsque l'utilisateur clique sur "Mot de passe oublié".
+          </p>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="email"
+              value={local.contact_email || ''}
+              onChange={(e) => setLocal({ ...local, contact_email: e.target.value })}
+              placeholder="Ex: aced@esi.dz"
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid var(--border)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+            <button
+              onClick={() => updatePlatformSettings({ contact_email: local.contact_email })}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '10px',
+                background: 'var(--primary)',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+            >
+              {t('Save') || 'Enregistrer'}
+            </button>
+          </div>
+        </div>
       </div>
     </Card>
   );
@@ -353,13 +482,46 @@ function PanelVisibility() {
 
 function PanelGradingFormula() {
   const { t } = useLanguage();
+  const { platformSettings, updatePlatformSettings } = useAdmin();
   const [formulas, setFormulas] = useState([]);
   const [newFormula, setNewFormula] = useState({ name: '', expression: '', description: '' });
-  const [loading, setLoading] = useState(false);
-  const { request: loadFormulas } = useApi(async () => {
-     const { data } = await client.get(ENDPOINTS.admin.gradeFormula);
-     setFormulas(Array.isArray(data) ? data : []);
+  const [weights, setWeights] = useState({
+    presentation: platformSettings?.presentation_weight || 20,
+    document: platformSettings?.document_weight || 30,
+    demo: platformSettings?.demo_weight || 50
   });
+  const [roleWeights, setRoleWeights] = useState({
+    president: platformSettings?.president_weight || 40,
+    supervisor: platformSettings?.supervisor_weight || 40,
+    other: platformSettings?.other_weight || 20
+  });
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    if (platformSettings) {
+      setWeights({
+        presentation: platformSettings.presentation_weight,
+        document: platformSettings.document_weight,
+        demo: platformSettings.demo_weight
+      });
+      setRoleWeights({
+        president: platformSettings.president_weight || 0,
+        supervisor: platformSettings.supervisor_weight || 0,
+        other: platformSettings.other_weight || 0
+      });
+    }
+  }, [platformSettings]);
+
+  const loadFormulas = async () => {
+    try {
+      const { data } = await client.get(ENDPOINTS.admin.gradeFormula);
+      setFormulas(Array.isArray(data) ? data : []);
+      setLoadError('');
+    } catch (e) {
+      setLoadError('Impossible de charger les formules. Vérifiez la connexion au serveur.');
+    }
+  };
 
   useEffect(() => { loadFormulas(); }, []);
 
@@ -369,7 +531,7 @@ function PanelGradingFormula() {
     try {
       await client.post(ENDPOINTS.admin.gradeFormula, {
         name: newFormula.name,
-        formula_expression: newFormula.expression,
+        expression: newFormula.expression,
         description: newFormula.description
       });
       toast.success("Formule ajoutée");
@@ -392,52 +554,94 @@ function PanelGradingFormula() {
     }
   };
 
+  const saveWeights = async () => {
+    const total = parseInt(weights.presentation) + parseInt(weights.document) + parseInt(weights.demo);
+    if (total !== 100) return toast.error(`Le total doit être 100% (actuel: ${total}%)`);
+    
+    setLoading(true);
+    await updatePlatformSettings({
+      presentation_weight: parseInt(weights.presentation),
+      document_weight: parseInt(weights.document),
+      demo_weight: parseInt(weights.demo)
+    });
+    setLoading(false);
+  };
+
+  const saveRoleWeights = async () => {
+    const total = parseInt(roleWeights.president) + parseInt(roleWeights.supervisor) + parseInt(roleWeights.other);
+    if (total !== 100) return toast.error(`Le total doit être 100% (actuel: ${total}%)`);
+    
+    setLoading(true);
+    await updatePlatformSettings({
+      president_weight: parseInt(roleWeights.president),
+      supervisor_weight: parseInt(roleWeights.supervisor),
+      other_weight: parseInt(roleWeights.other)
+    });
+    setLoading(false);
+  };
+
   return (
     <Card>
       <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>📊 Formule de calcul des moyennes</h2>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Définissez comment la note finale est calculée à partir des notes du jury.</p>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>📊 {t('GradingFormula')}</h2>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('FeaturesSubtitle')}</p>
       </div>
 
-      {/* List of formulas */}
-      <div style={{ marginBottom: '32px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px' }}>Formules existantes</h4>
-        {formulas.length === 0 ? <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Aucune formule définie.</p> : (
-          <div style={{ display: 'grid', gap: '12px' }}>
-            {formulas.map(f => (
-              <div key={f.id} style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: f.is_active ? 'var(--primary-subtle)' : 'var(--bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '14px' }}>{f.name}</span>
-                    {f.is_active && <span style={{ background: 'var(--primary)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>ACTIVE</span>}
-                  </div>
-                  <code style={{ fontSize: '13px', color: 'var(--primary)', background: '#fff', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border)', marginTop: '4px', display: 'inline-block' }}>{f.formula_expression}</code>
-                </div>
-                {!f.is_active && (
-                  <Button size="sm" variant="outline" onClick={() => handleActivate(f.id)}>Activer</Button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Create new */}
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px' }}>Ajouter une nouvelle formule</h4>
-        <div style={{ display: 'grid', gap: '16px', maxWidth: '500px' }}>
+      {/* Component Weights */}
+      <div style={{ marginBottom: '32px', padding: '20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          ⚖️ Pondération des notes individuelles
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Nom</label>
-            <Input placeholder="ex: Moyenne simple" value={newFormula.name} onChange={e => setNewFormula({...newFormula, name: e.target.value})} />
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Présentation (%)</label>
+            <Input type="number" value={weights.presentation} onChange={e => setWeights({...weights, presentation: e.target.value})} />
           </div>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Expression Python</label>
-            <Input placeholder="ex: (g1 + g2 + g3) / 3" value={newFormula.expression} onChange={e => setNewFormula({...newFormula, expression: e.target.value})} />
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Utilisez <code>g1</code>, <code>g2</code>, <code>g3</code> pour les notes des 3 jurés.</p>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Document (%)</label>
+            <Input type="number" value={weights.document} onChange={e => setWeights({...weights, document: e.target.value})} />
           </div>
-          <Button onClick={handleCreate} loading={loading} icon={<IoCheckmarkOutline size={16}/>}>Créer la formule</Button>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Démo (%)</label>
+            <Input type="number" value={weights.demo} onChange={e => setWeights({...weights, demo: e.target.value})} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '12px', color: (parseInt(weights.presentation)+parseInt(weights.document)+parseInt(weights.demo)) === 100 ? 'var(--success)' : '#EF4444', fontWeight: 600 }}>
+            Total: {parseInt(weights.presentation || 0) + parseInt(weights.document || 0) + parseInt(weights.demo || 0)}%
+          </p>
+          <Button size="sm" onClick={saveWeights} loading={loading} icon={<IoSaveOutline size={14}/>}>Sauvegarder pondération</Button>
         </div>
       </div>
+
+      {/* Role Weights */}
+      <div style={{ marginBottom: '32px', padding: '20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          ⚖️ Pondération par rôle du jury
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Président (%)</label>
+            <Input type="number" value={roleWeights.president} onChange={e => setRoleWeights({...roleWeights, president: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Encadreur (%)</label>
+            <Input type="number" value={roleWeights.supervisor} onChange={e => setRoleWeights({...roleWeights, supervisor: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Autre membre (%)</label>
+            <Input type="number" value={roleWeights.other} onChange={e => setRoleWeights({...roleWeights, other: e.target.value})} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '12px', color: (parseInt(roleWeights.president)+parseInt(roleWeights.supervisor)+parseInt(roleWeights.other)) === 100 ? 'var(--success)' : '#EF4444', fontWeight: 600 }}>
+            Total: {parseInt(roleWeights.president || 0) + parseInt(roleWeights.supervisor || 0) + parseInt(roleWeights.other || 0)}%
+          </p>
+          <Button size="sm" onClick={saveRoleWeights} loading={loading} icon={<IoSaveOutline size={14}/>}>Sauvegarder pondération rôles</Button>
+        </div>
+      </div>
+
+
     </Card>
   );
 }

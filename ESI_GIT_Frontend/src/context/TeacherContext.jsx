@@ -28,6 +28,7 @@ export function TeacherProvider({ children }) {
   const [recentActivity, setRecentActivity] = useState([]);
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [supervisorRequests, setSupervisorRequests] = useState(null);
+  const [platformSettings, setPlatformSettings] = useState(null);
 
   const { request: loadGroups, loading: groupsLoading } = useApi(groupApi.getTeacherGroups);
   const { request: loadMeetings, loading: meetingsLoading } = useApi(meetingsApi.getTeacherMeetings);
@@ -70,6 +71,11 @@ export function TeacherProvider({ children }) {
     loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(() => setMeetings([]));
     loadEvaluations().then(e => setEvaluations(e)).catch(() => setEvaluations({ assignees: 0, defenses: [] }));
     loadArchive().then(a => setArchive(Array.isArray(a) ? a : [])).catch(() => setArchive([]));
+    
+    // Load platform settings for weights
+    client.get(ENDPOINTS.admin.platformSettings).then(res => {
+      setPlatformSettings(res.data);
+    }).catch(err => console.error('Teacher: platform settings load failed', err));
   }, [user, isTeacher]);
 
   const pushActivity = useCallback((entry) => {
@@ -256,7 +262,7 @@ export function TeacherProvider({ children }) {
   }, [user]);
 
   const stats = {
-    groupsActive: groups?.filter(g => g.status === 'active').length ?? null,
+    groupsActive: groups?.filter(g => g.status === 'active' || g.status === 'approved').length ?? null,
     groupsTotal: groups?.length ?? null,
     meetingsPending: meetings?.filter(m => m.status === 'pending').length ?? null,
     evalsPending: evaluations?.a_evaluer ?? 0,
@@ -265,7 +271,7 @@ export function TeacherProvider({ children }) {
 
   const value = {
     groups, meetings, evaluations, archive, messages, activeContact, recentActivity,
-    assignedTasks, stats, analytics: backendAnalytics, supervisorRequests,
+    assignedTasks, stats, analytics: backendAnalytics, supervisorRequests, platformSettings,
     groupsLoading, meetingsLoading, evaluationsLoading, archiveLoading,
     addGroup, updateGroup, archiveGroup, respondToSupervisorRequest,
     assignTask, scheduleMeeting,

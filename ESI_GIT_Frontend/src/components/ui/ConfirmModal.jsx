@@ -125,7 +125,8 @@ export default function ConfirmModal({
             variant={type === 'warning' ? 'danger' : 'primary'}
             onClick={handleConfirm}
             loading={loading}
-            style={{ flex: 1, borderRadius: '12px' }}
+            disabled={type === 'prompt' && !inputValue?.trim()}
+            style={{ flex: 1, borderRadius: '12px', opacity: (type === 'prompt' && !inputValue?.trim()) ? 0.6 : 1 }}
           >
             {confirmText}
           </Button>

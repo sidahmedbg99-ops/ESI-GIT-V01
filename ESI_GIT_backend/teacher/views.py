@@ -296,9 +296,14 @@ class TeacherGroupDetailView(APIView):
 
     def patch(self, request, pid):
         teacher = get_teacher(request)
-        project = self._get_group(teacher, pid)
+        # Admins can see all projects (including archived), teachers only their own active ones
+        if teacher.is_admin:
+            project = Projects.objects.filter(PID=pid).first()
+        else:
+            project = self._get_group(teacher, pid)
+            
         if not project:
-            return Response({"error": "Group not found"}, status=404)
+            return Response({"error": "Group not found or access denied"}, status=404)
 
         # --- Final Submission Approval ---
         if "final_submission_approved" in request.data:
@@ -312,20 +317,25 @@ class TeacherGroupDetailView(APIView):
                 project.supervisor_feedback = request.data.get("supervisor_feedback", "")
             
             project.save()
-            return Response({
-                "message": "Final submission status updated",
-                "final_submission_approved": project.final_submission_approved,
-                "submitted_to_supervisor": project.submitted_to_supervisor
-            })
 
-        # --- github url update ---
+        # --- Project Info Updates ---
+        name = request.data.get("name")
+        description = request.data.get("description")
+        tech_stack = request.data.get("tech_stack")
+        project_type = request.data.get("type")
         github_url = request.data.get("github_url")
-        if github_url is not None:
-            project.github_url = github_url
-            project.save()
-            return Response({"message": "Github URL updated", "github_url": project.github_url})
-
-        return Response({"error": "No valid action provided"}, status=status.HTTP_400_BAD_REQUEST)
+        is_public = request.data.get("is_public")
+        
+        if name: project.name = name
+        if description is not None: project.description = description
+        if tech_stack is not None: project.tech_stack = tech_stack
+        if project_type: project.type = project_type
+        if github_url is not None: project.github_url = github_url
+        if is_public is not None: project.is_public = is_public
+        
+        project.save()
+        
+        return Response(TeacherGroupDetailSerializer(project, context={"teacher": teacher}).data)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -624,9 +634,12 @@ class TeacherJuryListView(APIView):
     def get(self, request):
         teacher = get_teacher(request)
 
+        # Include cases where teacher is supervisor, president, or examiner
         juries = (
             (
-                ProjectJury.objects.filter(teacher1_id=teacher)
+                ProjectJury.objects.filter(supervisor_id=teacher)
+                | ProjectJury.objects.filter(PID__TID=teacher)
+                | ProjectJury.objects.filter(teacher1_id=teacher)
                 | ProjectJury.objects.filter(teacher2_id=teacher)
                 | ProjectJury.objects.filter(teacher3_id=teacher)
             )
@@ -634,20 +647,22 @@ class TeacherJuryListView(APIView):
             .select_related("PID")
         )
 
-        graded_pids = set(Grades.objects.values_list("PID_id", flat=True))
-
         assigned = juries.count()
-        evaluated = juries.filter(PID__in=graded_pids).count()
-        to_evaluate = assigned - evaluated
+        
+        # We need to check if THIS teacher has graded, not if the project has ANY grades
+        evaluations_data = TeacherJurySerializer(
+            juries, many=True, context={"request": request, "teacher": teacher}
+        ).data
+        
+        evaluated_count = sum(1 for d in evaluations_data if d.get("is_evaluated"))
+        to_evaluate = assigned - evaluated_count
 
         return Response(
             {
                 "assignees": assigned,
                 "a_evaluer": to_evaluate,
-                "evaluees": evaluated,
-                "defenses": TeacherJurySerializer(
-                    juries, many=True, context={"graded_pids": graded_pids}
-                ).data,
+                "evaluees": evaluated_count,
+                "defenses": evaluations_data,
             }
         )
 
@@ -707,8 +722,15 @@ class TeacherJuryEvaluateView(APIView):
             grades.grade1 = final
         elif jury.teacher2_id == teacher:
             grades.grade2 = final
-        else:
+        elif jury.teacher3_id == teacher:
             grades.grade3 = final
+        elif jury.supervisor_id == teacher:
+            grades.grade4 = final
+        else:
+            return Response(
+                {"error": "You are not a jury member for this project"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         grades.comments = d.get("comments", grades.comments or "")
         grades.save()  # Grades.save() recalculates final_grade automatically

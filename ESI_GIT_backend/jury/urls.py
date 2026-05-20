@@ -7,6 +7,7 @@ from .views import (
     create_grades,
     list_grades,
     update_grades,
+    TeacherSubmitGradeView,
 )
 
 urlpatterns = [
@@ -17,4 +18,6 @@ urlpatterns = [
     path("admin/grades/create/", create_grades),
     path("admin/grades/", list_grades),
     path("admin/grades/<int:pid>/", update_grades),
+    # Teacher submits their own grade for a project
+    path("teacher/grades/<int:pid>/", TeacherSubmitGradeView.as_view()),
 ]

@@ -193,7 +193,7 @@ def archived_projects(request):
     # Admin or Staff → always allowed
     if is_admin or is_staff:
         projects = Projects.objects.filter(archived=True).order_by("-creation_date")
-        serializer = AdminProjectSerializer(projects, many=True)
+        serializer = StudentProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
     # Student → check platform settings
@@ -365,6 +365,12 @@ class CreateProjectView(APIView):
 
         student = request.user
 
+        if not student.level:
+            return Response(
+                {"error": "Your profile is incomplete. Please ensure you have a level assigned before creating a project."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # business rule: one active project per student
         already_in_project = SProjects.objects.filter(
             CID=student, PID__archived=False
@@ -382,10 +388,12 @@ class CreateProjectView(APIView):
         project = Projects.objects.create(
             name=data["name"],
             type=data["type"],
-            specialty=student.specialty,
+            specialty=student.specialty or "",
             academic_level=student.level,
             invite_code=generate_invite_code(),
             year=student.academic_year,
+            description=data.get("description", ""),
+            tech_stack=data.get("tech_stack", ""),
         )
 
         # Do not assign supervisor directly here. 
@@ -431,6 +439,15 @@ class JoinProjectView(APIView):
             except Projects.DoesNotExist:
                 return Response(
                     {"error": "Invalid invite code"}, status=status.HTTP_404_NOT_FOUND
+                )
+
+            # --- ADDED: Level and Specialty matching ---
+            student_spec = student.specialty or ""
+            project_spec = project.specialty or ""
+            if student.level != project.academic_level or student_spec != project_spec:
+                return Response(
+                    {"error": f"You can only join projects from your own level ({project.academic_level}) and specialty ({project.specialty or 'CPI'})"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # can't join an archived project
@@ -583,23 +600,44 @@ class LeaderActionsView(APIView):
             # EDIT project info
             elif action == "edit":
                 name = request.data.get("name")
-                type = request.data.get("type")
+                project_type = request.data.get("type") # renamed to avoid shadow
                 github_url = request.data.get("github_url")
+                description = request.data.get("description")
+                tech_stack = request.data.get("tech_stack")
                 submitted = request.data.get("submitted_to_supervisor")
 
                 if name:
                     project.name = name
-                if type:
-                    project.type = type
+                if project_type:
+                    project.type = project_type
                 if github_url is not None:
                     project.github_url = github_url
+                if description is not None:
+                    project.description = description
+                if tech_stack is not None:
+                    project.tech_stack = tech_stack
                 if submitted is not None:
                     project.submitted_to_supervisor = submitted
 
                 project.save()
                 return Response(ProjectSerializer(project).data)
 
-            return Response({"error": "Invalid action. Use kick, promote, or edit"}, status=400)
+            # UPDATE member role
+            elif action == "update_role":
+                target_cid = request.data.get("target_cid")
+                new_role = request.data.get("role")
+                if not target_cid or not new_role:
+                    return Response({"error": "target_cid and role are required"}, status=400)
+
+                try:
+                    target = SProjects.objects.get(CID__CID=target_cid, PID=project)
+                    target.role = new_role
+                    target.save()
+                    return Response({"message": "Role updated successfully", "role": target.role})
+                except SProjects.DoesNotExist:
+                    return Response({"error": "Member not found"}, status=404)
+
+            return Response({"error": "Invalid action. Use kick, promote, edit, or update_role"}, status=400)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
 
@@ -748,6 +786,17 @@ class SupervisorRequestView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # check if there is any pending request for this project to any teacher
+        has_pending = SupervisorRequest.objects.filter(
+            project_id=project, status="pending"
+        ).exists()
+
+        if has_pending:
+            return Response(
+                {"error": "Vous avez déjà une demande en cours de traitement. Vous ne pouvez pas envoyer une autre demande tant que la précédente n'est pas acceptée ou refusée."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # create the request
         supervisor_request = SupervisorRequest.objects.create(
             project_id=project, teacher_id=teacher, message=message, status="pending"
@@ -878,5 +927,26 @@ class StudentGroupStatusView(APIView):
             })
             
         return Response(data)
+
+
+class PublicSettingsView(APIView):
+    """
+    GET /api/projects/public-settings/
+    Returns public platform configurations.
+    """
+    permission_classes = []
+
+    def get(self, request):
+        settings = PlatformSettings.objects.first()
+        if not settings:
+            settings = PlatformSettings.objects.create()
+        return Response({
+            "students_can_see_archived_projects": settings.students_can_see_archived_projects,
+            "students_can_see_jury_column": settings.students_can_see_jury_column,
+            "current_academic_year": settings.current_academic_year,
+            "project_types": settings.project_types,
+            "contact_email": settings.contact_email,
+        })
+
 
 

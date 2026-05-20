@@ -16,4 +16,4 @@ class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = ['CID', 'email', 'first_name', 'last_name',
-                  'is_first_login', 'academic_year', 'level', 'specialty']
+                  'is_first_login', 'academic_year', 'level', 'specialty', 'department']

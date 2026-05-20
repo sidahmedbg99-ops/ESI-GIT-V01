@@ -46,8 +46,9 @@ export default function TeacherMeetings() {
                       <Badge variant="success">{t('Approve') || 'Approuvée'}</Badge>
                       <button 
                         onClick={() => {
-                          const r = prompt("Motif de l'annulation :");
-                          if(r) cancelMeeting(m.id, r);
+                          if (window.confirm("Voulez-vous vraiment annuler cette réunion ?")) {
+                            cancelMeeting(m.id, "");
+                          }
                         }} 
                         style={{ padding: '6px 12px', borderRadius: '8px', background: 'none', border: '1px solid #DC2626', color: '#DC2626', fontSize: '12px', cursor: 'pointer' }}
                       >

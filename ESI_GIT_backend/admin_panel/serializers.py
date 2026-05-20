@@ -59,7 +59,7 @@ class CreateStudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = [
             "CID", "email", "first_name", "last_name",
-            "specialty", "academic_year", "level", "is_active", "password"
+            "specialty", "department", "academic_year", "level", "is_active", "is_blocked", "password"
         ]
         extra_kwargs = {
             "CID": {"read_only": False, "required": True},
@@ -117,7 +117,8 @@ class CreateStaffSerializer(serializers.ModelSerializer):
         model = Staff
         fields = [
             "TID", "email", "first_name", "last_name",
-            "is_admin", "is_teacher", "is_active", "password"
+            "is_admin", "is_teacher", "is_active", "is_blocked",
+            "available", "specialty", "department", "password"
         ]
         extra_kwargs = {
             "TID": {"read_only": False, "required": True},
@@ -171,9 +172,10 @@ def student_to_dict(student: Student) -> dict:
         "full_name": student.full_name,
         "first_name": student.first_name,
         "last_name": student.last_name,
-        "specialty": student.specialty,
         "academic_year": student.academic_year,
         "level": student.level,
+        "specialty": student.specialty,
+        "department": student.department,
         "is_active": student.is_active,
         "is_blocked": student.is_blocked,
         "is_first_login": student.is_first_login,
@@ -263,14 +265,22 @@ class DepartmentWithSpecialtiesSerializer(serializers.ModelSerializer):
 class PlatformSettingsSerializer(serializers.ModelSerializer):
     """
     Serializer for the singleton PlatformSettings model.
-
     Only admins can read or update these settings.
-    The ``updated_by`` field is set automatically by the view, not the client.
-
-    Note: ``students_can_see_archived_projects`` is the authoritative field
-    name on the model — it is exposed as-is.
     """
 
     class Meta:
         model = PlatformSettings
-        fields = ["students_can_see_archived_projects", "current_academic_year"]
+        fields = [
+            "students_can_see_archived_projects",
+            "students_can_see_jury_column",
+            "current_academic_year",
+            "project_types",
+            "presentation_weight",
+            "document_weight",
+            "demo_weight",
+            "president_weight",
+            "supervisor_weight",
+            "other_weight",
+            "contact_email",
+        ]
+

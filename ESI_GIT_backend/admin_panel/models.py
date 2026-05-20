@@ -36,7 +36,20 @@ class PlatformSettings(models.Model):
     """
 
     students_can_see_archived_projects = models.BooleanField(default=False)
+    students_can_see_jury_column = models.BooleanField(default=False)
     current_academic_year = models.CharField(max_length=20, default="2024-2025")
+    project_types = models.TextField(default="PFE,Stage,Projet")
+    contact_email = models.CharField(max_length=100, default="aced@esi.dz")
+
+    # Grading weights: individual component scores (must sum to 100)
+    presentation_weight = models.IntegerField(default=20)
+    document_weight = models.IntegerField(default=30)
+    demo_weight = models.IntegerField(default=50)
+
+    # Grading weights: by jury role (must sum to 100)
+    president_weight   = models.IntegerField(default=40)
+    supervisor_weight  = models.IntegerField(default=40)
+    other_weight       = models.IntegerField(default=20)
 
     updated_by = models.ForeignKey(
         Staff, on_delete=models.SET_NULL, null=True, blank=True

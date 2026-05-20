@@ -142,33 +142,31 @@ class TaskDetailView(APIView):
 
 class AssignTaskView(APIView):
     """
-    POST /api/tasks/<task_id>/assign/
-    { "target_cid": 1003 }
-    Leader assigns a task to a team member.
+    POST   /api/tasks/<task_id>/assign/  { "target_cid": 1003 }  – assign a member
+    DELETE /api/tasks/<task_id>/assign/  { "target_cid": 1003 }  – unassign a member
+    Leader only.
     """
 
     permission_classes = [IsStudent]
 
-    def post(self, request, task_id):
+    def _get_task_and_check_leader(self, request, task_id):
+        """Shared guard: returns (task, error_response). One of them will be None."""
         student = request.user
-
         try:
             task = Task.objects.get(id=task_id)
         except Task.DoesNotExist:
-            return Response(
-                {"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return None, Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # only leader can assign tasks
-        membership = SProjects.objects.filter(
-            CID=student, PID=task.PID, is_leader=True
-        ).first()
+        is_leader = SProjects.objects.filter(CID=student, PID=task.PID, is_leader=True).exists()
+        if not is_leader:
+            return None, Response({"error": "Only the leader can modify task assignments"}, status=status.HTTP_403_FORBIDDEN)
 
-        if not membership:
-            return Response(
-                {"error": "Only the leader can assign tasks"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        return task, None
+
+    def post(self, request, task_id):
+        task, err = self._get_task_and_check_leader(request, task_id)
+        if err:
+            return err
 
         serializer = AssignTaskSerializer(data=request.data)
         if not serializer.is_valid():
@@ -177,35 +175,40 @@ class AssignTaskView(APIView):
         data = cast(Dict[str, Any], serializer.validated_data)
         target_cid = data["target_cid"]
 
-        # check target student is in the project
         from users.models import Student
-
         try:
             target = Student.objects.get(CID=target_cid)
         except Student.DoesNotExist:
-            return Response(
-                {"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
         is_member = SProjects.objects.filter(CID=target, PID=task.PID).exists()
         if not is_member:
-            return Response(
-                {"error": "This student is not in your project"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "This student is not in your project"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # check not already assigned
-        already_assigned = TaskAssignment.objects.filter(
-            task_id=task, CID=target
-        ).exists()
-
+        already_assigned = TaskAssignment.objects.filter(task_id=task, CID=target).exists()
         if already_assigned:
-            return Response(
-                {"error": "This student is already assigned to this task"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "This student is already assigned to this task"}, status=status.HTTP_400_BAD_REQUEST)
 
         TaskAssignment.objects.create(task_id=task, CID=target)
-        return Response(
-            {"message": f"Task assigned to {target.full_name} successfully"}
-        )
+        return Response({"message": f"Task assigned to {target.full_name} successfully"})
+
+    def delete(self, request, task_id):
+        task, err = self._get_task_and_check_leader(request, task_id)
+        if err:
+            return err
+
+        target_cid = request.data.get("target_cid")
+        if not target_cid:
+            return Response({"error": "target_cid is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from users.models import Student
+        try:
+            target = Student.objects.get(CID=target_cid)
+        except Student.DoesNotExist:
+            return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        deleted, _ = TaskAssignment.objects.filter(task_id=task, CID=target).delete()
+        if not deleted:
+            return Response({"error": "This student was not assigned to this task"}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({"message": f"Assignment removed for {target.full_name}"})

@@ -59,6 +59,7 @@ class Student(AbstractBaseUser, PermissionsMixin):
     level = models.IntegerField(null=True, blank=True)
     # 2eme, 3eme, 4eme, or 5eme annee
     specialty = models.CharField(max_length=100, null=True, blank=True)
+    department = models.CharField(max_length=100, null=True, blank=True)
     is_first_login = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     is_blocked = models.BooleanField(default=False)

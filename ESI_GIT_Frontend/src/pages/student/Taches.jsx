@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IoAddOutline, IoTimeOutline, IoPersonOutline, IoCheckmarkOutline, IoPlayOutline } from 'react-icons/io5';
+import { IoAddOutline, IoTimeOutline, IoPersonOutline, IoCheckmarkOutline, IoAlertCircleOutline } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
@@ -13,8 +13,8 @@ import { PRIORITY_COLORS } from '../../constants';
 
 const EMPTY_FORM = { title: '', desc: '', priority: 'medium', deadline: '', tag: '', assignees: [] };
 
-/* ── Compact task card with per-member submit buttons ─────────── */
-function TaskCard({ task, colId, group, onMove, onDelete }) {
+/* ── Compact task card with per-member reassign ─────────────── */
+function TaskCard({ task, colId, group, onMove, onDelete, onReassign }) {
   const members = group?.members ?? [];
   const [showMembers, setShowMembers] = useState(false);
   const { user } = useAuth();
@@ -89,48 +89,27 @@ function TaskCard({ task, colId, group, onMove, onDelete }) {
         </div>
       </div>
 
-      {/* Per-member submit buttons */}
+      {/* Per-member panel: shows assigned person + reassign button */}
       {showMembers && task.assigneeIds?.length > 0 && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {task.assigneeIds.map(id => {
             const m = members.find(mb => mb._id === id || mb.name === id);
             const name = m?.name ?? id;
-            const isMe = String(user?._id || user?.id || user?.CID) === String(id);
             return (
               <div key={id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <IoPersonOutline size={13} style={{ color: 'var(--text-muted)' }} />
                   <span style={{ fontSize: '12px', fontWeight: 500 }}>{name}</span>
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {(colId !== 'todo' && (isMe || isChef)) && (
-                    <button
-                      onClick={() => onMove(task._id, colId, 'todo')}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: 'var(--radius-md)', border: 'none', background: 'rgba(107,114,128,0.12)', color: '#6B7280', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      ↺ {t('Todo')}
-                    </button>
-                  )}
-                  {(colId !== 'inprogress' && (isMe || isChef)) && (
-                    <button
-                      onClick={() => onMove(task._id, colId, 'inprogress')}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: 'var(--radius-md)', border: 'none', background: 'rgba(79,70,229,0.12)', color: 'var(--primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      {colId === 'done' ? '↺' : <IoPlayOutline size={11} />} {t('InProgress_Short')}
-                    </button>
-                  )}
-                  {(colId !== 'done' && (isMe || isChef)) && (
-                    <button
-                      onClick={() => onMove(task._id, colId, 'done')}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: 'var(--radius-md)', border: 'none', background: 'rgba(16,185,129,0.12)', color: '#10B981', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      <IoCheckmarkOutline size={11} /> {t('Confirm')}
-                    </button>
-                  )}
-                  {colId === 'done' && (
-                    <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 600 }}>✓ {t('Done')}</span>
-                  )}
-                </div>
+                {isChef && (
+                  <button
+                    onClick={() => onReassign && onReassign(task)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', borderRadius: 'var(--radius-md)', border: 'none', background: 'rgba(79,70,229,0.12)', color: 'var(--primary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                    title="Changer de responsable"
+                  >
+                    <IoPersonOutline size={11} /> Changer
+                  </button>
+                )}
               </div>
             );
           })}
@@ -177,6 +156,8 @@ export default function Taches() {
   const { t } = useLanguage();
   const [modalOpen, setModalOpen] = useState(false);
   const [newTask, setNewTask] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState('');
+  const [reassignTask, setReassignTask] = useState(null); // task being reassigned
   const members = group?.members ?? [];
 
   const totalTasks = Object.values(tasks).flat().length;
@@ -207,6 +188,12 @@ export default function Taches() {
 
   const handleCreate = (e) => {
     e.preventDefault();
+    setFormError('');
+
+    // Validate required fields
+    if (!newTask.title.trim()) { setFormError('Veuillez saisir un titre pour la tâche.'); return; }
+    if (!newTask.deadline)    { setFormError('Veuillez choisir une date limite.'); return; }
+
     const col = newTask.column ?? 'todo';
     const taskData = {
       title: newTask.title,
@@ -219,6 +206,7 @@ export default function Taches() {
     addTaskObject(taskData, col);
     setModalOpen(false);
     setNewTask(EMPTY_FORM);
+    setFormError('');
   };
 
   if (!group) {
@@ -286,6 +274,7 @@ export default function Taches() {
                 group={group}
                 onMove={moveTask}
                 onDelete={handleDelete}
+                onReassign={(t) => setReassignTask(t)}
               />
             ))}
 
@@ -299,9 +288,18 @@ export default function Taches() {
       </div>
 
       {/* Create modal */}
-      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setNewTask(EMPTY_FORM); }} title={t('CreateTask')} size="md">
+      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setNewTask(EMPTY_FORM); setFormError(''); }} title={t('CreateTask')} size="md">
         <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Input label={t('TaskTitle')} value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))} placeholder="..." required />
+
+          {/* Validation error banner */}
+          {formError && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: 'var(--radius-md)', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', fontSize: '13px' }}>
+              <IoAlertCircleOutline size={16} />
+              {formError}
+            </div>
+          )}
+
+          <Input label={`${t('TaskTitle')} *`} value={newTask.title} onChange={e => { setNewTask(f => ({ ...f, title: e.target.value })); setFormError(''); }} placeholder="..." />
 
           <div>
             <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Description')}</label>
@@ -328,7 +326,7 @@ export default function Taches() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Input label={t('Deadline')} type="date" value={newTask.deadline} onChange={e => setNewTask(f => ({ ...f, deadline: e.target.value }))} />
+            <Input label={`${t('Deadline')} *`} type="date" value={newTask.deadline} onChange={e => { setNewTask(f => ({ ...f, deadline: e.target.value })); setFormError(''); }} />
             <Input label={t('Tag')} value={newTask.tag} onChange={e => setNewTask(f => ({ ...f, tag: e.target.value }))} placeholder="..." />
           </div>
 
@@ -365,11 +363,67 @@ export default function Taches() {
           )}
 
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button variant="outline" onClick={() => { setModalOpen(false); setNewTask(EMPTY_FORM); }} type="button">{t('Cancel')}</Button>
+            <Button variant="outline" onClick={() => { setModalOpen(false); setNewTask(EMPTY_FORM); setFormError(''); }} type="button">{t('Cancel')}</Button>
             <Button type="submit">{t('Save')}</Button>
           </div>
         </form>
       </Modal>
+
+      {/* Reassign modal */}
+      {reassignTask && (
+        <Modal isOpen={!!reassignTask} onClose={() => setReassignTask(null)} title="Changer le responsable" size="sm">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+              Tâche : <strong>{reassignTask.title}</strong>
+            </p>
+            {members.map((m, i) => {
+              const id = m._id ?? m.name;
+              const isCurrentAssignee = reassignTask.assigneeIds?.map(String).includes(String(id));
+              return (
+                <button
+                  key={i}
+                  onClick={async () => {
+                    try {
+                      // 1. Remove all existing assignees
+                      for (const oldId of (reassignTask.assigneeIds || [])) {
+                        await tasksApi.unassignTask(reassignTask._id, oldId).catch(() => {});
+                      }
+                      // 2. Assign the newly chosen member
+                      await tasksApi.assignTask(reassignTask._id, id);
+                      // 3. Update local state immediately — no refresh needed
+                      setTasks(prev => {
+                        const updated = { ...prev };
+                        for (const col of Object.keys(updated)) {
+                          updated[col] = updated[col].map(t =>
+                            (t._id === reassignTask._id || t.id === reassignTask._id)
+                              ? { ...t, assigneeIds: [id] }
+                              : t
+                          );
+                        }
+                        return updated;
+                      });
+                      setReassignTask(null);
+                    } catch(e) {
+                      console.error('Reassign failed', e);
+                    }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: isCurrentAssignee ? '2px solid var(--primary)' : '1px solid var(--border)', background: isCurrentAssignee ? 'var(--primary-subtle)' : 'var(--bg)', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: `hsl(${i * 80 + 230},65%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                    {(m.name || '?').charAt(0)}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '13px', fontWeight: 600 }}>{m.name}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{m.role}</p>
+                  </div>
+                  {isCurrentAssignee && <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 700 }}>✓ Actuel</span>}
+                </button>
+              );
+            })}
+            <Button variant="outline" onClick={() => setReassignTask(null)} style={{ marginTop: '6px' }}>Fermer</Button>
+          </div>
+        </Modal>
+      )}
     </DashboardLayout>
   );
 }

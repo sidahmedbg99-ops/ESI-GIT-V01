@@ -15,7 +15,7 @@ class Notification(models.Model):
     id = models.AutoField(primary_key=True)
 
     # null=True means broadcast notification
-    recipient_id = models.IntegerField(null=True, blank=True)
+    recipient_id = models.BigIntegerField(null=True, blank=True)
 
     recipient_type = models.CharField(
         max_length=10, choices=RecipientTypeChoices.choices

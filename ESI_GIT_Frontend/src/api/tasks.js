@@ -44,9 +44,14 @@ export const tasksApi = {
   },
 
   // POST /api/tasks/<id>/assign/ → assign task to a team member (leader only)
-  // Backend expects: { target_cid: <int> }
   assignTask: async (id, target_cid) => {
     const { data } = await client.post(ENDPOINTS.tasks.assign(id), { target_cid });
+    return data;
+  },
+
+  // DELETE /api/tasks/<id>/assign/ → remove a member's assignment (leader only)
+  unassignTask: async (id, target_cid) => {
+    const { data } = await client.delete(ENDPOINTS.tasks.assign(id), { data: { target_cid } });
     return data;
   },
 

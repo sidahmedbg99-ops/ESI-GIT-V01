@@ -101,9 +101,9 @@ def list_users(request):
 
     try:
         page = max(int(request.GET.get("page", 1)), 1)
-        limit = max(min(int(request.GET.get("limit", 10)), 50), 1)
+        limit = max(min(int(request.GET.get("limit", 1000)), 5000), 1)
     except ValueError:
-        page, limit = 1, 10
+        page, limit = 1, 1000
 
     # ── Base querysets ───────────────────────────────────────────────────────
     students = Student.objects.all()
@@ -152,22 +152,38 @@ def list_users(request):
     # ── Totals ───────────────────────────────────────────────────────────────
     total_students = students.count()
     total_staff = staff_members.count()
+    total_users = total_students + total_staff
 
     # ── Pagination ───────────────────────────────────────────────────────────
+    # We combine them logically for pagination.
+    # This is slightly complex since they are separate querysets.
+    # We'll take 'limit' total users starting from 'start'.
+    
+    all_users = []
+    
+    # Simple approach: fetch enough of each to cover the page
+    # A more robust way would be to fetch all IDs, but for this project's scale,
+    # fetching the current page is fine.
+    
     start = (page - 1) * limit
-    end = start + limit
-    students_page = students.order_by("-created_at")[start:end]
-    staff_page = staff_members.order_by("-created_at")[start:end]
-
-    # ── Serialise ────────────────────────────────────────────────────────────
-    students_data = [student_to_dict(s) for s in students_page]
-    staff_data = [staff_to_dict(s) for s in staff_page]
+    
+    # Fetch students if the range overlaps with students count
+    if start < total_students:
+        students_page = students.order_by("-created_at")[start : start + limit]
+        all_users.extend([student_to_dict(s) for s in students_page])
+    
+    # If we still need more users and there are staff members
+    if len(all_users) < limit and total_staff > 0:
+        staff_start = max(0, start - total_students)
+        staff_limit = limit - len(all_users)
+        staff_page = staff_members.order_by("-created_at")[staff_start : staff_start + staff_limit]
+        all_users.extend([staff_to_dict(s) for s in staff_page])
 
     return Response(
         {
             "page": page,
             "limit": limit,
-            "total_users": total_students + total_staff,
+            "total_users": total_users,
             "total_students": total_students,
             "total_staff": total_staff,
             "filters": {
@@ -179,7 +195,7 @@ def list_users(request):
                 "year": study_year,
                 "academic_year": academic_year,
             },
-            "users": students_data + staff_data,
+            "users": all_users,
         }
     )
 
@@ -195,13 +211,31 @@ def create_student(request):
     """
     POST /api/admin/students/create/
 
-    Create a new Student account.
-    A random password is generated, hashed, and emailed to the student.
-
-    Request body: { CID, email, first_name, last_name, specialty, academic_year }
-    Response 201: { message, student_id }
-    Response 400: serializer validation errors
+    Create or update a Student account.
+    If a student with the same CID or email already exists, their information is updated.
+    If creating, a random password is generated, hashed, and emailed to the student.
     """
+    cid = request.data.get("CID")
+    email = request.data.get("email")
+    student = None
+    if cid:
+        student = Student.objects.filter(CID=cid).first()
+    if not student and email:
+        student = Student.objects.filter(email=email.lower()).first()
+
+    if student:
+        serializer = CreateStudentSerializer(student, data=request.data, partial=True)
+        if serializer.is_valid():
+            student = serializer.save()
+            return Response(
+                {
+                    "message": "Student updated successfully.",
+                    "student_id": student.CID,
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     serializer = CreateStudentSerializer(data=request.data)
     if serializer.is_valid():
         student, password = serializer.save()
@@ -366,13 +400,31 @@ def create_staff(request):
     """
     POST /api/admin/staff/create/
 
-    Create a new Staff account (teacher or admin).
-    A random password is generated and emailed.
-
-    Request body: { email, first_name, last_name, is_admin, is_teacher }
-    Response 201: { message, staff_id }
-    Response 400: validation errors
+    Create or update a Staff account (teacher or admin).
+    If a staff member with the same TID or email already exists, their information is updated.
+    If creating, a random password is generated and emailed.
     """
+    tid = request.data.get("TID")
+    email = request.data.get("email")
+    staff = None
+    if tid:
+        staff = Staff.objects.filter(TID=tid).first()
+    if not staff and email:
+        staff = Staff.objects.filter(email=email.lower()).first()
+
+    if staff:
+        serializer = CreateStaffSerializer(staff, data=request.data, partial=True)
+        if serializer.is_valid():
+            staff = serializer.save()
+            return Response(
+                {
+                    "message": "Staff updated successfully.",
+                    "staff_id": staff.TID,
+                },
+                status=status.HTTP_200_OK,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     serializer = CreateStaffSerializer(data=request.data)
     if serializer.is_valid():
         staff, password = serializer.save()
@@ -655,9 +707,10 @@ class AdvancedAnalyticsAPI(APIView):
         )
 
         # 5. Pass/Fail Rates
-        all_grades = Grades.objects.filter(final_grade__isnull=False)
-        pass_count = all_grades.filter(final_grade__gte=10).count()
-        fail_count = all_grades.filter(final_grade__lt=10).count()
+        final_grades_qs = Grades.objects.filter(final_grade__isnull=False)
+        pass_count = final_grades_qs.filter(final_grade__gte=10).count()
+        fail_count = final_grades_qs.filter(final_grade__lt=10).count()
+        total_final_grades = final_grades_qs.count()
 
         # 6. Task Completion Rate
         total_tasks = Task.objects.count()
@@ -666,18 +719,50 @@ class AdvancedAnalyticsAPI(APIView):
         # 7. Late Submissions (Approximate: Past due tasks)
         late_tasks_count = Task.objects.filter(deadline__lt=now.date()).exclude(state='done').count()
 
-        # 8. Teacher Grading Patterns (Average grade given)
-        teacher_patterns = (
-            Staff.objects.filter(is_teacher=True)
-            .annotate(
-                avg_given=Avg('jury_as_president__PID__grades__final_grade')
-            )
-            .values('TID', 'first_name', 'last_name', 'avg_given')
-            .filter(avg_given__isnull=False)
-            .order_by('-avg_given')[:10]
-        )
+        # 8. Teacher Grading Patterns (Average grade given across all juries)
+        # We look at the actual grades given in each slot (g1, g2, g3)
+        teacher_patterns = []
+        teachers = Staff.objects.filter(is_teacher=True)
+        for t in teachers:
+            # Grades given as President (grade1)
+            g1_list = list(Grades.objects.filter(PID__projectjury__teacher1_id=t, grade1__isnull=False).values_list('grade1', flat=True))
+            # Grades given as Examiner 1 (grade2)
+            g2_list = list(Grades.objects.filter(PID__projectjury__teacher2_id=t, grade2__isnull=False).values_list('grade2', flat=True))
+            # Grades given as Examiner 2 (grade3)
+            g3_list = list(Grades.objects.filter(PID__projectjury__teacher3_id=t, grade3__isnull=False).values_list('grade3', flat=True))
+            
+            all_teacher_grades = g1_list + g2_list + g3_list
+            if all_teacher_grades:
+                avg = sum(all_teacher_grades) / len(all_teacher_grades)
+                teacher_patterns.append({
+                    "TID": t.TID,
+                    "first_name": t.first_name,
+                    "last_name": t.last_name,
+                    "name": t.full_name, # Frontend might expect 'name'
+                    "avg_given": round(avg, 2),
+                    "grade": round(avg, 2) # Frontend AdminPages uses 'grade'
+                })
+        
+        teacher_patterns.sort(key=lambda x: x['avg_given'], reverse=True)
+        teacher_patterns = teacher_patterns[:10]
 
-        # 9. System Usage (Creations per month)
+        # 9. Detailed Student List for Export
+        # [Student Name, Project, Supervisor, Grade]
+        student_list = []
+        memberships = SProjects.objects.select_related('CID', 'PID', 'PID__TID').all()
+        
+        # Pre-fetch grades to avoid N+1
+        project_grades_map = {g.PID_id: g.final_grade for g in Grades.objects.all()}
+        
+        for m in memberships:
+            student_list.append({
+                "student_name": m.CID.full_name,
+                "project_name": m.PID.name,
+                "supervisor": m.PID.TID.full_name if m.PID.TID else "—",
+                "grade": project_grades_map.get(m.PID.PID, "—")
+            })
+
+        # 10. System Usage (Creations per month)
         usage_trends = (
             Projects.objects.annotate(month=TruncMonth('creation_date'))
             .values('month')
@@ -688,22 +773,23 @@ class AdvancedAnalyticsAPI(APIView):
         return Response({
             "student_stats": {
                 "active": students_with_group,
-                "inactive": total_students - students_with_group,
+                "inactive": max(0, total_students - students_with_group),
                 "at_risk": at_risk_count,
             },
             "performance": {
                 "grade_trends": list(grade_trends),
                 "specialty_ranking": list(specialty_performance),
-                "pass_rate": round((pass_count / all_grades.count() * 100) if all_grades.count() > 0 else 0, 1),
-                "fail_rate": round((fail_count / all_grades.count() * 100) if all_grades.count() > 0 else 0, 1),
+                "pass_rate": round((pass_count / total_final_grades * 100) if total_final_grades > 0 else 0, 1),
+                "fail_rate": round((fail_count / total_final_grades * 100) if total_final_grades > 0 else 0, 1),
             },
             "operations": {
                 "task_completion_rate": round((done_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1),
                 "late_tasks": late_tasks_count,
                 "total_tasks": total_tasks,
             },
-            "teacher_patterns": list(teacher_patterns),
+            "teacher_patterns": teacher_patterns,
             "usage_trends": list(usage_trends),
+            "student_list": student_list,
         })
 
 
@@ -781,7 +867,11 @@ class SpecialtyListCreateAPI(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = SpecialtySerializer(data=request.data)
+        data = request.data.copy()
+        if not data.get("department"):
+            dept, _ = Department.objects.get_or_create(name="Second Cycle")
+            data["department"] = dept.id
+        serializer = SpecialtySerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -969,7 +1059,8 @@ class PlatformSettingsAPI(APIView):
     Response 200: { message, data: { students_can_see_archived_projects } }
     """
 
-    permission_classes = [IsAdmin]
+    from users.permissions import IsStaff
+    permission_classes = [IsStaff]
 
     def get(self, request):
         settings_obj = PlatformSettings.objects.first()
@@ -977,6 +1068,8 @@ class PlatformSettingsAPI(APIView):
         return Response(serializer.data)
 
     def patch(self, request):
+        if not request.user.is_admin:
+            return Response({"error": "Admin permission required"}, status=403)
         settings_obj = PlatformSettings.objects.first()
         serializer = PlatformSettingsSerializer(
             settings_obj, data=request.data, partial=True
@@ -989,13 +1082,14 @@ class PlatformSettingsAPI(APIView):
             instance.updated_by = request.user  # record which admin made the change
             instance.save()
 
-            # If the academic year has changed, archive all active projects
+            # If the academic year has changed, archive all active projects and restore projects from the new year
             if new_year and new_year != old_year:
                 from projects.models import Projects
                 archived_count = Projects.objects.filter(archived=False).update(archived=True)
+                restored_count = Projects.objects.filter(year=new_year, archived=True).update(archived=False)
                 return Response(
                     {
-                        "message": f"Platform settings updated. Academic year changed from {old_year} to {new_year}. {archived_count} projects archived.",
+                        "message": f"Platform settings updated. Academic year changed to {new_year}. {archived_count} projects archived, {restored_count} restored.",
                         "data": serializer.data,
                     }
                 )

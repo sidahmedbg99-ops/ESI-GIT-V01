@@ -42,6 +42,7 @@ export default function Groupe() {
   const [createStep, setCreateStep] = useState(0);
   const [groupName, setGroupName] = useState('');
   const [projectTitle, setProjectTitle] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
   const [projectTheme, setProjectTheme] = useState('Intelligence Artificielle');
   const [creatorRole, setCreatorRole] = useState('frontend');
   const [selectedTeacher, setSelectedTeacher] = useState(null);
@@ -62,10 +63,35 @@ export default function Groupe() {
   const [studentDirectory, setStudentDirectory] = useState([]);
   const [dirLoading, setDirLoading] = useState(false);
   const [dirSearch, setDirSearch] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editTech, setEditTech] = useState('');
+  const [editType, setEditType] = useState('');
+  const [publicSettings, setPublicSettings] = useState(null);
+  const [projectType, setProjectType] = useState('PFE');
+
+  useEffect(() => {
+    groupApi.getPublicSettings()
+      .then(res => {
+        setPublicSettings(res);
+        if (res.project_types) {
+          const types = res.project_types.split(',');
+          if (types.length > 0) {
+            setProjectType(types[0]);
+          }
+        }
+      })
+      .catch(e => console.error("Error loading public settings:", e));
+  }, []);
 
   useEffect(() => {
     if (team) {
       setRepoUrl(team.github_url || '');
+      setEditTitle(team.name || team.title || '');
+      setEditDesc(team.description || '');
+      setEditTech(team.tech_stack || '');
+      setEditType(team.type || '');
       groupApi.getAttachments().then(setDocumentFiles).catch(console.error);
     }
   }, [team]);
@@ -137,7 +163,8 @@ export default function Groupe() {
       setCreateStep(2);
       setShowSupervisorConfirmModal(false);
     } catch (err) {
-      toast.error('Erreur lors de l\'envoi de la demande');
+      const msg = err.response?.data?.error || err.response?.data?.detail || 'Erreur lors de l\'envoi de la demande';
+      toast.error(msg);
     }
   };
 
@@ -186,8 +213,10 @@ export default function Groupe() {
   const handleCreate = async () => {
     try {
       const res = await groupApi.createGroup({
-        name: groupName || projectTitle || 'Projet PFE',
-        type: projectTheme,
+        name: projectTitle || 'Projet PFE',
+        title: projectTitle,
+        description: projectDescription,
+        type: projectType,
         role: creatorRole,
       });
 
@@ -204,11 +233,13 @@ export default function Groupe() {
           toast.success('Demande envoyée à l\'encadreur');
         } catch (e) {
           console.error("Failed to send initial supervisor request:", e);
+          const msg = e.response?.data?.error || e.response?.data?.detail || "Erreur lors de l'envoi de la demande à l'encadreur";
+          toast.error(msg);
         }
       }
 
       // If no teacher selected, or even if selected, redirect to see status
-      setTimeout(() => window.location.href = '/student/encadreur', 1500);
+      setTimeout(() => window.location.href = '/student/groupe', 1500);
     } catch (err) {
       setError(err.response?.data?.error || 'Erreur lors de la création');
     }
@@ -224,6 +255,7 @@ export default function Groupe() {
       const fullProject = await groupApi.getStudentGroup();
       updateGroup(fullProject);
       toast.success(t('GroupJoined') || 'Groupe rejoint !');
+      setTimeout(() => window.location.href = '/student/groupe', 1500);
     } catch (err) {
       console.error('Join error:', err.response?.data);
       const msg = err.response?.data?.error || err.response?.data?.detail || t('InvalidInviteCode');
@@ -260,9 +292,57 @@ export default function Groupe() {
     }
   };
 
-  const updateRole = (index, role) => {
-    setTeam(prev => ({ ...prev, members: prev.members.map((m, i) => i === index ? { ...m, Role: role, role } : m) }));
-    setEditingRole(null);
+  const updateRole = async (index, role) => {
+    const member = team.members[index];
+    const cid = member.student_id || member.id || member.CID || member._id;
+    
+    try {
+      // Check if current user is leader or is updating their own role
+      const isLeader = team.members.find(m => m.isMe)?.isChef;
+      if (!isLeader && !member.isMe) {
+        toast.error("Seul le chef peut changer le rôle des autres");
+        return;
+      }
+
+      await groupApi.leaderAction({
+        action: 'update_role',
+        target_cid: cid,
+        role: role
+      });
+
+      setTeam(prev => ({ 
+        ...prev, 
+        members: prev.members.map((m, i) => i === index ? { ...m, Role: role, role } : m) 
+      }));
+      toast.success("Rôle mis à jour");
+    } catch (err) {
+      toast.error("Erreur lors de la mise à jour du rôle");
+    } finally {
+      setEditingRole(null);
+    }
+  };
+
+  const handleUpdateInfo = async () => {
+    try {
+      await groupApi.leaderAction({
+        action: 'edit',
+        name: editTitle,
+        description: editDesc,
+        tech_stack: editTech,
+        type: editType
+      });
+      updateGroup({ 
+        ...team, 
+        name: editTitle, 
+        description: editDesc, 
+        tech_stack: editTech, 
+        type: editType 
+      });
+      toast.success('Informations mises à jour');
+      setShowEditModal(false);
+    } catch (err) {
+      toast.error('Erreur lors de la mise à jour');
+    }
   };
 
   // ── Handle multi-file upload ──────────────────────────────────
@@ -360,8 +440,17 @@ export default function Groupe() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>{t('CurrentGroup')}</p>
-                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{team.Name || team.name}</h2>
-                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>{team.title}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{team.Name || team.name}</h2>
+                    <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>{team.title}</p>
+                  </div>
+                  {team.members?.find(m => m.isMe)?.isChef && (
+                    <Button variant="outline" size="sm" onClick={() => setShowEditModal(true)} style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} icon={<IoRocketOutline size={14}/>}>
+                      {t('Edit')} Infos
+                    </Button>
+                  )}
+                </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
                   {t('Supervisor')} : {team.supervisorRequest?.status === 'rejected' 
                     ? <span style={{ color: '#FECACA' }}>{team.supervisorRequest.teacher_name} (Refusé)</span>
@@ -395,12 +484,12 @@ export default function Groupe() {
                     {team.supervisorRequest?.status === 'rejected' ? '❌ Demande refusée' : 
                      team.supervisorRequest?.status === 'pending' ? '⏳ Demande en attente' : '🔍 Trouver un encadreur'}
                   </h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     {team.supervisorRequest?.status === 'rejected' 
-                      ? `${team.supervisorRequest.teacher_name} a refusé votre demande. Vous devez solliciter un autre enseignant.`
+                      ? `${team.supervisorRequest.teacher_name} a refusé votre demande. Vous devez solliciter un autre enseignant. (⚠️ Vous ne pourrez pas planifier de réunions tant que vous n'aurez pas d'encadreur.)`
                       : team.supervisorRequest?.status === 'pending'
-                        ? `Votre demande est en cours de révision par ${team.supervisorRequest.teacher_name}.`
-                        : 'Votre groupe n\'a pas encore d\'encadreur. Recherchez un enseignant disponible.'}
+                        ? `Votre demande est en cours de révision par ${team.supervisorRequest.teacher_name}. (⚠️ Vous ne pourrez pas planifier de réunions tant que vous n'aurez pas d'encadreur.)`
+                        : "Votre groupe n'a pas encore d'encadreur. Recherchez un enseignant disponible. (⚠️ Vous ne pourrez pas planifier de réunions tant que vous n'aurez pas d'encadreur.)"}
                   </p>
                 </div>
               </div>
@@ -497,7 +586,7 @@ export default function Groupe() {
                 {/* Repo stats */}
                 <div style={{ display: 'flex', gap: '16px', padding: '14px 16px', background: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', marginBottom: '12px', flexWrap: 'wrap' }}>
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: 700 }}>{ghData.repo.full_name}</p>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{ghData.repo.full_name}</p>
                     {ghData.repo.description && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{ghData.repo.description}</p>}
                   </div>
                   <div style={{ display: 'flex', gap: '14px', marginLeft: 'auto', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -678,6 +767,50 @@ export default function Groupe() {
             </Card>
           )}
 
+          {/* Jury & Soutenance */}
+          {(team.jury || team.schedule || team.grades) && (
+            <Card style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <IoStarOutline size={18} color="var(--primary)" /> Soutenance & Évaluation
+                </h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {team.schedule && (
+                  <div style={{ padding: '14px 16px', background: 'var(--bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>📅 Calendrier de Soutenance</p>
+                    <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>Date: {team.schedule.presentation_date} à {team.schedule.presentation_time}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Salle: {team.schedule.room} ({team.schedule.duration_minutes} min)</p>
+                  </div>
+                )}
+                {team.jury && (
+                  <div style={{ padding: '14px 16px', background: 'var(--bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px' }}>👥 Membres du Jury</p>
+                    <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>Président: {team.jury.president}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Examinateur 1: {team.jury.examiner1}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Examinateur 2: {team.jury.examiner2}</p>
+                  </div>
+                )}
+                {team.grades && team.grades.final_grade && (
+                  <div style={{ padding: '14px 16px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid #10B981' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 600, color: '#059669', marginBottom: '8px' }}>⭐ Évaluation Finale</p>
+                    <p style={{ fontSize: '24px', fontWeight: 800, color: '#10B981', marginBottom: '4px' }}>{Number(team.grades.final_grade).toFixed(1)}/20</p>
+                    {team.grades.grade1 && (
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px', fontSize: '11px', color: '#059669', opacity: 0.8 }}>
+                        <span>J1: {team.grades.grade1}</span>
+                        <span>J2: {team.grades.grade2}</span>
+                        <span>J3: {team.grades.grade3}</span>
+                      </div>
+                    )}
+                    {team.grades.feedback && (
+                      <p style={{ fontSize: '13px', color: '#059669', marginTop: '8px', fontStyle: 'italic' }}>«{team.grades.feedback}»</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Members */}
 
           <Card>
@@ -773,7 +906,7 @@ export default function Groupe() {
           </div>
 
           {activeTab === 'creer' && (
-            <div style={{ maxWidth: '620px' }}>
+            <div style={{ maxWidth: '620px', margin: '0 auto' }}>
               <StepIndicator />
               {error && <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', fontSize: '14px', marginBottom: '20px' }}>{error}</div>}
 
@@ -789,12 +922,23 @@ export default function Groupe() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <Input label={t('GroupName') || 'Nom du groupe'} value={groupName} onChange={e => setGroupName(e.target.value)} placeholder="Ex: Les Innovateurs" icon={<IoPeopleOutline size={18} />} />
-                    <Input label={t('ProjectTitle')} value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Titre de votre PFE" icon={<IoDocumentTextOutline size={18} />} />
+                    <Input label={t('ProjectTitle') || 'Titre du projet'} value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Titre de votre PFE" icon={<IoDocumentTextOutline size={18} />} />
                     <div>
-                      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('ProjectTheme') || 'Thème du projet'}</label>
-                      <select value={projectTheme} onChange={e => setProjectTheme(e.target.value)} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
-                        <option>Intelligence Artificielle</option><option>Développement Web</option><option>Systèmes Distribués</option><option>Cybersécurité</option><option>Big Data</option><option>Internet des Objets (IoT)</option><option>Vision par Ordinateur</option>
+                      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Description') || 'Description du projet'}</label>
+                      <textarea value={projectDescription} onChange={e => setProjectDescription(e.target.value)} placeholder="Décrivez brièvement votre projet..." rows={3} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical' }}></textarea>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Type de projet</label>
+                      <select value={projectType} onChange={e => setProjectType(e.target.value)} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
+                        {publicSettings?.project_types?.split(',').map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        )) || (
+                          <>
+                            <option>PFE</option>
+                            <option>Stage</option>
+                            <option>Projet</option>
+                          </>
+                        )}
                       </select>
                     </div>
                     <div>
@@ -806,7 +950,7 @@ export default function Groupe() {
                       </select>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                      <Button icon={<IoArrowForwardOutline size={16} />} onClick={() => { if (!groupName.trim() || !projectTitle.trim() || !creatorRole) { setError('Veuillez remplir tous les champs.'); return; } setError(''); setCreateStep(1); }}>Suivant : Récapitulatif</Button>
+                      <Button icon={<IoArrowForwardOutline size={16} />} onClick={() => { if (!projectTitle.trim() || !projectDescription.trim() || !creatorRole) { setError('Veuillez remplir le titre, la description et le rôle.'); return; } setError(''); setCreateStep(1); }}>Suivant : Récapitulatif</Button>
                     </div>
                   </div>
                 </Card>
@@ -877,7 +1021,7 @@ export default function Groupe() {
                   </div>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-                    {[{ label: 'Nom du groupe', value: groupName, icon: '🏷️' }, { label: 'Titre du projet', value: projectTitle, icon: '📄' }, { label: 'Thème', value: projectTheme, icon: '🎯' }, { label: 'Encadreur', value: findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.name || findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.full_name, icon: '👨‍🏫' }, { label: 'Votre rôle', value: `Chef & ${ROLE_MAP[creatorRole]?.label}`, icon: '⭐' }].map((item, i) => (
+                    {[{ label: 'Titre du projet', value: projectTitle, icon: '📄' }, { label: 'Description', value: projectDescription, icon: '📝' }, { label: 'Type de projet', value: projectType, icon: '🎯' }, { label: 'Encadreur', value: findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.name || findTeacher(selectedTeacher?._id || selectedTeacher?.TID)?.full_name, icon: '👨‍🏫' }, { label: 'Votre rôle', value: `Chef & ${ROLE_MAP[creatorRole]?.label}`, icon: '⭐' }].map((item, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                         <span style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}><span>{item.icon}</span> {item.label}</span>
                         <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{item.value || '—'}</span>
@@ -1012,6 +1156,35 @@ export default function Groupe() {
             <Button style={{ flex: 1, background: 'var(--danger)' }} onClick={handleKickConfirm} disabled={isKicking}>
               {isKicking ? 'Retrait...' : 'Retirer le membre'}
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Modifier les infos du groupe">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <Input label="Titre du projet" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+          <div>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Description</label>
+            <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} rows={4} style={{ width: '100%', padding: '12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical' }} />
+          </div>
+          <Input label="Technologies (ex: React, Django, PostgreSQL)" value={editTech} onChange={e => setEditTech(e.target.value)} />
+          <div>
+            <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Type de projet</label>
+            <select value={editType} onChange={e => setEditType(e.target.value)} style={{ width: '100%', padding: '12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
+              {publicSettings?.project_types?.split(',').map(t => (
+                <option key={t} value={t}>{t}</option>
+              )) || (
+                <>
+                  <option>PFE</option>
+                  <option>Stage</option>
+                  <option>Projet</option>
+                </>
+              )}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+            <Button variant="outline" style={{ flex: 1 }} onClick={() => setShowEditModal(false)}>Annuler</Button>
+            <Button style={{ flex: 1 }} onClick={handleUpdateInfo}>Enregistrer</Button>
           </div>
         </div>
       </Modal>

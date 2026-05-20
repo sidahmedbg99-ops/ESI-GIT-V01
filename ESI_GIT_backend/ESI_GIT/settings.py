@@ -163,6 +163,15 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Email Settings
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # In dev, logs to terminal
+DEFAULT_FROM_EMAIL = 'no-reply@esi-git.dz'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = '' # User should provide this for production
+EMAIL_HOST_PASSWORD = '' # User should provide this for production
+
 # Frontend URL (used in emails)
 FRONTEND_URL = "http://localhost:3000"
 

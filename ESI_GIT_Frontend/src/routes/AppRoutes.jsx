@@ -8,6 +8,8 @@ import ProtectedRoute from './ProtectedRoute';
 import Home      from '../pages/public/Home';
 import About     from '../pages/public/About';
 import Login     from '../pages/public/Login';
+import ForgotPassword from '../pages/public/ForgotPassword';
+import ResetPassword  from '../pages/public/ResetPassword';
 
 import StudentDashboard from '../pages/student/Dashboard';
 import Groupe           from '../pages/student/Groupe';
@@ -71,6 +73,8 @@ export default function AppRoutes() {
       <Route path="/"          element={<Home/>}/>
       <Route path="/about"     element={<About/>}/>
       <Route path="/login"     element={<Login/>}/>
+      <Route path="/forgot-password" element={<ForgotPassword/>}/>
+      <Route path="/reset-password/:uid/:token" element={<ResetPassword/>}/>
       <Route path="/dashboard" element={<RootRedirect/>}/>
 
       {/* ── Student ── */}

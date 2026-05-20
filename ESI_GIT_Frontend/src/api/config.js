@@ -7,6 +7,15 @@
 // ── Backend base URL from .env ──────────────────────────────────────
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// ── File URL helper ──────────────────────────────────────────────────
+// Resolves relative /media/ paths to absolute backend URLs
+export const getFileUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('http')) return url;
+  const server = BASE_URL.replace('/api', '');
+  return `${server}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 // ── All endpoints ───────────────────────────────────────────────────
 export const ENDPOINTS = {
   // ── Auth (users app, mounted at /api/) ────────────────────────────
@@ -38,6 +47,7 @@ export const ENDPOINTS = {
     leader: 'projects/leader/',                    // PATCH { action, target_cid }
     supervisorRequest: 'projects/supervisor-request/', // GET/POST
     studentGroupStatus: 'projects/students/status/', // GET
+    publicSettings: 'projects/public-settings/',     // GET
 
     // Teacher
     byTeacher: () => `teacher/groups/`,            // GET
@@ -129,6 +139,7 @@ export const ENDPOINTS = {
     gradeFormulaActive: 'admin/grade-formula/active/',
     gradeFormulaActivate: (id) => `admin/grade-formula/${id}/activate/`,
     platformSettings: 'admin/platform-settings/',
+    advancedAnalytics: 'admin/analytics/advanced/',
     studentsWithoutGroup: 'projects/admin/students-without-group/',
     archivedVisibility: 'projects/admin/archived-projects-visibility/',
   },

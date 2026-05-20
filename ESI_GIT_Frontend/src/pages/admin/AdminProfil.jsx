@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   IoPersonOutline, IoMailOutline, IoShieldCheckmarkOutline,
   IoTimeOutline, IoKeyOutline, IoCheckmarkOutline, IoLockClosedOutline,
+  IoCardOutline, IoBusinessOutline, IoBookOutline
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -9,6 +10,7 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
+import { useAdmin } from '../../context/AdminContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export default function AdminProfil() {
@@ -29,10 +31,11 @@ export default function AdminProfil() {
     setTimeout(() => setSaved(false), 3000);
   };
 
+  const { stats } = useAdmin();
   const ADMIN_ACTIONS = [
-    { label: t('Users'),        value: '2 500+', color: 'var(--primary)' },
-    { label: t('Groups'),       value: '180',    color: '#10B981' },
-    { label: t('Projects'),     value: '2 100',  color: 'var(--accent)' },
+    { label: t('Users'),        value: stats?.usersTotal || '0', color: 'var(--primary)' },
+    { label: t('Groups'),       value: stats?.groupsActive || '0',    color: '#10B981' },
+    { label: t('Projects'),     value: stats?.groupsTotal || '0',  color: 'var(--accent)' },
   ];
 
   return (
@@ -53,25 +56,6 @@ export default function AdminProfil() {
             </div>
             <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>{user?.name}</h2>
             <Badge variant="primary">{t('Admin')}</Badge>
-
-            {/* Quick stats */}
-            <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {ADMIN_ACTIONS.map((a, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderRadius: '8px', background: 'var(--bg)' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{a.label}</span>
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: a.color }}>{a.value}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Last login */}
-          <Card style={{ padding: '14px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <IoTimeOutline size={15} color="var(--text-muted)" />
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('Date')}</span>
-            </div>
-            <p style={{ fontSize: '13px', fontWeight: 600 }}>{new Date().toLocaleDateString()}</p>
           </Card>
         </div>
 
@@ -85,8 +69,11 @@ export default function AdminProfil() {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {[
+                { label: 'Matricule (TID)', value: user?.TID || '—', icon: <IoCardOutline size={16}/> },
                 { label: t('FullName'),    value: user?.name  || '—', icon: <IoPersonOutline size={16}/> },
                 { label: t('Email'), value: user?.email || '—', icon: <IoMailOutline size={16}/> },
+                { label: 'Département', value: user?.department || '—', icon: <IoBusinessOutline size={16}/> },
+                { label: 'Spécialité', value: user?.specialty || '—', icon: <IoBookOutline size={16}/> },
                 { label: t('Status'),           value: t('Admin'), icon: <IoShieldCheckmarkOutline size={16}/> },
               ].map((f, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
@@ -97,21 +84,6 @@ export default function AdminProfil() {
                   </div>
                 </div>
               ))}
-            </div>
-            <div style={{ marginTop: '14px', padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px dashed var(--border)' }}>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                {t('AdminLock')}
-              </p>
-            </div>
-          </Card>
-
-          {/* Change password */}
-          <Card>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <IoKeyOutline size={18} color="#F59E0B" /> {t('Settings')}
-            </h3>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '420px' }}>
-              <p style={{fontSize: '14px', color: 'var(--text-secondary)'}}>{t('AdminLock')}</p>
             </div>
           </Card>
         </div>

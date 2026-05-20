@@ -22,6 +22,7 @@ from .views import (
     SupervisorRequestView,
     StudentAttachmentView,
     StudentGroupStatusView,
+    PublicSettingsView,
 )
 
 urlpatterns = [
@@ -54,4 +55,5 @@ urlpatterns = [
     ),
     path("attachments/", StudentAttachmentView.as_view(), name="project-attachments"),
     path("students/status/", StudentGroupStatusView.as_view(), name="students-status"),
+    path("public-settings/", PublicSettingsView.as_view(), name="public-settings"),
 ]

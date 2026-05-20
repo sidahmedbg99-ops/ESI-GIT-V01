@@ -100,7 +100,7 @@ export default function Home() {
       <button 
         onClick={scrollToTop}
         style={{
-          position: 'fixed', bottom: '30px', left: showScrollTop ? '30px' : '-80px', zIndex: 1000,
+          position: 'fixed', bottom: '30px', right: showScrollTop ? '30px' : '-80px', zIndex: 1000,
           width: '56px', height: '56px', borderRadius: '18px', background: 'var(--primary)',
           color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
@@ -136,12 +136,12 @@ export default function Home() {
             </span>
           </div>
 
-          <h1 style={{ fontSize: 'clamp(48px, 8vw, 88px)', fontWeight: 800, marginBottom: '24px', letterSpacing: '-0.05em', lineHeight: 1 }}>
+          <h1 style={{ fontSize: 'clamp(48px, 8vw, 88px)', fontWeight: 800, marginBottom: '24px', letterSpacing: '-0.05em', lineHeight: 1, color: '#fff' }}>
             {t('HomeTitle')}<br />
             <span className="text-gradient">ESI-GIT</span>
           </h1>
 
-          <p style={{ fontSize: '20px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '48px', maxWidth: '640px', margin: '0 auto 48px' }}>
+          <p style={{ fontSize: '20px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, marginBottom: '48px', maxWidth: '640px', margin: '0 auto 48px' }}>
             {t('HomeSubtitle')}
           </p>
 

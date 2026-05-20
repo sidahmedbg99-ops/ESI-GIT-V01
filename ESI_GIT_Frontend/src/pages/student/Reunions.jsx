@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   IoAddOutline, IoCalendarOutline, IoTimeOutline,
   IoCheckmarkCircleOutline, IoCloseCircleOutline, IoHourglassOutline,
-  IoVideocamOutline, IoPersonOutline,
+  IoVideocamOutline, IoPersonOutline, IoLocationOutline, IoAlertCircleOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -75,7 +75,7 @@ function MiniCalendar({ meetings }) {
   );
 }
 
-const EMPTY_FORM = { title: '', date: '', time: '', desc: '', type: 'Présentielle' };
+const EMPTY_FORM = { title: '', date: '', time: '', location: '', desc: '', type: 'Présentielle' };
 
 export default function Reunions() {
   // ── Context ──────────────────────────────────────────────────
@@ -89,40 +89,57 @@ export default function Reunions() {
 
   const encadreurName = group?.encadreur ?? group?.supervisorName ?? '—';
 
-  /* ── submit: add to context (replace with API call later) ───── */
-  const handleSubmit = (e) => {
+  /* ── submit: validate then send to API ──────────────────────── */
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    /* ── TODO: replace this block with your real API call ────────
-     *
-     *   const iso = new Date(`${formData.date}T${formData.time}:00`).toISOString();
-     *   const res = await fetch('/api/meetings', { method: 'POST', ... });
-     *   const data = await res.json();
-     *   if (!res.ok) { setError(data.error); return; }
-     *   // then either push returned object or re-fetch from API
-     *
-     * ────────────────────────────────────────────────────────── */
-    addMeeting({
-      title: formData.title,
-      date: formData.date,                    // backend wants "YYYY-MM-DD" alone
-      time: formData.time || '00:00',         // backend wants "HH:MM" alone
-      location: formData.desc || 'À définir',     // backend requires this field
-    });
+    // Validate required fields
+    if (!formData.title.trim()) { setError('Veuillez saisir l\'objet de la réunion.'); return; }
+    if (!formData.date)         { setError('Veuillez choisir une date.'); return; }
+    if (!formData.time)         { setError('Veuillez choisir une heure.'); return; }
+    if (formData.type === 'Présentielle' && !formData.location.trim()) {
+      setError('Veuillez indiquer le lieu pour une réunion présentielle.'); return;
+    }
 
-    setModalOpen(false);
-    setFormData(EMPTY_FORM);
+    try {
+      await addMeeting({
+        title:    formData.title,
+        date:     formData.date,
+        time:     formData.time,
+        location: formData.type === 'Présentielle' ? formData.location : formData.type,
+        type:     formData.type,
+      });
+      // Only close if the API call succeeded
+      setModalOpen(false);
+      setFormData(EMPTY_FORM);
+    } catch (err) {
+      setError('Erreur lors de l\'envoi de la demande. Veuillez réessayer.');
+    }
   };
 
   /* ── split into upcoming vs history ─────────────────────────── */
-  // treat null as [] (backend not connected yet)
   const list = Array.isArray(meetings) ? meetings : [];
-  const upcoming = list.filter(m => m.status !== 'rejected').slice(0, 2);
-  const history = list.filter(m => m.status !== 'rejected').length > 2
-    ? list.filter(m => m.status !== 'rejected').slice(2)
-    : list.filter(m => m.status === 'rejected');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
+  // Upcoming: pending/approved meetings whose date is today or in the future
+  const upcoming = list.filter(m => {
+    if (m.status === 'rejected' || m.status === 'cancelled') return false;
+    if (!m.date) return true;
+    return new Date(m.date) >= today;
+  });
 
+  // History: past meetings OR rejected/cancelled ones
+  const history = list.filter(m => {
+    if (m.status === 'rejected' || m.status === 'cancelled') return true;
+    if (!m.date) return false;
+    return new Date(m.date) < today;
+  });
+
+  const hasSupervisor = !!(group?.TID || group?.encadreur || group?.supervisorName);
+  const isFormValid = formData.title.trim() && formData.date && formData.time &&
+    (formData.type !== 'Présentielle' || formData.location.trim());
 
   if (!group) {
     return (
@@ -147,12 +164,30 @@ export default function Reunions() {
           <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '4px' }}>{t('Meetings')}</h1>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('ScheduleMeeting')}</p>
         </div>
-        <Button icon={<IoAddOutline size={18} />} onClick={() => setModalOpen(true)}>
+        <Button 
+          icon={<IoAddOutline size={18} />} 
+          onClick={() => setModalOpen(true)}
+          disabled={!hasSupervisor}
+          style={{ opacity: hasSupervisor ? 1 : 0.6 }}
+        >
           {t('NewTask').split(' ')[0]} {t('Meetings').toLowerCase().slice(0, -1)}
         </Button>
       </div>
 
+      {!hasSupervisor && (
+        <Card style={{ marginBottom: '24px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <IoAlertCircleOutline size={24} color="#D97706" />
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: '#92400E' }}>Action requise : Aucun encadreur assigné</p>
+              <p style={{ fontSize: '13px', color: '#B45309' }}>Vous devez d'abord solliciter un encadreur depuis l'onglet "Groupe" avant de pouvoir planifier des réunions.</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '20px' }}>
+        {/* ... rest of the file ... */}
 
         {/* Meetings list */}
         <div>
@@ -193,9 +228,12 @@ export default function Reunions() {
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                          {d && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoTimeOutline size={13} /> {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                          {m.time && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoTimeOutline size={13} /> {m.time}</span>}
+                          {!m.time && d && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoTimeOutline size={13} /> {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
                           {encadreurName !== '—' && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoPersonOutline size={13} /> {encadreurName}</span>}
-                          {m.type && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoVideocamOutline size={13} /> {m.type}</span>}
+                          {m.location && !m.location.startsWith('En ligne') && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoLocationOutline size={13} /> {m.location}</span>}
+                          {m.location && m.location.startsWith('En ligne') && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoVideocamOutline size={13} /> {m.location}</span>}
+                          {!m.location && m.type && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoVideocamOutline size={13} /> {m.type}</span>}
                         </div>
                         {m.desc && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px' }}>{m.desc}</p>}
                       </div>
@@ -260,12 +298,21 @@ export default function Reunions() {
       </div>
 
       {/* Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Planifier une réunion" size="md">
+      <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setFormData(EMPTY_FORM); setError(''); }} title="Planifier une réunion" size="md">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <Input label="Objet de la réunion" value={formData.title} onChange={e => setFormData(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Revue d'avancement sprint 3" required />
+
+          {/* Validation error banner */}
+          {error && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: 'var(--radius-md)', background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C', fontSize: '13px' }}>
+              <IoAlertCircleOutline size={16} />
+              {error}
+            </div>
+          )}
+
+          <Input label="Objet de la réunion *" value={formData.title} onChange={e => { setFormData(f => ({ ...f, title: e.target.value })); setError(''); }} placeholder="Ex: Revue d'avancement sprint 3" />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Input label="Date" type="date" value={formData.date} onChange={e => setFormData(f => ({ ...f, date: e.target.value }))} required />
-            <Input label="Heure" type="time" value={formData.time} onChange={e => setFormData(f => ({ ...f, time: e.target.value }))} required />
+            <Input label="Date *" type="date" value={formData.date} onChange={e => { setFormData(f => ({ ...f, date: e.target.value })); setError(''); }} />
+            <Input label="Heure *" type="time" value={formData.time} onChange={e => { setFormData(f => ({ ...f, time: e.target.value })); setError(''); }} />
           </div>
           <div>
             <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Type</label>
@@ -275,12 +322,23 @@ export default function Reunions() {
               <option>En ligne (Zoom)</option>
             </select>
           </div>
+
+          {/* Location field — only for in-person meetings */}
+          {formData.type === 'Présentielle' && (
+            <Input
+              label="Lieu *"
+              value={formData.location}
+              onChange={e => { setFormData(f => ({ ...f, location: e.target.value })); setError(''); }}
+              placeholder="Ex: Salle D12, Bâtiment principal..."
+            />
+          )}
+
           <div>
             <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Description</label>
-            <textarea value={formData.desc} onChange={e => setFormData(f => ({ ...f, desc: e.target.value }))} placeholder="Décrivez l'objectif de cette réunion..." rows={4} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical' }} />
+            <textarea value={formData.desc} onChange={e => setFormData(f => ({ ...f, desc: e.target.value }))} placeholder="Décrivez l'objectif de cette réunion..." rows={3} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }} />
           </div>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button variant="outline" onClick={() => setModalOpen(false)} type="button">Annuler</Button>
+            <Button variant="outline" onClick={() => { setModalOpen(false); setFormData(EMPTY_FORM); setError(''); }} type="button">Annuler</Button>
             <Button type="submit">Envoyer la demande</Button>
           </div>
         </form>

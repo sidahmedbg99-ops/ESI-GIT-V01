@@ -14,7 +14,7 @@ ALLOWED_FUNCTIONS = {
 }
 
 # Dummy grades used to validate formula before saving
-TEST_GRADES = {"g1": 15.0, "g2": 14.0, "g3": 16.0}
+TEST_GRADES = {"g1": 15.0, "g2": 14.0, "g3": 16.0, "g4": 15.0}
 
 
 # ─────────────────────────────────────────
@@ -64,14 +64,19 @@ def get_active_formula():
 # ─────────────────────────────────────────
 def calculate_final_grade(grades: dict):
     """
-    grades = {"g1": float, "g2": float, "g3": float}
+    grades = {"g1": float, "g2": float, "g3": float, "g4": float|None}
+    g4 is the supervisor's grade (optional — included if present)
     """
 
     formula = get_active_formula()
 
+    # Build grade context, excluding None values
+    grade_context = {k: v for k, v in grades.items() if v is not None}
+    active_grades = [v for v in grade_context.values()]
+
     # fallback if no formula exists
     if not formula:
-        avg = round((grades["g1"] + grades["g2"] + grades["g3"]) / 3, 2)
+        avg = round(sum(active_grades) / len(active_grades), 2) if active_grades else 0
         logger.warning("No active formula → using average")
         return avg, None
 
@@ -79,7 +84,7 @@ def calculate_final_grade(grades: dict):
         result = eval(
             formula.formula_expression,
             {"__builtins__": {}},
-            {**ALLOWED_FUNCTIONS, **grades},
+            {**ALLOWED_FUNCTIONS, **grade_context},
         )
 
         final = round(float(result), 2)
@@ -89,5 +94,5 @@ def calculate_final_grade(grades: dict):
 
     except Exception as e:
         logger.error(f"Formula crashed → fallback average: {e}")
-        avg = round((grades["g1"] + grades["g2"] + grades["g3"]) / 3, 2)
+        avg = round(sum(active_grades) / len(active_grades), 2) if active_grades else 0
         return avg, None

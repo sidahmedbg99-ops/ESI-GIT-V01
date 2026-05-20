@@ -61,6 +61,7 @@ class AdminProjectSerializer(serializers.ModelSerializer):
 
             jury = ProjectJury.objects.get(PID=obj)
             return {
+                "supervisor": jury.supervisor_id.full_name if jury.supervisor_id else None,
                 "president": jury.teacher1_id.full_name,
                 "examiner1": jury.teacher2_id.full_name,
                 "examiner2": jury.teacher3_id.full_name,
@@ -72,12 +73,18 @@ class AdminProjectSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         student_ids = validated_data.pop("student_ids", [])
         teacher_id = validated_data.pop("teacher_id", None)
+        leader_id = validated_data.pop("leader_id", None)
 
         if teacher_id:
-            teacher = Staff.objects.get(TID=teacher_id)
-            validated_data["TID"] = teacher
+            try:
+                teacher = Staff.objects.get(TID=teacher_id)
+                validated_data["TID"] = teacher
+            except Staff.DoesNotExist:
+                pass
 
+        # Always generate a fresh invite code if not provided or even if provided (as per auto ID request)
         validated_data["invite_code"] = self.generate_invite_code()
+        
         project = Projects.objects.create(**validated_data)
 
         for sid in student_ids:
@@ -85,8 +92,13 @@ class AdminProjectSerializer(serializers.ModelSerializer):
             student_id = sid['cid'] if isinstance(sid, dict) else sid
             student_role = sid.get('role', 'fullstack') if isinstance(sid, dict) else 'fullstack'
             
-            student = Student.objects.get(CID=student_id)
-            SProjects.objects.create(PID=project, CID=student, role=student_role)
+            is_leader = (str(student_id) == str(leader_id))
+            
+            try:
+                student = Student.objects.get(CID=student_id)
+                SProjects.objects.create(PID=project, CID=student, role=student_role, is_leader=is_leader)
+            except Student.DoesNotExist:
+                pass
 
         return project
 
@@ -151,6 +163,8 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
             "jury",
             "schedule",
             "grades",
+            "description",
+            "tech_stack",
         ]
 
     def get_teacher_name(self, obj):
@@ -200,18 +214,26 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
     def get_grades(self, obj):
         try:
             from jury.models import Grades
+            from admin_panel.models import PlatformSettings
 
             grades = Grades.objects.filter(PID=obj).first()
             if not grades:
                 return None
 
-            return {
-                "grade1": grades.grade1,
-                "grade2": grades.grade2,
-                "grade3": grades.grade3,
+            settings = PlatformSettings.objects.first()
+            show_jury = settings.students_can_see_jury_column if settings else False
+
+            data = {
                 "final_grade": grades.final_grade,
                 "feedback": grades.comments,
             }
+            if show_jury:
+                data.update({
+                    "grade1": grades.grade1,
+                    "grade2": grades.grade2,
+                    "grade3": grades.grade3,
+                })
+            return data
         except Exception:
             return None
 
@@ -406,6 +428,15 @@ class StudentProjectSerializer(serializers.ModelSerializer):
     teacher_name = serializers.SerializerMethodField()
     students = serializers.SerializerMethodField()
     grades = serializers.SerializerMethodField()
+    
+    # Aliases for frontend Archive.jsx compatibility
+    group = serializers.CharField(source="invite_code", read_only=True)
+    grade = serializers.SerializerMethodField()
+    tech = serializers.SerializerMethodField()
+    repo = serializers.CharField(source="github_url", read_only=True)
+    members = serializers.SerializerMethodField()
+    encadreur = serializers.SerializerMethodField()  # alias: teacher_name for archive
+    specialite = serializers.CharField(source="specialty", read_only=True)
 
     class Meta:
         model = Projects
@@ -414,28 +445,72 @@ class StudentProjectSerializer(serializers.ModelSerializer):
             "name",
             "type",
             "specialty",
+            "specialite",
             "year",
             "teacher_name",
+            "encadreur",
             "students",
             "grades",
+            "group",
+            "grade",
+            "tech",
+            "repo",
+            "members",
+            "description",
+            "status",
+            "is_public",
         ]
 
     def get_teacher_name(self, obj):
         return obj.TID.full_name if obj.TID else "—"
 
+    def get_encadreur(self, obj):
+        return obj.TID.full_name if obj.TID else "—"
+
     def get_students(self, obj):
         relations = SProjects.objects.filter(PID=obj)
         return [rel.CID.full_name for rel in relations]
+    
+    def get_members(self, obj):
+        return self.get_students(obj)
+
+    def get_grade(self, obj):
+        g = self.get_grades(obj)
+        return g["final_grade"] if g else 0
+
+    def get_tech(self, obj):
+        if obj.tech_stack:
+            return [t.strip() for t in obj.tech_stack.split(",")]
+        return []
 
     def get_grades(self, obj):
         try:
             from jury.models import Grades
+            from admin_panel.models import PlatformSettings
+
             grades = Grades.objects.filter(PID=obj).first()
             if not grades:
                 return None
-            return {
-                "final_grade": grades.final_grade,
-            }
+            
+            settings = PlatformSettings.objects.first()
+            show_jury = settings.students_can_see_jury_column if settings else False
+
+            if show_jury:
+                return {
+                    "final_grade": grades.final_grade,
+                    "grade1": grades.grade1,
+                    "grade2": grades.grade2,
+                    "grade3": grades.grade3,
+                    "grade4": grades.grade4,
+                }
+            else:
+                return {
+                    "final_grade": grades.final_grade,
+                    "grade1": None,
+                    "grade2": None,
+                    "grade3": None,
+                    "grade4": None,
+                }
         except Exception:
             return None
 
@@ -450,18 +525,27 @@ class CreateProjectSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=150)
     type = serializers.CharField(max_length=50)
     role = serializers.ChoiceField(choices=SProjects.RoleChoices.choices)
+    description = serializers.CharField(required=False, allow_blank=True)
+    tech_stack = serializers.CharField(required=False, allow_blank=True)
 
 
 class SProjectSerializer(serializers.ModelSerializer):
     # shows one team member's info
     student_name = serializers.CharField(source="CID.full_name", read_only=True)
-    # source='CID.full_name' means "go to the CID foreign key, get the full_name property"
-    student_email = serializers.CharField(source="CID.email", read_only=True)
+    student_email = serializers.EmailField(source="CID.email", read_only=True)
     student_id = serializers.IntegerField(source="CID.CID", read_only=True)
+    isChef = serializers.BooleanField(source="is_leader", read_only=True)
+    isMe = serializers.SerializerMethodField()
 
     class Meta:
         model = SProjects
-        fields = ["student_id", "student_name", "student_email", "role", "is_leader", "joined_date"]
+        fields = ["student_id", "student_name", "student_email", "role", "is_leader", "isChef", "isMe", "joined_date"]
+
+    def get_isMe(self, obj):
+        request = self.context.get("request")
+        if request and hasattr(request.user, 'CID'):
+            return request.user.CID == obj.CID.CID
+        return False
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -493,6 +577,8 @@ class ProjectSerializer(serializers.ModelSerializer):
             "attachments",
             "teacher_name",
             "supervisor_request",
+            "description",
+            "tech_stack",
         ]
 
     def get_teacher_name(self, obj):
@@ -523,15 +609,6 @@ class ProjectSerializer(serializers.ModelSerializer):
             for a in attachments
         ]
 
-    def get_students(self, obj):
-        relations = SProjects.objects.filter(PID=obj)
-        return [
-            {
-                "id": rel.CID.CID,
-                "name": rel.CID.full_name,
-            }
-            for rel in relations
-        ]
 
 
 class SupervisorRequestSerializer(serializers.ModelSerializer):

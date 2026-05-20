@@ -12,6 +12,7 @@ import {
 import { useTeacher } from '../../context/TeacherContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { ROLE_OPTIONS } from '../../constants';
+import { getFileUrl } from '../../api/config';
 
 const ROLE_MAP = Object.fromEntries((ROLE_OPTIONS || []).map(r => [r.value, r]));
 
@@ -102,7 +103,7 @@ export default function TeacherGroups() {
     setMeetSubmitting(false);
   };
 
-  if (list.length === 0 && (supervisorRequests || []).length === 0) {
+  if (list.length === 0) {
     return (
       <DashboardLayout>
         <div style={{ marginBottom: '28px' }}>
@@ -117,50 +118,12 @@ export default function TeacherGroups() {
     );
   }
 
-  // List view
-  const pendingRequests = (supervisorRequests || []).filter(r => r.Status === 'pending');
-
   if (!group) {
     return (
       <DashboardLayout>
         <div style={{ marginBottom: '28px' }}>
           <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>{t('MyGroups')}</h1>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('ClickGroupDetails')}</p>
-        </div>
-
-        {/* Categories 1: Requests */}
-        <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '14px', color: 'var(--text-primary)' }}>
-            {t('SupervisionRequests')} {pendingRequests.length > 0 && <span style={{ background: '#EF4444', color: '#fff', fontSize: '12px', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px', verticalAlign: 'middle' }}>{pendingRequests.length}</span>}
-          </h2>
-          {pendingRequests.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-              {pendingRequests.map(req => (
-                <Card key={req.id} style={{ padding: '16px', background: 'var(--primary-subtle)', border: '1px solid var(--primary)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{req.projectTitle}</h3>
-                    <Badge variant="warning">{req.groupCode}</Badge>
-                  </div>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                    {(req.members || []).map((m, idx) => (
-                      <span key={idx} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'var(--bg)', border: '1px solid var(--border)', color: m.is_leader ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: m.is_leader ? 700 : 400 }}>
-                        {m.is_leader && '⭐ '}{m.name}
-                      </span>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px', fontStyle: 'italic' }}>
-                    {req.Message ? `"${req.Message}"` : t('NoMessage')}
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => respondToSupervisorRequest(req.id, 'rejected')} style={{ padding: '6px 12px', borderRadius: '8px', background: 'none', border: '1px solid #EF4444', color: '#EF4444', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>{t('Reject')}</button>
-                    <button onClick={() => respondToSupervisorRequest(req.id, 'approved')} style={{ padding: '6px 12px', borderRadius: '8px', background: '#10B981', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>✓ {t('Approve')}</button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '16px', borderRadius: '12px', border: '1px dashed var(--border)' }}>{t('NoPendingRequests')}</p>
-          )}
         </div>
 
         {/* Categories 2: Supervised Groups */}
@@ -175,7 +138,7 @@ export default function TeacherGroups() {
                   <Card hover>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{g.title}</h3>
-                      <Badge variant={g.status === 'active' ? 'success' : 'warning'}>{g.status === 'active' ? t('Done') : t('InProgress')}</Badge>
+                      <Badge variant={(g.status === 'active' || g.status === 'approved') ? 'success' : 'warning'}>{(g.status === 'active' || g.status === 'approved') ? t('Done') : t('InProgress')}</Badge>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>{g.groupCode}</p>
                     <div style={{ marginBottom: '12px' }}>
@@ -344,7 +307,7 @@ export default function TeacherGroups() {
                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{file.attachment_type === 'report' ? 'Rapport Final' : 'Document'}</p>
                      </div>
                    </div>
-                   <a href={file.url?.startsWith('http') ? file.url : `http://localhost:8000${file.url || ''}`} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Ouvrir</a>
+                   <a href={getFileUrl(file.url)} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Ouvrir</a>
                  </div>
                ))}
              </div>
