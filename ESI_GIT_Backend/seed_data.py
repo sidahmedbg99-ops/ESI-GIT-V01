@@ -72,10 +72,10 @@ def make_staff(email, first, last, is_admin=False):
     created_staff.append((f"{first} {last}", email, "Admin" if is_admin else "Teacher", plain))
     return s
 
-make_staff("admin@esi.dz",   "Ali",    "Benali",  is_admin=True)
-make_staff("karim@esi.dz",   "Karim",  "Meziani")
-make_staff("sara@esi.dz",    "Sara",   "Hamidi")
-make_staff("youcef@esi.dz",  "Youcef", "Brahim")
+make_staff("admin@esi-sba.dz",   "Ali",    "Benali",  is_admin=True)
+make_staff("karim@esi-sba.dz",   "Karim",  "Meziani")
+make_staff("sara@esi-sba.dz",    "Sara",   "Hamidi")
+make_staff("youcef@esi-sba.dz",  "Youcef", "Brahim")
 
 print("✅ Staff created")
 
@@ -109,26 +109,26 @@ def make_student(cid, email, first, last, level, specialty, year, note=""):
     return s
 
 # 2nd year — no specialty, promo 2023/2024
-make_student(20230001, "farid@student.esi.dz",   "Farid",   "Amrani",   level=2, specialty=None, year="2023/2024")
-make_student(20230002, "hana@student.esi.dz",    "Hana",    "Boudiaf",  level=2, specialty=None, year="2023/2024")
+make_student(20230001, "f.amrani@esi-sba.dz",   "Farid",   "Amrani",   level=2, specialty=None, year="2023/2024")
+make_student(20230002, "h.boudiaf@esi-sba.dz",    "Hana",    "Boudiaf",  level=2, specialty=None, year="2023/2024")
 
 # 3rd year — no specialty, promo 2022/2023
-make_student(20220001, "tarek@student.esi.dz",   "Tarek",   "Morsli",   level=3, specialty=None, year="2022/2023")
-make_student(20220002, "rima@student.esi.dz",    "Rima",    "Saadi",    level=3, specialty=None, year="2022/2023")
+make_student(20220001, "t.morsli@esi-sba.dz",   "Tarek",   "Morsli",   level=3, specialty=None, year="2022/2023")
+make_student(20220002, "r.saadi@esi-sba.dz",    "Rima",    "Saadi",    level=3, specialty=None, year="2022/2023")
 
 # 3rd year but redid — same promo as 3rd years but level 4
 # tests that they CANNOT join a 3rd year project despite sharing the promo
-make_student(20220003, "bilal@student.esi.dz",   "Bilal",   "Cherif",   level=4, specialty="ISI", year="2022/2023", note="redid year")
+make_student(20220003, "b.cherif@esi-sba.dz",   "Bilal",   "Cherif",   level=4, specialty="ISI", year="2022/2023", note="redid year")
 
 # 4th year — specialty assigned, promo 2021/2022
-make_student(20210001, "amina@student.esi.dz",   "Amina",   "Khelil",   level=4, specialty="ISI",  year="2021/2022")
-make_student(20210002, "riad@student.esi.dz",    "Riad",    "Touati",   level=4, specialty="SIW",  year="2021/2022")
-make_student(20210003, "nadia@student.esi.dz",   "Nadia",   "Bensalem", level=4, specialty="IASD", year="2021/2022")
+make_student(20210001, "a.khelil@esi-sba.dz",   "Amina",   "Khelil",   level=4, specialty="ISI",  year="2021/2022")
+make_student(20210002, "r.touati@esi-sba.dz",    "Riad",    "Touati",   level=4, specialty="SIW",  year="2021/2022")
+make_student(20210003, "n.bensalem@esi-sba.dz",   "Nadia",   "Bensalem", level=4, specialty="IASD", year="2021/2022")
 
 # 5th year — specialty assigned, promo 2020/2021
-make_student(20200001, "omar@student.esi.dz",    "Omar",    "Ferhat",   level=5, specialty="ISI",  year="2020/2021")
-make_student(20200002, "yasmine@student.esi.dz", "Yasmine", "Meziane",  level=5, specialty="CYS",  year="2020/2021")
-make_student(20200003, "sami@student.esi.dz",    "Sami",    "Bouzid",   level=5, specialty="IASD", year="2020/2021")
+make_student(20200001, "o.ferhat@esi-sba.dz",    "Omar",    "Ferhat",   level=5, specialty="ISI",  year="2020/2021")
+make_student(20200002, "y.meziane@esi-sba.dz", "Yasmine", "Meziane",  level=5, specialty="CYS",  year="2020/2021")
+make_student(20200003, "s.bouzid@esi-sba.dz",    "Sami",    "Bouzid",   level=5, specialty="IASD", year="2020/2021")
 
 print("✅ Students created")
 

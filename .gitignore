@@ -1,0 +1,10 @@
+.vscode/
+*.exe
+*.dll
+*.so
+*.dylib
+*.log
+ESI_GIT_Frontend/node_modules/
+ESI_GIT_Frontend/dist/
+ESI_GIT_Frontend/build/
+ESI_GIT_Frontend/.env

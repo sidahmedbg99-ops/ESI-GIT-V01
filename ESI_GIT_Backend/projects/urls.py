@@ -5,7 +5,6 @@ from .views import (
     Students_without_group,
     admin_groups_list,
     admin_group_details,
-    assign_jury,
     admin_projects_analytics,
     admin_dashboard_stats,
     archived_projects,
@@ -25,6 +24,7 @@ from .views import (
 )
 
 from .views import AttachmentView
+from jury.views import assign_jury
 
 
 urlpatterns = [
