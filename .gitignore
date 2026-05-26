@@ -1,10 +1,23 @@
+# Frontend
+ESI_GIT_Frontend/node_modules/
+ESI_GIT_Frontend/dist/
+ESI_GIT_Frontend/build/
+ESI_GIT_Frontend/.env
+
+# Backend
+ESI_GIT_Backend/venv/
+ESI_GIT_Backend/*.pyc
+ESI_GIT_Backend/db.sqlite3
+ESI_GIT_Backend/*.sqlite3
+ESI_GIT_Backend/.env
+ESI_GIT_Backend/project_attachments/
+ESI_GIT_Backend/media/
+ESI_GIT_Backend/__pycache__/
+
+# General
 .vscode/
 *.exe
 *.dll
 *.so
 *.dylib
 *.log
-ESI_GIT_Frontend/node_modules/
-ESI_GIT_Frontend/dist/
-ESI_GIT_Frontend/build/
-ESI_GIT_Frontend/.env
