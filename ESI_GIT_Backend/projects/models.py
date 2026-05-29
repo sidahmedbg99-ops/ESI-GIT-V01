@@ -6,29 +6,41 @@ from django.utils import timezone
 class Projects(models.Model):
 
     class StatusChoices(models.TextChoices):
-        PENDING = "pending", "Pending"
+        PENDING  = "pending",  "Pending"
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
 
-    PID = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=150)
-    type = models.CharField(max_length=50)
-    specialty = models.CharField(max_length=100, null=True, blank=True)
-    year = models.CharField(max_length=9, null=True, blank=True)  
+    PID            = models.AutoField(primary_key=True)
+    name           = models.CharField(max_length=150)
+    type           = models.CharField(max_length=50)
+    specialty      = models.CharField(max_length=100, null=True, blank=True)
+    year           = models.CharField(max_length=9, null=True, blank=True)
     # auto sets to current year ex: 2025
-    academic_level = models.IntegerField(null=True, blank=True)  
+    academic_level = models.IntegerField(null=True, blank=True)
     # taken from student.level
-    TID = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, blank=True)
-    github_url = models.URLField(max_length=300, blank=True, null=True)
+    TID            = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, blank=True)
+    github_url     = models.URLField(max_length=300, blank=True, null=True)
 
-    status = models.CharField(
+    # added: project description and tech stack
+    description    = models.TextField(null=True, blank=True)
+    
+
+    status         = models.CharField(
         max_length=10, choices=StatusChoices.choices, default=StatusChoices.PENDING
     )
+    creation_date  = models.DateField(auto_now_add=True)
+    finish_date    = models.DateField(null=True, blank=True)
+    archived       = models.BooleanField(default=False)
+    invite_code    = models.CharField(max_length=8, unique=True)
 
-    creation_date = models.DateField(auto_now_add=True)
-    finish_date = models.DateField(null=True, blank=True)
-    archived = models.BooleanField(default=False)
-    invite_code = models.CharField(max_length=8, unique=True)
+    # added: final submission workflow
+    submitted_to_supervisor   = models.BooleanField(default=False)
+    supervisor_feedback       = models.TextField(null=True, blank=True)
+    final_submission_approved = models.BooleanField(default=False)
+    final_submission_date     = models.DateTimeField(null=True, blank=True)
+
+    # added: archive visibility
+    is_public      = models.BooleanField(default=True)
 
 
 class SProjects(models.Model):

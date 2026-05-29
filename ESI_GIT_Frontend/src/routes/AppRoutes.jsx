@@ -8,6 +8,8 @@ import ProtectedRoute from './ProtectedRoute';
 import Home      from '../pages/public/Home';
 import About     from '../pages/public/About';
 import Login     from '../pages/public/Login';
+import ForgotPassword from '../pages/public/ForgotPassword';
+import ResetPassword  from '../pages/public/ResetPassword';
 
 import StudentDashboard from '../pages/student/Dashboard';
 import Groupe           from '../pages/student/Groupe';
@@ -15,6 +17,7 @@ import Reunions         from '../pages/student/Reunions';
 import Taches           from '../pages/student/Taches';
 import { Archive }      from '../pages/student/Archive';
 import Profil           from '../pages/student/Profil';
+import Supervisor       from '../pages/student/Supervisor';
 
 import TeacherDashboard  from '../pages/teacher/Dashboard';
 import TeacherProfil     from '../pages/teacher/TeacherProfil';
@@ -22,12 +25,14 @@ import TeacherGroups     from '../pages/teacher/TeacherGroups';
 import TeacherMeetings   from '../pages/teacher/TeacherMeetings';
 import TeacherJury       from '../pages/teacher/TeacherJury';
 import TeacherArchive    from '../pages/teacher/TeacherArchive';
+import TeacherRequests   from '../pages/teacher/TeacherRequests';
 
 import AdminDashboard from '../pages/admin/Dashboard';
 import AdminUsers     from '../pages/admin/Users';
 import AdminGroupes   from '../pages/admin/AdminGroupes';
 import AdminArchive   from '../pages/admin/AdminArchive';
 import AdminProfil    from '../pages/admin/AdminProfil';
+import AdminStudents  from '../pages/admin/AdminStudents';
 import { AdminAnalytics, AdminSettings } from '../pages/admin/AdminPages';
 
 function RootRedirect() {
@@ -65,10 +70,12 @@ export default function AppRoutes() {
   return (
     <Routes>
       {/* ── Public ── */}
-      <Route path="/"          element={<Home/>}/>
-      <Route path="/about"     element={<About/>}/>
-      <Route path="/login"     element={<Login/>}/>
-      <Route path="/dashboard" element={<RootRedirect/>}/>
+      <Route path="/"                          element={<Home/>}/>
+      <Route path="/about"                     element={<About/>}/>
+      <Route path="/login"                     element={<Login/>}/>
+      <Route path="/forgot-password"           element={<ForgotPassword/>}/>
+      <Route path="/reset-password/:uid/:token" element={<ResetPassword/>}/>
+      <Route path="/dashboard"                 element={<RootRedirect/>}/>
 
       {/* ── Student ── */}
       <Route element={<StudentLayout/>}>
@@ -79,6 +86,7 @@ export default function AppRoutes() {
         <Route path="/student/taches"         element={<Taches/>}/>
         <Route path="/student/archive"        element={<Archive/>}/>
         <Route path="/student/profil"         element={<Profil/>}/>
+        <Route path="/student/encadreur"      element={<Supervisor/>}/>
       </Route>
 
       {/* ── Teacher ── */}
@@ -90,6 +98,7 @@ export default function AppRoutes() {
         <Route path="/teacher/jury"           element={<TeacherJury/>}/>
         <Route path="/teacher/archive"        element={<TeacherArchive/>}/>
         <Route path="/teacher/profil"         element={<TeacherProfil/>}/>
+        <Route path="/teacher/requests"       element={<TeacherRequests/>}/>
       </Route>
 
       {/* ── Admin ── */}
@@ -102,6 +111,7 @@ export default function AppRoutes() {
         <Route path="/admin/archive"          element={<AdminArchive/>}/>
         <Route path="/admin/settings"         element={<AdminSettings/>}/>
         <Route path="/admin/profil"           element={<AdminProfil/>}/>
+        <Route path="/admin/students"         element={<AdminStudents/>}/>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace/>}/>

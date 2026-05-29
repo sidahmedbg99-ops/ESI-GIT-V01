@@ -27,7 +27,11 @@ from admin_panel.views import (
     GradeFormulaView, ActiveFormulaView, ActivateFormulaView,
     # Platform settings
     PlatformSettingsAPI,
+    dashboard_analytics,
+    AdvancedAnalyticsAPI,
 )
+from admin_panel.views import dashboard_analytics  # add to imports
+
 
 urlpatterns = [
 
@@ -70,4 +74,8 @@ urlpatterns = [
 
     # ── Platform settings ──────────────────────────────────────────────────────
     path("platform-settings/", PlatformSettingsAPI.as_view()),
+
+    path("analytics/advanced/", AdvancedAnalyticsAPI.as_view()),
+    path("dashboard/analytics/", dashboard_analytics),
+
 ]

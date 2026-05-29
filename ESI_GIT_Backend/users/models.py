@@ -50,23 +50,25 @@ class StudentManager(BaseUserManager):
 
 
 class Student(AbstractBaseUser, PermissionsMixin):
-    CID = models.IntegerField(primary_key=True)  # admin provides this
-    email = models.EmailField(max_length=255, unique=True)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
+    CID           = models.IntegerField(primary_key=True)
+    email         = models.EmailField(max_length=255, unique=True)
+    first_name    = models.CharField(max_length=100)
+    last_name     = models.CharField(max_length=100)
     academic_year = models.CharField(max_length=9, null=True, blank=True)
-    # promo 2024/2025
-    level = models.IntegerField(null=True, blank=True)
-    # 2eme, 3eme, 4eme, or 5eme annee
-    specialty = models.CharField(max_length=100, null=True, blank=True)
-    is_first_login = models.BooleanField(default=True)
-    is_active = models.BooleanField(default=True)
-    is_blocked = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    level         = models.IntegerField(null=True, blank=True)
+    specialty     = models.CharField(max_length=100, null=True, blank=True)
 
-    USERNAME_FIELD = "email"
+    # added: department for filtering and display
+    department    = models.CharField(max_length=100, null=True, blank=True)
+
+    is_first_login = models.BooleanField(default=True)
+    is_active      = models.BooleanField(default=True)
+    is_blocked     = models.BooleanField(default=False)
+    is_staff       = models.BooleanField(default=False) #for django
+    is_superuser   = models.BooleanField(default=False) #for django
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    USERNAME_FIELD  = "email"
     REQUIRED_FIELDS = ["first_name", "last_name", "CID"]
 
     objects = StudentManager()
@@ -110,19 +112,24 @@ class StaffManager(BaseUserManager):
 
 
 class Staff(AbstractBaseUser):
-    TID = models.AutoField(primary_key=True)
-    email = models.EmailField(max_length=255, unique=True)
+    TID        = models.AutoField(primary_key=True)
+    email      = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    is_admin = models.BooleanField(default=False)
+    last_name  = models.CharField(max_length=100)
+    is_admin   = models.BooleanField(default=False)
     is_teacher = models.BooleanField(default=True)
-    available = models.BooleanField(default=True)
-    is_first_login = models.BooleanField(default=True)
-    is_active = models.BooleanField(default=True)
-    is_blocked = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+    available  = models.BooleanField(default=True)
 
-    USERNAME_FIELD = "email"
+    # added: specialty and department for filtering and display
+    specialty  = models.CharField(max_length=100, null=True, blank=True)
+    department = models.CharField(max_length=100, null=True, blank=True)
+
+    is_first_login = models.BooleanField(default=True)
+    is_active      = models.BooleanField(default=True)
+    is_blocked     = models.BooleanField(default=False)
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    USERNAME_FIELD  = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
 
     objects = StaffManager()

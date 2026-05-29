@@ -11,7 +11,7 @@ class TimeStampedModel(models.Model):
 
 
 class Department(TimeStampedModel):
-    id = models.AutoField(primary_key=True)
+    id   = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255, unique=True)
 
     def __str__(self):
@@ -19,8 +19,8 @@ class Department(TimeStampedModel):
 
 
 class Specialty(TimeStampedModel):
-    id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255)
+    id         = models.AutoField(primary_key=True)
+    name       = models.CharField(max_length=255)
     department = models.ForeignKey(
         Department, on_delete=models.CASCADE, related_name="specialties"
     )
@@ -31,16 +31,29 @@ class Specialty(TimeStampedModel):
 
 class PlatformSettings(models.Model):
     """
-    Global configuration of the platform.
+    Global platform configuration.
     Only ONE row must exist in this table.
     """
-
+    # existing
     students_can_see_archived_projects = models.BooleanField(default=False)
+
+    # added: controls whether students can see who their jury members are
+    jury_page_visible                  = models.BooleanField(default=False)
+
+    # added: displayed across the platform e.g. "2024-2025"
+    current_academic_year              = models.CharField(max_length=20, default="2024-2025")
+
+    # added: comma-separated allowed project types
+    # frontend reads this to populate the type dropdown when creating a project
+    # instead of hardcoding options in the frontend
+    project_types                      = models.TextField(default="PFE,Stage,Projet")
+
+    # added: shown on public pages (Home, About) before login
+    contact_email                      = models.CharField(max_length=100, default="contact@esi.dz")
 
     updated_by = models.ForeignKey(
         Staff, on_delete=models.SET_NULL, null=True, blank=True
     )
-
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

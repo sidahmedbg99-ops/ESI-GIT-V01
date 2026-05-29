@@ -20,6 +20,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Avg
 from django.utils import timezone
 
+from projects.serializers import ProjectSerializer
 from users.permissions import IsStaff
 from users.models import Staff
 from projects.models import Projects, SProjects, SupervisorRequest, ProjectAttachment
@@ -263,8 +264,9 @@ class TeacherGroupListView(APIView):
 class TeacherGroupDetailView(APIView):
     """
     GET   /api/teacher/groups/<pid>/   → group detail
-    PATCH /api/teacher/groups/<pid>/   → update github_url
-        body: { "github_url": "https://..." }
+    PATCH /api/teacher/groups/<pid>/   → approve or reject final submission
+        approve: { "final_submission_approved": true }
+        reject:  { "final_submission_approved": false, "supervisor_feedback": "reason" }
     """
 
     permission_classes = [IsStaff]
@@ -298,16 +300,64 @@ class TeacherGroupDetailView(APIView):
         if not project:
             return Response({"error": "Group not found"}, status=404)
 
-        github_url = request.data.get("github_url")
-        if github_url is not None:
-            project.github_url = github_url
-            project.save(update_fields=["github_url"])
-            return Response({"github_url": project.github_url})
+        # handle final submission approval/rejection
+        approved = request.data.get("final_submission_approved")
+        feedback = request.data.get("supervisor_feedback")
 
-        return Response(
-            {"error": "No valid field to update."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        if approved is None:
+            return Response({"error": "No valid field to update"}, status=400)
+
+        if approved:
+            # approve — mark as approved and record the date
+            project.final_submission_approved = True
+            project.final_submission_date = timezone.now()
+            project.submitted_to_supervisor = True
+            project.save(update_fields=[
+                "final_submission_approved",
+                "final_submission_date",
+                "submitted_to_supervisor"
+            ])
+
+            # notify all members
+            from notifications.utils import notify
+            from projects.models import SProjects
+            members = SProjects.objects.filter(PID=project).select_related("CID")
+            for m in members:
+                notify(
+                    recipient_type="student",
+                    recipient_id=m.CID_id,
+                    title="Submission approved",
+                    message=f'Your project "{project.name}" has been approved for presentation.',
+                )
+        else:
+            # reject — reset submission, save feedback
+            if not feedback:
+                return Response(
+                    {"error": "Feedback is required when rejecting a submission"},
+                    status=400
+                )
+            project.submitted_to_supervisor = False
+            project.final_submission_approved = False
+            project.supervisor_feedback = feedback
+            project.save(update_fields=[
+                "submitted_to_supervisor",
+                "final_submission_approved",
+                "supervisor_feedback"
+            ])
+
+            # notify all members
+            from notifications.utils import notify
+            from projects.models import SProjects
+            members = SProjects.objects.filter(PID=project).select_related("CID")
+            for m in members:
+                notify(
+                    recipient_type="student",
+                    recipient_id=m.CID_id,
+                    title="Submission rejected",
+                    message=f'Your project "{project.name}" was sent back. Check supervisor feedback.',
+                )
+
+        return Response(ProjectSerializer(project).data)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -392,19 +442,17 @@ class TeacherSupervisorRequestActionView(APIView):
             req.status = "rejected"
             req.save()
 
-            # notify the project leader
+            # notify ALL members
             from notifications.utils import notify
-            try:
-                from projects.models import SProjects
-                leader_m = SProjects.objects.get(PID=req.project_id, is_leader=True)
+            from projects.models import SProjects
+            members = SProjects.objects.filter(PID=project).select_related("CID")
+            for m in members:
                 notify(
                     recipient_type="student",
-                    recipient_id=leader_m.CID.CID,
-                    title="Supervision request rejected",
-                    message=f"{teacher.full_name} has declined your supervision request for '{req.project_id.name}'.",
+                    recipient_id=m.CID.CID,
+                    title="Supervisor assigned",
+                    message=f"{teacher.full_name} is now supervising your project '{project.name}'.",
                 )
-            except Exception:
-                pass
 
             return Response({"message": "Request rejected."})
 
@@ -523,7 +571,9 @@ class TeacherMeetingActionView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            reason = request.data.get("cancellation_reason", "")
             meeting.status = "cancelled"
+            meeting.cancellation_reason = reason
             meeting.save()
 
             # notify all project members
@@ -533,7 +583,8 @@ class TeacherMeetingActionView(APIView):
                     recipient_type="student",
                     recipient_id=m.CID.CID,
                     title="Meeting cancelled",
-                    message=f"Your supervisor has cancelled the meeting '{meeting.title}' scheduled on {meeting.date}.",
+                    message=f"The meeting '{meeting.title}' on {meeting.date} was cancelled."
+                            + (f" Reason: {reason}" if reason else ""),
                 )
 
             return Response(
@@ -650,6 +701,14 @@ class TeacherJuryListView(APIView):
     permission_classes = [IsStaff]
 
     def get(self, request):
+        from admin_panel.models import PlatformSettings
+        settings = PlatformSettings.objects.first()
+        if not settings or not settings.jury_page_visible:
+            return Response(
+                {"error": "The admin has disabled access to the jury page"},
+                status=403
+            )
+
         teacher = get_teacher(request)
 
         juries = (

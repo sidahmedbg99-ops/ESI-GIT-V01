@@ -2,6 +2,8 @@ from django.urls import path
 from .views import (
     AdminProjectListCreateView,
     AdminProjectDetailView,
+    PublicSettingsView,
+    StudentGroupStatusView,
     Students_without_group,
     admin_groups_list,
     admin_group_details,
@@ -62,5 +64,7 @@ urlpatterns = [
         name="available-supervisors",
     ),
     path("attachments/", AttachmentView.as_view(), name="attachments"),
+    path("projects/group-status/", StudentGroupStatusView.as_view()),
+    path("projects/public-settings/", PublicSettingsView.as_view()),
 ]
 

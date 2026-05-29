@@ -622,11 +622,28 @@ class LeaderActionsView(APIView):
         elif action == "edit":
             name = request.data.get("name")
             type = request.data.get("type")
+            github_url = request.data.get("github_url")
+            submitted = request.data.get("submitted_to_supervisor")
 
             if name:
-                project.name = name  # update name if provided
+                project.name = name
             if type:
-                project.type = type  # update type if provided
+                project.type = type
+            if github_url is not None:
+                project.github_url = github_url
+
+            # final submission to supervisor
+            if submitted is not None:
+                # can only submit if project has a supervisor
+                if not project.TID:
+                    return Response(
+                        {"error": "You need a supervisor before submitting"},
+                        status=400
+                    )
+                project.submitted_to_supervisor = submitted
+                # clear feedback when resubmitting
+                if submitted:
+                    project.supervisor_feedback = None
 
             project.save()
             return Response(ProjectSerializer(project).data)
@@ -829,14 +846,20 @@ class AvailableSupervisorsView(APIView):
         data = [
             {
                 "TID": t.TID,
-                "full_name": t.full_name,
+                "_id": t.TID,
                 "email": t.email,
+                "first_name": t.first_name,
+                "last_name": t.last_name,
+                "name": f"{t.first_name} {t.last_name}",
+                "full_name": f"{t.first_name} {t.last_name}",
+                "specialty": t.specialty or "",
+                "department": t.department or "",
+                "available": t.available,
             }
             for t in supervisors
         ]
 
         return Response(data)
-
 
 class AttachmentView(APIView):
     permission_classes = [IsStudent]
@@ -888,3 +911,41 @@ class AttachmentView(APIView):
             is_final=request.data.get("is_final", False),
         )
         return Response({"id": attachment.id, "filename": attachment.filename}, status=201)
+    
+class StudentGroupStatusView(APIView):
+    permission_classes = [IsStudent]
+
+    def get(self, request):
+        student = request.user
+        students = Student.objects.filter(
+            academic_year=student.academic_year,
+            specialty=student.specialty,
+        ).exclude(CID=student.CID)
+
+        data = []
+        for s in students:
+            has_group = SProjects.objects.filter(
+                CID=s, PID__archived=False
+            ).exists()
+            data.append({
+                "CID": s.CID,
+                "full_name": s.full_name,
+                "has_group": has_group,
+            })
+
+        return Response(data)
+
+
+class PublicSettingsView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        from admin_panel.models import PlatformSettings
+        settings = PlatformSettings.objects.first()
+        if not settings:
+            settings = PlatformSettings.objects.create()
+        return Response({
+            "project_types": settings.project_types,
+            "current_academic_year": settings.current_academic_year,
+            "contact_email": settings.contact_email,
+        })

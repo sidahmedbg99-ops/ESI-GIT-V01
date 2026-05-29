@@ -4,31 +4,49 @@ from jury.models import GradingFormula
 
 logger = logging.getLogger(__name__)
 
-# Allowed safe math functions admin can use in formula
+# ─────────────────────────────────────────
+# Allowed functions admin can use in formula
+# ─────────────────────────────────────────
+
 ALLOWED_FUNCTIONS = {
-    "min": min,
-    "max": max,
+    "min":   min,
+    "max":   max,
     "round": round,
-    "abs": abs,
-    "sqrt": math.sqrt,
+    "abs":   abs,
+    "sqrt":  math.sqrt,
 }
 
-# Dummy grades used to validate formula before saving
-TEST_GRADES = {"g1": 15.0, "g2": 14.0, "g3": 16.0}
+
+# ─────────────────────────────────────────
+# Get active formula
+# ─────────────────────────────────────────
+
+def get_active_formula():
+    return GradingFormula.objects.filter(is_active=True).first()
 
 
 # ─────────────────────────────────────────
-# Validate formula BEFORE saving it
+# Validate formula before saving
 # ─────────────────────────────────────────
-def validate_formula(expression: str):
+
+def validate_formula(expression: str, labels: dict):
+    """
+    Runs the formula with dummy values (15.0 for each variable)
+    to catch errors before the admin saves it.
+    labels = {"g1": "Continuous work", "g2": "Final product", ...}
+    """
     if not expression or not expression.strip():
         return False, "Formula cannot be empty"
+    if not labels:
+        return False, "Labels cannot be empty"
+
+    test_grades = {var: 15.0 for var in labels.keys()}
 
     try:
         result = eval(
             expression,
             {"__builtins__": {}},
-            {**ALLOWED_FUNCTIONS, **TEST_GRADES},
+            {**ALLOWED_FUNCTIONS, **test_grades},
         )
 
         if not isinstance(result, (int, float)):
@@ -41,53 +59,38 @@ def validate_formula(expression: str):
 
     except ZeroDivisionError:
         return False, "Division by zero detected"
-
     except NameError as e:
-        return False, f"Unknown variable/function: {str(e)}"
-
+        return False, f"Unknown variable or function: {str(e)}"
     except SyntaxError as e:
         return False, f"Syntax error: {e.msg}"
-
     except Exception as e:
         return False, f"Formula error: {str(e)}"
 
 
 # ─────────────────────────────────────────
-# Get active formula
+# Calculate final grade
 # ─────────────────────────────────────────
-def get_active_formula():
-    return GradingFormula.objects.filter(is_active=True).first()
 
-
-# ─────────────────────────────────────────
-# Calculate final grade using active formula
-# ─────────────────────────────────────────
-def calculate_final_grade(grades: dict):
+def calculate_final_grade(values: dict):
     """
-    grades = {"g1": float, "g2": float, "g3": float}
+    Called from Grades.save().
+    values = {"g1": 15.0, "g2": 14.0, ...} — must be complete, view validates this first.
+    Returns float or None if no active formula.
     """
-
     formula = get_active_formula()
 
-    # fallback if no formula exists
     if not formula:
-        avg = round((grades["g1"] + grades["g2"] + grades["g3"]) / 3, 2)
-        logger.warning("No active formula → using average")
-        return avg, None
+        logger.warning("No active formula found — cannot calculate grade")
+        return None
 
     try:
         result = eval(
-            formula.formula_expression,
+            formula.expression,
             {"__builtins__": {}},
-            {**ALLOWED_FUNCTIONS, **grades},
+            {**ALLOWED_FUNCTIONS, **{k: float(v) for k, v in values.items()}},
         )
-
-        final = round(float(result), 2)
-        final = max(0.0, min(20.0, final))  # clamp 0-20
-
-        return final, formula
+        return round(max(0.0, min(20.0, float(result))), 2)
 
     except Exception as e:
-        logger.error(f"Formula crashed → fallback average: {e}")
-        avg = round((grades["g1"] + grades["g2"] + grades["g3"]) / 3, 2)
-        return avg, None
+        logger.error(f"Grading engine error: {e}")
+        return None
