@@ -5,6 +5,8 @@ import {
   IoSchoolOutline, IoFolderOutline, IoPeopleOutline,
   IoMailOutline, IoCheckmarkOutline, IoDownloadOutline, IoTimeOutline,
   IoCloudDownloadOutline, IoSearchOutline,
+  IoAddOutline, IoTrashOutline, IoFlashOutline, IoCheckmarkCircleOutline,
+  IoArrowForwardOutline,
 } from 'react-icons/io5';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import DashboardLayout from '../../layouts/DashboardLayout';
@@ -241,7 +243,6 @@ export function AdminAnalytics() {
 // ─────────────────────────────────────────────────────────
 // Each setting panel rendered inline when a card is clicked
 // ─────────────────────────────────────────────────────────
-
 function PanelYears({ onBack }) {
   const { t } = useLanguage();
   const { platformSettings, updatePlatformSettings } = useAdmin();
@@ -258,7 +259,6 @@ function PanelYears({ onBack }) {
 
   const save = async () => {
     if (year !== platformSettings?.current_academic_year) {
-      // Logic handled via handleYearChange
       handleYearChange();
       return;
     }
@@ -281,6 +281,18 @@ function PanelYears({ onBack }) {
     });
   };
 
+  const handleAdvanceYear = () => {
+    if (!window.confirm(`Clôturer ${platformSettings?.current_academic_year} et archiver tous les projets actifs ?`)) return;
+    setLoading(true);
+    client.post(ENDPOINTS.admin.advanceYear)
+      .then(res => {
+        toast.success(res.data.message);
+        updatePlatformSettings({});
+      })
+      .catch(e => toast.error(e?.response?.data?.error || 'Erreur'))
+      .finally(() => setLoading(false));
+  };
+
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
@@ -289,7 +301,7 @@ function PanelYears({ onBack }) {
       <div style={{ maxWidth: 420 }}>
         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{t('ActiveYear')}</label>
         <Input value={year} onChange={e => setYear(e.target.value)} placeholder="ex: 2024-2025" style={{ marginBottom: '16px' }} />
-        
+
         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Types de Projet</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
           {types.map(p => (
@@ -298,7 +310,7 @@ function PanelYears({ onBack }) {
               <button onClick={() => setTypes(pr => pr.filter(x => x !== p))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '16px', padding: 0, lineHeight: 1 }}>×</button>
             </div>
           ))}
-          <button onClick={() => { 
+          <button onClick={() => {
             window.showPrompt({
               title: "Nouveau type",
               message: "Entrez le nom du type (ex: Master)",
@@ -306,13 +318,25 @@ function PanelYears({ onBack }) {
             });
           }} style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px dashed var(--border)', background: 'none', fontSize: '13px', cursor: 'pointer', color: 'var(--text-muted)' }}>+ Ajouter</button>
         </div>
-        
+
         <Button onClick={save} loading={loading} icon={<IoSaveOutline size={16}/>}>
           {t('Save')}
         </Button>
+
         <div style={{ marginTop: '16px', padding: '12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', fontSize: '12px', color: '#92400E' }}>
           {t('ChangeYearWarning')}
         </div>
+
+        <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
+          <p style={{ fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>🔁 Clôturer l'année & Avancer</p>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Archive tous les projets actifs et passe automatiquement à l'année suivante. Cette action est <strong>irréversible</strong>.
+          </p>
+          <Button variant="danger" loading={loading} icon={<IoArrowForwardOutline size={16}/>} onClick={handleAdvanceYear}>
+            Clôturer l'année & Avancer
+          </Button>
+        </div>
+
       </div>
     </Card>
   );
@@ -419,7 +443,7 @@ function PanelVisibility() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
           {[
             { key: 'students_can_see_archived_projects', label: t('ShowArchiveStudents'), desc: t('ShowArchiveStudents_Desc') },
-            { key: 'students_can_see_jury_column', label: 'Afficher la colonne jury pour les étudiants', desc: 'Permet aux étudiants de voir les notes détaillées de chaque juré' },
+            { key: 'jury_page_visible', label: t('JuryPageVisible') || 'Enable jury page for teachers', desc: 'Teachers can access the jury grading page' },
           ].map(s => (
             <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
               <div style={{ flex: 1, marginRight: '16px' }}>
@@ -436,17 +460,17 @@ function PanelVisibility() {
         {/* Email de contact pour mot de passe oublié */}
         <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', marginTop: '8px' }}>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '6px' }}>
-            E-mail de contact (Mot de passe oublié)
+            {t('SystemEmail') || 'System Email'}
           </label>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-            Cette adresse sera affichée dans la boîte de dialogue d'aide lorsque l'utilisateur clique sur "Mot de passe oublié".
+            {t('SystemEmailDesc') || 'Used as the sender address for account credentials, password resets and system notifications'}
           </p>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input
               type="email"
               value={local.contact_email || ''}
               onChange={(e) => setLocal({ ...local, contact_email: e.target.value })}
-              placeholder="Ex: aced@esi.dz"
+              placeholder="Ex: aced@esi-sba.dz"
               style={{
                 flex: 1,
                 padding: '10px 14px',
@@ -482,166 +506,210 @@ function PanelVisibility() {
 
 function PanelGradingFormula() {
   const { t } = useLanguage();
-  const { platformSettings, updatePlatformSettings } = useAdmin();
-  const [formulas, setFormulas] = useState([]);
-  const [newFormula, setNewFormula] = useState({ name: '', expression: '', description: '' });
-  const [weights, setWeights] = useState({
-    presentation: platformSettings?.presentation_weight || 20,
-    document: platformSettings?.document_weight || 30,
-    demo: platformSettings?.demo_weight || 50
-  });
-  const [roleWeights, setRoleWeights] = useState({
-    president: platformSettings?.president_weight || 40,
-    supervisor: platformSettings?.supervisor_weight || 40,
-    other: platformSettings?.other_weight || 20
-  });
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState('');
+  const [formulas, setFormulas]       = useState([]);
+  const [loadError, setLoadError]     = useState('');
+  const [saving, setSaving]           = useState(false);
 
+  // --- create form state ---
+  const [formulaName, setFormulaName]         = useState('');
+  const [formulaDesc, setFormulaDesc]         = useState('');
+  const [components, setComponents]           = useState([{ label: '', coef: 1 }]);
+  const [expression, setExpression]           = useState('');
+  const [exprManuallyEdited, setExprManuallyEdited] = useState(false);
+
+  // auto-generate expression from components whenever they change
   useEffect(() => {
-    if (platformSettings) {
-      setWeights({
-        presentation: platformSettings.presentation_weight,
-        document: platformSettings.document_weight,
-        demo: platformSettings.demo_weight
-      });
-      setRoleWeights({
-        president: platformSettings.president_weight || 0,
-        supervisor: platformSettings.supervisor_weight || 0,
-        other: platformSettings.other_weight || 0
-      });
-    }
-  }, [platformSettings]);
+    if (exprManuallyEdited) return;
+    const valid = components.filter(c => c.label.trim() && Number(c.coef) > 0);
+    if (valid.length === 0) { setExpression(''); return; }
+    const totalCoef = valid.reduce((s, c) => s + Number(c.coef), 0);
+    const terms = valid.map((c, i) => `g${i + 1}*${c.coef}`).join(' + ');
+    setExpression(`(${terms}) / ${totalCoef}`);
+  }, [components, exprManuallyEdited]);
+
+  const addComponent    = () => setComponents(p => [...p, { label: '', coef: 1 }]);
+  const removeComponent = (i) => setComponents(p => p.filter((_, idx) => idx !== i));
+  const updateComponent = (i, field, val) => {
+    setComponents(p => p.map((c, idx) => idx === i ? { ...c, [field]: val } : c));
+    setExprManuallyEdited(false); // re-trigger auto-gen on component change
+  };
 
   const loadFormulas = async () => {
     try {
       const { data } = await client.get(ENDPOINTS.admin.gradeFormula);
       setFormulas(Array.isArray(data) ? data : []);
       setLoadError('');
-    } catch (e) {
-      setLoadError('Impossible de charger les formules. Vérifiez la connexion au serveur.');
+    } catch {
+      setLoadError(t('Error'));
     }
   };
-
   useEffect(() => { loadFormulas(); }, []);
 
   const handleCreate = async () => {
-    if (!newFormula.name || !newFormula.expression) return toast.error("Nom et expression requis");
-    setLoading(true);
+    if (!formulaName.trim()) return toast.error(t('fieldsRequired'));
+    if (!expression.trim())  return toast.error(t('fieldsRequired'));
+    const validComponents = components.filter(c => c.label.trim());
+    if (validComponents.length === 0) return toast.error(t('fieldsRequired'));
+
+    const labels = {};
+    validComponents.forEach((c, i) => { labels[`g${i + 1}`] = c.label.trim(); });
+
+    setSaving(true);
     try {
       await client.post(ENDPOINTS.admin.gradeFormula, {
-        name: newFormula.name,
-        expression: newFormula.expression,
-        description: newFormula.description
+        name: formulaName.trim(),
+        expression: expression.trim(),
+        labels,
+        description: formulaDesc.trim(),
       });
-      toast.success("Formule ajoutée");
-      setNewFormula({ name: '', expression: '', description: '' });
+      toast.success(t('Saved'));
+      setFormulaName(''); setFormulaDesc('');
+      setComponents([{ label: '', coef: 1 }]);
+      setExpression(''); setExprManuallyEdited(false);
       loadFormulas();
     } catch (err) {
-      toast.error(err.response?.data?.error || "Erreur de création");
+      toast.error(err.response?.data?.error || t('Error'));
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleActivate = async (id) => {
     try {
       await client.patch(ENDPOINTS.admin.gradeFormulaActivate(id));
-      toast.success("Formule activée");
+      toast.success(t('Saved'));
       loadFormulas();
-    } catch (err) {
-      toast.error("Erreur d'activation");
+    } catch {
+      toast.error(t('Error'));
     }
   };
 
-  const saveWeights = async () => {
-    const total = parseInt(weights.presentation) + parseInt(weights.document) + parseInt(weights.demo);
-    if (total !== 100) return toast.error(`Le total doit être 100% (actuel: ${total}%)`);
-    
-    setLoading(true);
-    await updatePlatformSettings({
-      presentation_weight: parseInt(weights.presentation),
-      document_weight: parseInt(weights.document),
-      demo_weight: parseInt(weights.demo)
-    });
-    setLoading(false);
-  };
-
-  const saveRoleWeights = async () => {
-    const total = parseInt(roleWeights.president) + parseInt(roleWeights.supervisor) + parseInt(roleWeights.other);
-    if (total !== 100) return toast.error(`Le total doit être 100% (actuel: ${total}%)`);
-    
-    setLoading(true);
-    await updatePlatformSettings({
-      president_weight: parseInt(roleWeights.president),
-      supervisor_weight: parseInt(roleWeights.supervisor),
-      other_weight: parseInt(roleWeights.other)
-    });
-    setLoading(false);
-  };
+  const ROW = { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' };
+  const LABEL_STYLE = { fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' };
 
   return (
     <Card>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>📊 {t('GradingFormula')}</h2>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('FeaturesSubtitle')}</p>
-      </div>
+      <h2 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '4px' }}>📊 {t('GradingFormula')}</h2>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '28px' }}>{t('FeaturesSubtitle')}</p>
 
-      {/* Component Weights */}
-      <div style={{ marginBottom: '32px', padding: '20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          ⚖️ Pondération des notes individuelles
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+      {/* ── Create formula ── */}
+      <div style={{ padding: '20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)', marginBottom: '32px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '18px' }}>➕ {t('AddUser').replace('User','Formula') || 'New formula'}</h4>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Présentation (%)</label>
-            <Input type="number" value={weights.presentation} onChange={e => setWeights({...weights, presentation: e.target.value})} />
+            <label style={LABEL_STYLE}>{t('Name') || 'Name'}</label>
+            <Input value={formulaName} onChange={e => setFormulaName(e.target.value)} placeholder="e.g. PFE 2025" />
           </div>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Document (%)</label>
-            <Input type="number" value={weights.document} onChange={e => setWeights({...weights, document: e.target.value})} />
-          </div>
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Démo (%)</label>
-            <Input type="number" value={weights.demo} onChange={e => setWeights({...weights, demo: e.target.value})} />
+            <label style={LABEL_STYLE}>{t('Description') || 'Description'} ({t('Optional') || 'optional'})</label>
+            <Input value={formulaDesc} onChange={e => setFormulaDesc(e.target.value)} placeholder="e.g. Final year formula" />
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: '12px', color: (parseInt(weights.presentation)+parseInt(weights.document)+parseInt(weights.demo)) === 100 ? 'var(--success)' : '#EF4444', fontWeight: 600 }}>
-            Total: {parseInt(weights.presentation || 0) + parseInt(weights.document || 0) + parseInt(weights.demo || 0)}%
+
+        {/* Components */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ ...LABEL_STYLE, marginBottom: '10px' }}>{t('Components') || 'Grade components'}</label>
+          {components.map((c, i) => (
+            <div key={i} style={ROW}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'var(--primary-subtle)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, flexShrink: 0 }}>
+                g{i + 1}
+              </div>
+              <Input
+                value={c.label}
+                onChange={e => updateComponent(i, 'label', e.target.value)}
+                placeholder={`e.g. Oral defense`}
+                style={{ flex: 2 }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                <label style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{t('Coefficient') || 'Coef.'}</label>
+                <input
+                  type="number" min="0" step="0.1"
+                  value={c.coef}
+                  onChange={e => updateComponent(i, 'coef', e.target.value)}
+                  style={{ width: '70px', padding: '8px', borderRadius: '8px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px', textAlign: 'center' }}
+                />
+              </div>
+              {components.length > 1 && (
+                <button onClick={() => removeComponent(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: '4px', borderRadius: '6px', flexShrink: 0 }}>
+                  <IoTrashOutline size={16} />
+                </button>
+              )}
+            </div>
+          ))}
+          <button onClick={addComponent} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1.5px dashed var(--border)', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, marginTop: '4px' }}>
+            <IoAddOutline size={16} /> {t('Add') || 'Add component'}
+          </button>
+        </div>
+
+        {/* Expression */}
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+            <label style={LABEL_STYLE}>{t('Expression') || 'Expression'}</label>
+            {exprManuallyEdited && (
+              <button onClick={() => setExprManuallyEdited(false)} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                ↺ {t('Reset') || 'Auto-generate'}
+              </button>
+            )}
+          </div>
+          <input
+            value={expression}
+            onChange={e => { setExpression(e.target.value); setExprManuallyEdited(true); }}
+            placeholder="e.g. (g1*4 + g2*3 + g3*3) / 10"
+            style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: `1.5px solid ${exprManuallyEdited ? 'var(--accent)' : 'var(--border)'}`, background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px', fontFamily: 'monospace', boxSizing: 'border-box' }}
+          />
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>
+            {exprManuallyEdited ? '✏️ Manually edited' : '⚡ Auto-generated from components'}
           </p>
-          <Button size="sm" onClick={saveWeights} loading={loading} icon={<IoSaveOutline size={14}/>}>Sauvegarder pondération</Button>
         </div>
+
+        <Button onClick={handleCreate} loading={saving} icon={<IoSaveOutline size={14}/>}>{t('Save')}</Button>
       </div>
 
-      {/* Role Weights */}
-      <div style={{ marginBottom: '32px', padding: '20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          ⚖️ Pondération par rôle du jury
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Président (%)</label>
-            <Input type="number" value={roleWeights.president} onChange={e => setRoleWeights({...roleWeights, president: e.target.value})} />
-          </div>
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Encadreur (%)</label>
-            <Input type="number" value={roleWeights.supervisor} onChange={e => setRoleWeights({...roleWeights, supervisor: e.target.value})} />
-          </div>
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Autre membre (%)</label>
-            <Input type="number" value={roleWeights.other} onChange={e => setRoleWeights({...roleWeights, other: e.target.value})} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: '12px', color: (parseInt(roleWeights.president)+parseInt(roleWeights.supervisor)+parseInt(roleWeights.other)) === 100 ? 'var(--success)' : '#EF4444', fontWeight: 600 }}>
-            Total: {parseInt(roleWeights.president || 0) + parseInt(roleWeights.supervisor || 0) + parseInt(roleWeights.other || 0)}%
+      {/* ── Saved formulas ── */}
+      <div>
+        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px' }}>📋 {t('SavedFormulas') || 'Saved formulas'}</h4>
+        {loadError && <p style={{ color: '#EF4444', fontSize: '13px' }}>{loadError}</p>}
+        {formulas.length === 0 && !loadError && (
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '16px', borderRadius: '10px', background: 'var(--bg)', border: '1px dashed var(--border)', textAlign: 'center' }}>
+            {t('NoFormulas') || 'No formulas yet'}
           </p>
-          <Button size="sm" onClick={saveRoleWeights} loading={loading} icon={<IoSaveOutline size={14}/>}>Sauvegarder pondération rôles</Button>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {formulas.map(f => (
+            <div key={f.id} style={{ padding: '16px', borderRadius: '14px', background: 'var(--bg)', border: `1.5px solid ${f.is_active ? 'var(--primary)' : 'var(--border)'}`, position: 'relative' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div>
+                  <span style={{ fontSize: '14px', fontWeight: 700 }}>{f.name}</span>
+                  {f.is_active && (
+                    <span style={{ marginLeft: '10px', fontSize: '11px', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-subtle)', padding: '2px 8px', borderRadius: '20px' }}>
+                      <IoFlashOutline size={10} style={{ marginRight: '3px' }} />{t('Active') || 'ACTIVE'}
+                    </span>
+                  )}
+                </div>
+                {!f.is_active && (
+                  <Button size="sm" variant="ghost" onClick={() => handleActivate(f.id)} icon={<IoCheckmarkCircleOutline size={14}/>}>
+                    {t('Activate') || 'Activate'}
+                  </Button>
+                )}
+              </div>
+              <code style={{ display: 'block', fontSize: '12px', padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-card)', color: 'var(--accent)', marginBottom: '10px', fontFamily: 'monospace' }}>
+                {f.expression}
+              </code>
+              {f.labels && Object.keys(f.labels).length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {Object.entries(f.labels).map(([key, label]) => (
+                    <span key={key} style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontWeight: 600 }}>
+                      {key}: {label}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {f.description && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{f.description}</p>}
+            </div>
+          ))}
         </div>
       </div>
-
-
     </Card>
   );
 }

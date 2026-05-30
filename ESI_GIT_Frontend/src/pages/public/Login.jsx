@@ -302,9 +302,9 @@ export default function Login() {
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Mot de passe</label>
-                        <span onClick={() => setShowForgotModal(true)} style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}>
-                          Mot de passe oublié ?
-                        </span>
+                        <Link to="/forgot-password" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                        Mot de passe oublié ?
+                      </Link>
                       </div>
                       <div style={{ position: 'relative' }}>
                         <IoLockClosedOutline size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />

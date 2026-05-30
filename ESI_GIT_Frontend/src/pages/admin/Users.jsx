@@ -122,11 +122,13 @@ function UserForm({ initial, onSave, onCancel }) {
               <IoPersonOutline size={16} color="var(--primary)"/> {t('Identity')}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div style={{ gridColumn: '1/-1' }}>
-                <Field label="ID / Matricule (National ID)">
-                  <Input value={form.id} onChange={e => set('id', e.target.value)} placeholder="Ex: 202031045..." icon={<IoShieldOutline size={14}/>} disabled={isEdit}/>
-                </Field>
-              </div>
+              {form.role === 'student' && (
+                <div style={{ gridColumn: '1/-1' }}>
+                  <Field label="ID / Matricule (National ID)">
+                    <Input value={form.id} onChange={e => set('id', e.target.value)} placeholder="Ex: 202031045..." icon={<IoShieldOutline size={14}/>} disabled={isEdit}/>
+                  </Field>
+                </div>
+              )}
               <div style={{ gridColumn: '1/-1', display: 'flex', gap: '14px' }}>
                 <div style={{ flex: 1 }}>
                   <Field label={t('FirstName')}>
@@ -162,9 +164,6 @@ function UserForm({ initial, onSave, onCancel }) {
                   </label>
                 </div>
               )}
-              <Field label={isEdit ? t('NewPasswordOptional') : "Password"}>
-                <Input type="text" value={form.password || ''} onChange={e => set('password', e.target.value)} placeholder={isEdit ? t('LeaveEmptyNoChange') : "Default: student123"} icon={<IoShieldOutline size={14}/>}/>
-              </Field>
             </div>
           </Card>
 
@@ -199,8 +198,7 @@ function UserForm({ initial, onSave, onCancel }) {
                       value={form.specialite || ''} 
                       onChange={v => set('specialite', v)} 
                       options={[
-                        { value: '', label: `-- ${t('Choose')} --` },
-                        ...specialties.map(s => ({ value: s.name, label: s.name }))
+                        specialties.map(s => ({ value: s.name, label: s.name }))
                       ]}
                     />
                   </Field>

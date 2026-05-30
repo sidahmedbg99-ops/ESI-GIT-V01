@@ -808,11 +808,14 @@ class SpecialtyListCreateAPI(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = SpecialtySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        name = request.data.get("name", "").strip()
+        if not name:
+            return Response({"error": "Name is required."}, status=status.HTTP_400_BAD_REQUEST)
+        dept = Department.objects.exclude(name__icontains="prep").first() or Department.objects.first()
+        if not dept:
+            return Response({"error": "No department found. Run seed first."}, status=status.HTTP_400_BAD_REQUEST)
+        specialty = Specialty.objects.create(name=name, department=dept)
+        return Response(SpecialtySerializer(specialty).data, status=status.HTTP_201_CREATED)
 
 
 class SpecialtyDetailAPI(APIView):
@@ -1024,3 +1027,39 @@ class PlatformSettingsAPI(APIView):
                 {"message": "Platform settings updated.", "data": serializer.data}
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdvanceAcademicYearAPI(APIView):
+    """
+    POST /api/admin/advance-year/
+    1. Archives all non-archived projects from the current year
+    2. Bumps current_academic_year (e.g. "2024-2025" → "2025-2026")
+    """
+    permission_classes = [IsAdmin]
+
+    def post(self, request):
+        from projects.models import Projects
+
+        settings = PlatformSettings.objects.first()
+        if not settings:
+            return Response({"error": "Platform settings not found."}, status=400)
+
+        # Archive all active projects
+        archived_count = Projects.objects.filter(archived=False).update(archived=True)
+
+        # Bump the year — parse "2024-2025" → "2025-2026"
+        try:
+            current = settings.current_academic_year  # e.g. "2024-2025"
+            parts = current.split("-")
+            new_year = f"{int(parts[0]) + 1}-{int(parts[1]) + 1}"
+        except Exception:
+            new_year = current + "+"  # fallback if format is unexpected
+
+        settings.current_academic_year = new_year
+        settings.save()
+
+        return Response({
+            "message": f"Year advanced to {new_year}. {archived_count} project(s) archived.",
+            "new_year": new_year,
+            "archived_count": archived_count,
+        })

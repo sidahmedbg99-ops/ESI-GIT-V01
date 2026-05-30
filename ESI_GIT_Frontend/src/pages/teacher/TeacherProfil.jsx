@@ -29,16 +29,6 @@ export default function TeacherProfil() {
   const [available, setAvailable] = useState(user?.available !== false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  const handlePasswordChange = () => {
-    if (!passForm.current || !passForm.next) { setPassMsg(t('Error')); return; }
-    if (passForm.next !== passForm.confirm)  { setPassMsg(t('Error')); return; }
-    if (passForm.next.length < 8)           { setPassMsg(t('Error')); return; }
-    setPassMsg('');
-    setSaved(true);
-    setPassForm({ current: '', next: '', confirm: '' });
-    setTimeout(() => setSaved(false), 3000);
-  };
-
   const safeGroups = groups || [];
   const activeGroups  = safeGroups.filter(g => g.status === 'active' || g.status === 'approved').length;
   const totalStudents = safeGroups.reduce((acc, g) => acc + (g.members?.length || g.studentIds?.length || 0), 0);
@@ -143,9 +133,9 @@ export default function TeacherProfil() {
               {passMsg && <p style={{ fontSize: '13px', color: '#EF4444' }}>{passMsg}</p>}
               {saved   && <p style={{ fontSize: '13px', color: '#10B981' }}>✓ {t('Saved')}</p>}
               <Button onClick={async () => {
-                if (!passForm.current || !passForm.next) { setPassMsg(t('Error')); return; }
-                if (passForm.next !== passForm.confirm)  { setPassMsg(t('Error')); return; }
-                if (passForm.next.length < 8)           { setPassMsg(t('Error')); return; }
+                if (!passForm.current || !passForm.next) { setPassMsg(t('fieldsRequired')); return; }
+                if (passForm.next !== passForm.confirm)  { setPassMsg(t('passwordMismatch')); return; }
+                if (passForm.next.length < 8)           { setPassMsg(t('passwordTooShort')); return; }
                 setPassMsg('');
                 try {
                   await authApi.changePassword(passForm.current, passForm.next);

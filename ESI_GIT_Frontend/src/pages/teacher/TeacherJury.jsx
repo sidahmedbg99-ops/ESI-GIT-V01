@@ -8,10 +8,20 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTeacher } from '../../context/TeacherContext';
 import { getFileUrl } from '../../api/config';
 
+
 export default function TeacherJury() {
   const { t } = useLanguage();
   const { evaluations, evaluationsLoading, gradeEvaluation, platformSettings } = useTeacher();
   
+  if (evaluations?.disabled) return (
+    <DashboardLayout>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: '12px' }}>
+        <IoRibbonOutline size={48} style={{ color: 'var(--text-muted)' }} />
+        <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('JuryPageDisabled') || 'Jury access is currently disabled by the admin'}</p>
+      </div>
+    </DashboardLayout>
+  );
+
   const stats = evaluations || { assignees: 0, a_evaluer: 0, evaluees: 0 };
   const defenses = evaluations?.defenses || [];
 

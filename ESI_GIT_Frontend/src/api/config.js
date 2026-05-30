@@ -146,6 +146,7 @@ export const ENDPOINTS = {
     advancedAnalytics: 'admin/analytics/advanced/',
     studentsWithoutGroup: 'projects/admin/students-without-group/',
     archivedVisibility: 'projects/admin/archived-projects-visibility/',
+    advanceYear: 'admin/advance-year/',
   },
 
   // ── Archive ───────────────────────────────────────────────────────

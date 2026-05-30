@@ -29,9 +29,8 @@ from admin_panel.views import (
     PlatformSettingsAPI,
     dashboard_analytics,
     AdvancedAnalyticsAPI,
+    AdvanceAcademicYearAPI
 )
-from admin_panel.views import dashboard_analytics  # add to imports
-
 
 urlpatterns = [
 
@@ -77,5 +76,6 @@ urlpatterns = [
 
     path("analytics/advanced/", AdvancedAnalyticsAPI.as_view()),
     path("dashboard/analytics/", dashboard_analytics),
+    path("advance-year/", AdvanceAcademicYearAPI.as_view()),
 
 ]

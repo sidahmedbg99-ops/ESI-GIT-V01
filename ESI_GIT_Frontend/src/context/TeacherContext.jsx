@@ -69,7 +69,12 @@ export function TeacherProvider({ children }) {
     }).catch(() => { setGroups([]); setSupervisorRequests([]); });
 
     loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(() => setMeetings([]));
-    loadEvaluations().then(e => setEvaluations(e)).catch(() => setEvaluations({ assignees: 0, defenses: [] }));
+    loadEvaluations()
+    .then(e => setEvaluations(e))
+    .catch(err => {
+      if (err?.response?.status === 403) setEvaluations({ disabled: true, defenses: [] });
+      else setEvaluations({ assignees: 0, defenses: [] });
+    });
     loadArchive().then(a => setArchive(Array.isArray(a) ? a : [])).catch(() => setArchive([]));
     
     // Load platform settings for weights

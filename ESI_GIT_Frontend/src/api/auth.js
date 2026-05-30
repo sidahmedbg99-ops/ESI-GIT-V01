@@ -15,11 +15,11 @@ export const authApi = {
     return data;
   },
   forgotPassword: async (email) => {
-    const { data } = await client.post('/users/forgot-password/', { email });
+    const { data } = await client.post('forgot-password/', { email });
     return data;
   },
   resetPasswordConfirm: async (uid, token, new_password) => {
-    const { data } = await client.post('/users/reset-password-confirm/', { uid, token, new_password });
+    const { data } = await client.post(`reset-password/${uid}/${token}/`, { new_password });
     return data;
   },
 };

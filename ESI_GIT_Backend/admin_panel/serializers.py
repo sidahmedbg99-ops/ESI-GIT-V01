@@ -278,7 +278,7 @@ class SpecialtySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Specialty
-        fields = ["id", "name", "department"]
+        fields = ["id", "name"]
         extra_kwargs = {
             # department is required on create but optional on partial update
             "department": {"required": False},
@@ -331,4 +331,4 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlatformSettings
-        fields = ["students_can_see_archived_projects"]
+        fields = ["students_can_see_archived_projects", "jury_page_visible", "students_can_see_jury_column", "contact_email"]

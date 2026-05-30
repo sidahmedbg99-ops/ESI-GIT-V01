@@ -13,12 +13,8 @@ export const evaluationsApi = {
 
   // GET /api/teacher/jury/ → list of defenses/evaluations
   getTeacherEvaluations: async () => {
-    try {
-      const { data } = await client.get(ENDPOINTS.evaluations.teacherJury);
-      return data;
-    } catch {
-      return [];
-    }
+    const { data } = await client.get(ENDPOINTS.evaluations.teacherJury);
+    return data;
   },
 
   // POST /api/teacher/jury/<pid>/evaluate/ → submit jury evaluation
