@@ -28,6 +28,7 @@ export function TeacherProvider({ children }) {
   const [recentActivity, setRecentActivity] = useState([]);
   const [assignedTasks, setAssignedTasks] = useState([]);
   const [supervisorRequests, setSupervisorRequests] = useState(null);
+  const [platformSettings, setPlatformSettings] = useState(null);
 
   const { request: loadGroups, loading: groupsLoading } = useApi(groupApi.getTeacherGroups);
   const { request: loadMeetings, loading: meetingsLoading } = useApi(meetingsApi.getTeacherMeetings);
@@ -70,6 +71,11 @@ export function TeacherProvider({ children }) {
     loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(() => setMeetings([]));
     loadEvaluations().then(e => setEvaluations(e)).catch(() => setEvaluations({ assignees: 0, defenses: [] }));
     loadArchive().then(a => setArchive(Array.isArray(a) ? a : [])).catch(() => setArchive([]));
+    
+    // Load platform settings for weights
+    client.get(ENDPOINTS.admin.platformSettings).then(res => {
+      setPlatformSettings(res.data);
+    }).catch(err => console.error('Teacher: platform settings load failed', err));
   }, [user, isTeacher]);
 
   const pushActivity = useCallback((entry) => {
@@ -166,15 +172,41 @@ export function TeacherProvider({ children }) {
     } catch (e) { console.error(e); toast.error("Erreur refus"); }
   }, [pushActivity]);
 
+  const cancelMeeting = useCallback(async (id, reason) => {
+    try {
+      const u = await meetingsApi.cancelMeeting(id, reason);
+      setMeetings(p => p?.map(m => (m._id === id || m.id === id) ? { ...m, ...u, status: 'cancelled', cancellation_reason: reason } : m) ?? p);
+      pushActivity({ type: 'meeting_cancelled', action: 'Réunion annulée', desc: id, color: '#6B7280' });
+      toast.success('Réunion annulée');
+    } catch (e) { console.error(e); toast.error("Erreur annulation"); }
+  }, [pushActivity]);
+
   // ── Evaluations ────────────────────────────────────────────────────
   // POST /api/teacher/jury/<pid>/evaluate/
-  const gradeEvaluation = useCallback(async (pid, grade, feedback) => {
+  const gradeEvaluation = useCallback(async (pid, data) => {
     try {
-      const u = await evaluationsApi.gradeEvaluation(pid, { grade, feedback });
-      setEvaluations(p => p?.map(e => (e._id === pid || e.id === pid) ? { ...e, ...u } : e) ?? p);
+      // data is { presentation, document, demo, validate_cpi, comments }
+      const u = await evaluationsApi.gradeEvaluation(pid, data);
+      
+      // Update local state: find the defense in evaluations and update it
+      setEvaluations(p => {
+        if (!p?.defenses) return p;
+        return {
+          ...p,
+          defenses: p.defenses.map(d => (d.PID_id === pid || d.id === pid) ? { ...d, is_evaluated: true } : d),
+          evaluees: (p.evaluees || 0) + 1,
+          a_evaluer: Math.max(0, (p.a_evaluer || 0) - 1)
+        };
+      });
+
       pushActivity({ type: 'livrable_graded', action: 'Livrable noté', desc: pid, color: '#10B981' });
-      toast.success('Note enregistrée !'); return u;
-    } catch (e) { console.error(e); toast.error("Erreur notation"); }
+      toast.success('Note enregistrée !');
+      return u;
+    } catch (e) {
+      console.error(e);
+      const msg = e?.response?.data?.detail || e?.response?.data?.error || "Erreur notation";
+      toast.error(msg);
+    }
   }, [pushActivity]);
 
   const gradeArchivedProject = useCallback(async (archiveId, grade, feedback) => {
@@ -230,7 +262,7 @@ export function TeacherProvider({ children }) {
   }, [user]);
 
   const stats = {
-    groupsActive: groups?.filter(g => g.status === 'active').length ?? null,
+    groupsActive: groups?.filter(g => g.status === 'active' || g.status === 'approved').length ?? null,
     groupsTotal: groups?.length ?? null,
     meetingsPending: meetings?.filter(m => m.status === 'pending').length ?? null,
     evalsPending: evaluations?.a_evaluer ?? 0,
@@ -239,11 +271,11 @@ export function TeacherProvider({ children }) {
 
   const value = {
     groups, meetings, evaluations, archive, messages, activeContact, recentActivity,
-    assignedTasks, stats, analytics: backendAnalytics, supervisorRequests,
+    assignedTasks, stats, analytics: backendAnalytics, supervisorRequests, platformSettings,
     groupsLoading, meetingsLoading, evaluationsLoading, archiveLoading,
     addGroup, updateGroup, archiveGroup, respondToSupervisorRequest,
     assignTask, scheduleMeeting,
-    addMeeting, acceptMeeting, rejectMeeting,
+    addMeeting, acceptMeeting, rejectMeeting, cancelMeeting,
     gradeEvaluation, gradeArchivedProject,
     loadThread, sendMessage, markThreadRead,
     setActiveContact, pushActivity,

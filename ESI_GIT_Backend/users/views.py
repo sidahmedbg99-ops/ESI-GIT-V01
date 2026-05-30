@@ -144,6 +144,11 @@ class MeView(APIView):
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
+                    "full_name": f"{user.first_name} {user.last_name}",
+                    "academic_year": user.academic_year,
+                    "level": user.level,
+                    "specialty": user.specialty,
+                    "department": user.department,
                     "is_first_login": user.is_first_login,
                 }
             )
@@ -156,8 +161,11 @@ class MeView(APIView):
                     "email": user.email,
                     "first_name": user.first_name,
                     "last_name": user.last_name,
+                    "full_name": f"{user.first_name} {user.last_name}",
                     "is_admin": user.is_admin,
                     "is_teacher": user.is_teacher,
+                    "department": user.department,
+                    "specialty": user.specialty,
                     "is_first_login": user.is_first_login,
                 }
             )

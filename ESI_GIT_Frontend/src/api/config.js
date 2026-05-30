@@ -7,6 +7,15 @@
 // ── Backend base URL from .env ──────────────────────────────────────
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// ── File URL helper ──────────────────────────────────────────────────
+// Resolves relative /media/ paths to absolute backend URLs
+export const getFileUrl = (url) => {
+  if (!url) return '#';
+  if (url.startsWith('http')) return url;
+  const server = BASE_URL.replace('/api', '');
+  return `${server}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 // ── All endpoints ───────────────────────────────────────────────────
 export const ENDPOINTS = {
   // ── Auth (users app, mounted at /api/) ────────────────────────────
@@ -38,6 +47,8 @@ export const ENDPOINTS = {
     leader: 'projects/leader/',                    // PATCH { action, target_cid }
     supervisorRequest: 'projects/supervisor-request/', // GET/POST
     availableSupervisors: 'projects/available-supervisors/', // GET → filtered: available=True, not blocked
+    studentGroupStatus: 'projects/students/status/', // GET
+    publicSettings: 'projects/public-settings/',     // GET
 
     // Teacher
     byTeacher: () => `teacher/groups/`,            // GET
@@ -94,7 +105,7 @@ export const ENDPOINTS = {
   // ── Evaluations (teacher jury scoring) ────────────────────────────
   evaluations: {
     teacherJury: 'teacher/jury/',                  // GET
-    teacherEvaluate: (pid) => `/teacher/jury/${pid}/evaluate/`, // POST
+    teacherEvaluate: (pid) => `teacher/jury/${pid}/evaluate/`, // POST
   },
 
   // ── Admin Panel ───────────────────────────────────────────────────
@@ -126,6 +137,7 @@ export const ENDPOINTS = {
     },
     academicStructure: 'admin/academic-structure/',
     specialties: 'admin/specialties/',
+    specialtyDetail: (id) => `admin/specialties/${id}/`,
     departments: 'admin/departments/',
     gradeFormula: 'admin/grade-formula/',
     gradeFormulaActive: 'admin/grade-formula/active/',

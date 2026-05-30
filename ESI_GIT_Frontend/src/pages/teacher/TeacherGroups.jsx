@@ -210,7 +210,7 @@ export default function TeacherGroups() {
         </p>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <Badge style={{ background: team.supervisorApproved ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)', color: '#fff', border: 'none' }}>
-            {team.supervisorApproved ? `✓ ${t('Approve')}` : `⏳ ${t('InProgress')}`}
+            {team.final_submission_approved ? `✓ ${t('Approve')}` : team.submitted_to_supervisor ? `📋 ${t('ValidationRequest')}` : `⏳ ${t('InProgress')}`}
           </Badge>
           <Badge style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>{(team.members||[]).length} membre(s)</Badge>
           {team.joinCode && (
@@ -222,7 +222,7 @@ export default function TeacherGroups() {
       </div>
 
       {/* Validation workflow */}
-      {team.submittedToSupervisor && !team.supervisorApproved && (
+      {team.submitted_to_supervisor && !team.final_submission_approved && (
         <Card style={{ marginBottom: '20px', background: 'var(--primary-subtle)', border: '1px solid var(--primary)' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
             <div>
@@ -232,9 +232,9 @@ export default function TeacherGroups() {
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button variant="outline" onClick={() => {
                 const reason = prompt(t('Reject') + " :");
-                if (reason) updateGroup(team._id, { submittedToSupervisor: true, supervisorApproved: false, supervisorFeedback: reason });
+                if (reason) updateGroup(team._id, { final_submission_approved: false, supervisor_feedback: reason });
               }} style={{ borderColor: '#EF4444', color: '#EF4444' }}>{t('Reject')}</Button>
-              <Button onClick={() => updateGroup(team._id, { supervisorApproved: true, submittedToSupervisor: true })} style={{ background: '#10B981', borderColor: '#10B981' }}>{t('Approve')}</Button>
+              <Button onClick={() => updateGroup(team._id, { final_submission_approved: true })} style={{ background: '#10B981', borderColor: '#10B981' }}>{t('Approve')}</Button>
             </div>
           </div>
         </Card>
@@ -252,22 +252,6 @@ export default function TeacherGroups() {
         </button>
       </div>
 
-      {/* Progress */}
-      <Card style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 600 }}>{t('ProjectProgress')}</span>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)' }}>{team.progress || 0}%</span>
-        </div>
-        <div style={{ height: 10, borderRadius: 5, background: 'var(--border)', overflow: 'hidden' }}>
-          <div style={{ width: `${team.progress || 0}%`, height: '100%', background: 'linear-gradient(90deg, var(--primary), #8B5CF6)', borderRadius: 5, transition: 'width 0.4s' }}/>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
-          <button onClick={() => updateGroup && updateGroup(team._id, { progress: Math.max(0, (team.progress||0) - 10) })}
-            style={{ padding: '5px 14px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '13px', cursor: 'pointer' }}>-10%</button>
-          <button onClick={() => updateGroup && updateGroup(team._id, { progress: Math.min(100, (team.progress||0) + 10) })}
-            style={{ padding: '5px 14px', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontSize: '13px', cursor: 'pointer' }}>+10%</button>
-        </div>
-      </Card>
 
       {/* GitHub & Docs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '20px' }}>

@@ -37,11 +37,10 @@ export function AuthProvider({ children }) {
 
         const fullUser = { 
           ...data.user, 
+          name: data.user.name || data.user.full_name || `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim(),
           role: normalizedRole, 
           first_login: data.first_login ?? data.user.IsFirstLogin,
-          _id: data.user.CID || data.user.TID || data.user.id || data.user._id,
-          isAdmin: data.user.is_admin,
-          isTeacher: data.user.is_teacher,
+          _id: data.user.CID || data.user.TID || data.user.id || data.user._id 
         };
         setUser(fullUser);
         localStorage.setItem('esi-user', JSON.stringify(fullUser));
@@ -70,15 +69,21 @@ export function AuthProvider({ children }) {
        authApi.getMe().then(r => {
          // Backend returns flat object { role, CID/TID, email, ... }
          if (r && r.email) {
-           const normalized = { 
-             ...r, 
-             _id: r.CID || r.TID || r.id,
-             // Ensure role is correctly mapped for redirection logic
-             role: r.role === 'staff' ? (r.is_admin ? 'admin' : 'teacher') : r.role,
-             isAdmin: r.is_admin,
-             isTeacher: r.is_teacher,
-           };
-           setUser(normalized);
+            // If user is admin, allow them to stay in their current role (admin or teacher)
+            const currentRole = user?.role;
+            const newRole = r.role === 'staff' 
+              ? (r.is_admin 
+                  ? (currentRole === 'teacher' ? 'teacher' : 'admin') 
+                  : 'teacher') 
+              : r.role;
+
+            const normalized = { 
+              ...r, 
+              name: r.name || r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+              _id: r.CID || r.TID || r.id,
+              role: newRole
+            };
+            setUser(normalized);
            localStorage.setItem('esi-user', JSON.stringify(normalized));
          }
        }).catch(() => {

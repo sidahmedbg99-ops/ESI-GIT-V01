@@ -3,9 +3,10 @@ import {
   IoBarChartOutline, IoTrendingUpOutline, IoGlobeOutline,
   IoArrowBackOutline, IoSettingsOutline, IoSaveOutline,
   IoSchoolOutline, IoFolderOutline, IoPeopleOutline,
-  IoMailOutline, IoCheckmarkOutline, IoArchiveOutline,
+  IoMailOutline, IoCheckmarkOutline, IoDownloadOutline, IoTimeOutline,
+  IoCloudDownloadOutline, IoSearchOutline,
 } from 'react-icons/io5';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
 import StatCard from '../../components/ui/StatCard';
@@ -13,284 +14,379 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAdmin } from '../../context/AdminContext';
+import toast from 'react-hot-toast';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../api/config';
-import toast from 'react-hot-toast';
+import { useApi } from '../../hooks/useApi';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
-// Converts "2025-01-01T00:00:00Z" → "Jan 25"
-function formatMonth(isoString) {
-  const d = new Date(isoString);
-  return d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-}
+const data = [
+  { month: 'Sep', projects: 120, submissions: 340 },
+  { month: 'Oct', projects: 145, submissions: 420 },
+  { month: 'Nov', projects: 162, submissions: 390 },
+  { month: 'Déc', projects: 140, submissions: 280 },
+  { month: 'Jan', projects: 170, submissions: 510 },
+  { month: 'Fév', projects: 180, submissions: 620 },
+];
 
 export function AdminAnalytics() {
   const { t } = useLanguage();
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { advancedAnalytics, analytics } = useAdmin();
+  const a = analytics || {};
+  const adv = advancedAnalytics || {};
 
-  useEffect(() => {
-    client.get(ENDPOINTS.admin.analytics)
-      .then(res => setAnalyticsData(res.data))
-      .catch(() => setAnalyticsData(null))
-      .finally(() => setLoading(false));
-  }, []);
-
-  // monthly_submissions: [{ month: "2025-01-01T00:00:00Z", total: 8 }, ...]
-  const chartData = (analyticsData?.monthly_submissions ?? []).map(entry => ({
-    month: formatMonth(entry.month),
-    soumissions: entry.total,
+  const chartData = (adv.performance?.grade_trends ?? []).map(item => ({
+    month: new Date(item.month).toLocaleDateString('fr-FR', { month: 'short' }),
+    grade: item.avg_grade,
+    projects: adv.usage_trends?.find(u => u.month === item.month)?.projects || 0
   }));
 
-  // projects_progress: [{ year: "2024-2025", total: 45 }, ...]
-  const byYear = analyticsData?.projects_progress ?? [];
+  const gradeTrendsData = (adv.performance?.grade_trends ?? []).map(item => ({
+    month: new Date(item.month).toLocaleDateString('fr-FR', { month: 'short' }),
+    grade: item.avg_grade,
+  }));
 
-  const statCards = [
-    {
-      label: 'Projets archivés',
-      value: analyticsData?.total_archived_projects ?? '—',
-      icon: <IoArchiveOutline size={22}/>,
-      color: 'var(--primary)',
-    },
-    {
-      label: 'Soumissions ce mois',
-      value: analyticsData?.submissions_this_month ?? '—',
-      icon: <IoTrendingUpOutline size={22}/>,
-      color: '#10B981',
-    },
-    {
-      label: 'Taux de complétion',
-      value: analyticsData ? `${analyticsData.completion_rate}%` : '—',
-      icon: <IoGlobeOutline size={22}/>,
-      color: '#F59E0B',
-    },
+  const usageTrendsData = (adv.usage_trends ?? []).map(item => ({
+    month: new Date(item.month).toLocaleDateString('fr-FR', { month: 'short' }),
+    projects: item.projects,
+  }));
+
+  const teacherPatternsData = (adv.teacher_patterns ?? []).map(tp => ({
+    name: tp.last_name,
+    grade: tp.avg_given,
+  }));
+
+  const activeVsInactiveData = [
+    { name: 'Actifs', value: adv.student_stats?.active ?? 0 },
+    { name: 'Inactifs', value: adv.student_stats?.inactive ?? 0 },
   ];
+
+  const [studentSearch, setStudentSearch] = useState('');
+
+  const exportToCSV = (type = 'summary') => {
+    let headers, rows, filename;
+    
+    if (type === 'summary') {
+      headers = ["Catégorie", "Valeur"];
+      rows = [
+        ["Étudiants Actifs", adv.student_stats?.active],
+        ["Étudiants Inactifs", adv.student_stats?.inactive],
+        ["Étudiants à Risque", adv.student_stats?.at_risk],
+        ["Taux de Réussite", `${adv.performance?.pass_rate}%`],
+        ["Taux d'Achèvement des Tâches", `${adv.operations?.task_completion_rate}%`],
+      ];
+      filename = `rapport_analytique_${new Date().toISOString().split('T')[0]}.csv`;
+    } else {
+      headers = ["Nom Étudiant", "Projet", "Encadreur", "Note"];
+      rows = (adv.student_list || []).map(s => [
+        s.student_name,
+        s.project_name,
+        s.supervisor,
+        s.grade
+      ]);
+      filename = `liste_etudiants_notes_${new Date().toISOString().split('T')[0]}.csv`;
+    }
+
+    let csvContent = "\uFEFF" + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredStudents = (adv.student_list || []).filter(s => 
+    s.student_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.project_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.supervisor?.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+
 
   return (
     <DashboardLayout>
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>{t('AdminDashboard')}</h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('RealTimeAnalytics')}</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>{t('PlatformAnalytics')}</h1>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('ConsolidatedData')}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Button variant="outline" onClick={() => exportToCSV('summary')} icon={<IoDownloadOutline size={18}/>}>{t('Summary')}</Button>
+          <Button onClick={() => exportToCSV('students')} icon={<IoCloudDownloadOutline size={18}/>}>{t('StudentList')}</Button>
+        </div>
       </div>
-
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        {statCards.map((s, i) => <div key={i}><StatCard {...s} /></div>)}
+        {[
+          { label: t('Active_Stat'),          value: a.activeGroups || 0, icon: <IoBarChartOutline size={22}/>, color: 'var(--primary)' },
+          { label: t('SuccessRate'),        value: adv.performance?.pass_rate || 0, icon: <IoTrendingUpOutline size={22}/>, color: '#10B981', suffix: '%' },
+          { label: t('OverallProgress'),    value: adv.operations?.task_completion_rate || 0,  icon: <IoGlobeOutline size={22}/>, color: '#F59E0B', suffix: '%' },
+          { label: t('StudentsAtRisk'),      value: adv.student_stats?.at_risk || 0, icon: <IoPeopleOutline size={22}/>, color: '#EF4444' },
+        ].map((s, i) => <div key={i}><StatCard {...s} /></div>)}
       </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '20px' }}>
-        {/* Monthly submissions chart — real data from backend */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         <Card>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>Soumissions mensuelles (6 derniers mois)</h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            Nombre de documents soumis par mois
-          </p>
-          {loading ? (
-            <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-              Chargement…
-            </div>
-          ) : chartData.length === 0 ? (
-            <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-              Aucune soumission sur les 6 derniers mois
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={chartData} barSize={32}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '13px' }}
-                  formatter={(v) => [`${v} soumissions`]}
-                />
-                <Bar dataKey="soumissions" fill="var(--primary)" radius={[6, 6, 0, 0]} name="Soumissions" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('GradeTrends')}</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={gradeTrendsData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 20]}/>
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
+              <Line type="monotone" dataKey="grade" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)' }} name="Moyenne"/>
+            </LineChart>
+          </ResponsiveContainer>
         </Card>
 
-        {/* Projects by academic year */}
         <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Projets par année</h3>
-          {loading ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Chargement…</p>
-          ) : byYear.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Aucune donnée</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {byYear.map((entry, i) => (
-                <div key={i}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600 }}>{entry.year || 'Non défini'}</span>
-                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{entry.total} projets</span>
-                  </div>
-                  <div style={{ height: 6, borderRadius: 3, background: 'var(--border)' }}>
-                    <div style={{
-                      height: '100%', borderRadius: 3,
-                      background: 'var(--primary)',
-                      width: `${Math.min(100, (entry.total / Math.max(...byYear.map(e => e.total))) * 100)}%`,
-                      transition: 'width 0.4s ease',
-                    }} />
-                  </div>
-                </div>
-              ))}
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('StudentActivity')}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', height: '250px' }}>
+            <PieChart width={200} height={200}>
+              <Pie data={activeVsInactiveData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
+                <Cell fill="var(--primary)"/>
+                <Cell fill="var(--border)"/>
+              </Pie>
+              <Tooltip/>
+            </PieChart>
+            <div style={{ flex: 1, paddingLeft: '20px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Étudiants Actifs</p>
+                <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>{adv.student_stats?.active ?? 0}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Étudiants Inactifs</p>
+                <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-secondary)' }}>{adv.student_stats?.inactive ?? 0}</p>
+              </div>
             </div>
-          )}
+          </div>
         </Card>
       </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <Card>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('NotationPatterns')}</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={teacherPatternsData} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border)"/>
+              <XAxis type="number" domain={[0, 20]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80}/>
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
+              <Bar dataKey="grade" fill="var(--accent)" radius={[0, 4, 4, 0]} name="Moyenne donnée"/>
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+
+        <Card>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('UsageTrends')}</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={usageTrendsData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)"/>
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
+              <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
+              <Bar dataKey="projects" fill="#10B981" radius={[4, 4, 0, 0]} name="Nouveaux Projets"/>
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      </div>
+
+      <Card style={{ marginTop: '24px', padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t('StudentList')} & {t('Grades')}</h3>
+          <div style={{ width: '300px' }}>
+            <Input 
+              placeholder={t('Search') + "..."} 
+              value={studentSearch} 
+              onChange={e => setStudentSearch(e.target.value)}
+              icon={<IoSearchOutline size={18}/>}
+            />
+          </div>
+        </div>
+        
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Student')}</th>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Project')}</th>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Supervisor')}</th>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'right' }}>{t('Grade')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredStudents.length > 0 ? filteredStudents.map((s, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                  <td style={{ padding: '12px 8px', fontWeight: 600 }}>{s.student_name}</td>
+                  <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.project_name}</td>
+                  <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.supervisor}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 800, color: s.grade !== '—' ? 'var(--primary)' : 'var(--text-muted)' }}>
+                    {s.grade !== '—' ? (typeof s.grade === 'number' ? s.grade.toFixed(2) : s.grade) : '—'}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>{t('NoResults')}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </DashboardLayout>
   );
 }
+
 
 // ─────────────────────────────────────────────────────────
 // Each setting panel rendered inline when a card is clicked
 // ─────────────────────────────────────────────────────────
 
 function PanelYears({ onBack }) {
-  const [year, setYear] = useState('2024-2025');
-  const [promos, setPromos] = useState(['ISI', 'IASD', 'GL', 'SIQ']);
-  const [saved, setSaved] = useState(false);
-  const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const { t } = useLanguage();
+  const { platformSettings, updatePlatformSettings } = useAdmin();
+  const [year, setYear] = useState(platformSettings?.current_academic_year || '2024-2025');
+  const [types, setTypes] = useState(platformSettings?.project_types ? platformSettings.project_types.split(',') : ['PFE', 'Stage', 'Projet']);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (platformSettings) {
+      setYear(platformSettings.current_academic_year);
+      setTypes(platformSettings.project_types ? platformSettings.project_types.split(',') : ['PFE', 'Stage', 'Projet']);
+    }
+  }, [platformSettings]);
+
+  const save = async () => {
+    if (year !== platformSettings?.current_academic_year) {
+      // Logic handled via handleYearChange
+      handleYearChange();
+      return;
+    }
+    setLoading(true);
+    await updatePlatformSettings({ current_academic_year: year, project_types: types.join(',') });
+    setLoading(false);
+  };
+
+  const handleYearChange = () => {
+    window.showConfirm({
+      title: "Changer l'année ?",
+      message: "Changer l'année académique va ARCHIVER tous les projets actuels. Cette action est irréversible.",
+      confirmText: "Changer & Archiver",
+      type: "warning",
+      onConfirm: async () => {
+        setLoading(true);
+        await updatePlatformSettings({ current_academic_year: year, project_types: types.join(',') });
+        setLoading(false);
+      }
+    });
+  };
 
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={onBack} style={{ padding: '6px', border: 'none', background: 'var(--bg)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}><IoArrowBackOutline size={18}/></button>
-        <h2 style={{ fontSize: '18px', fontWeight: 700 }}>🎓 Années académiques</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>🎓 {t('AcademicYears')} & Types</h2>
       </div>
       <div style={{ maxWidth: 420 }}>
-        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Année active</label>
+        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{t('ActiveYear')}</label>
         <Input value={year} onChange={e => setYear(e.target.value)} placeholder="ex: 2024-2025" style={{ marginBottom: '16px' }} />
-        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Promotions actives</label>
+        
+        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Types de Projet</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-          {promos.map(p => (
+          {types.map(p => (
             <div key={p} style={{ padding: '6px 14px', borderRadius: '20px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
               {p}
-              <button onClick={() => setPromos(pr => pr.filter(x => x !== p))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '16px', padding: 0, lineHeight: 1 }}>×</button>
+              <button onClick={() => setTypes(pr => pr.filter(x => x !== p))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '16px', padding: 0, lineHeight: 1 }}>×</button>
             </div>
           ))}
-          <button onClick={() => { const v = prompt('Nouvelle promotion:'); if (v) setPromos(p => [...p, v.trim()]); }} style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px dashed var(--border)', background: 'none', fontSize: '13px', cursor: 'pointer', color: 'var(--text-muted)' }}>+ Ajouter</button>
+          <button onClick={() => { 
+            window.showPrompt({
+              title: "Nouveau type",
+              message: "Entrez le nom du type (ex: Master)",
+              onConfirm: (v) => { if (v) setTypes(p => [...p, v.trim()]); }
+            });
+          }} style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px dashed var(--border)', background: 'none', fontSize: '13px', cursor: 'pointer', color: 'var(--text-muted)' }}>+ Ajouter</button>
         </div>
-        <Button onClick={save} icon={saved ? <IoCheckmarkOutline size={16}/> : <IoSaveOutline size={16}/>}>
-          {saved ? 'Enregistré !' : 'Sauvegarder'}
+        
+        <Button onClick={save} loading={loading} icon={<IoSaveOutline size={16}/>}>
+          {t('Save')}
         </Button>
+        <div style={{ marginTop: '16px', padding: '12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', fontSize: '12px', color: '#92400E' }}>
+          {t('ChangeYearWarning')}
+        </div>
       </div>
     </Card>
   );
 }
 
-function PanelCategories({ onBack }) {
-  const [cats, setCats] = useState(['IA & ML', 'Réseaux', 'Génie Logiciel', 'Base de données', 'Vision par ordi.']);
-  const [saved, setSaved] = useState(false);
-  const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+function PanelCategories() {
+  const { t } = useLanguage();
+  const [cats, setCats] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  const loadCats = async () => {
+    try {
+      const { data } = await client.get(ENDPOINTS.admin.specialties);
+      setCats(Array.isArray(data) ? data : []);
+    } catch (e) { toast.error("Erreur chargement spécialités"); }
+  };
+
+  useEffect(() => { loadCats(); }, []);
+
+  const handleAdd = async (name) => {
+    try {
+      await client.post(ENDPOINTS.admin.specialties, { name });
+      loadCats();
+      toast.success("Spécialité ajoutée");
+    } catch (e) { toast.error("Erreur lors de l'ajout"); }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await client.delete(ENDPOINTS.admin.specialtyDetail(id));
+      loadCats();
+      toast.success("Supprimée");
+    } catch (e) { toast.error("Erreur lors de la suppression"); }
+  };
 
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={onBack} style={{ padding: '6px', border: 'none', background: 'var(--bg)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}><IoArrowBackOutline size={18}/></button>
-        <h2 style={{ fontSize: '18px', fontWeight: 700 }}>📂 Catégories de projets</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>📂 {t('SpecialtiesThemes')}</h2>
       </div>
       <div style={{ maxWidth: 420 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-          {cats.map((c, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '14px', fontWeight: 500 }}>{c}</span>
-              <button onClick={() => setCats(prev => prev.filter((_, j) => j !== i))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '18px', lineHeight: 1 }}>×</button>
+          {cats.map((c) => (
+            <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500 }}>{c.name}</span>
+              <button onClick={() => handleDelete(c.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '18px', lineHeight: 1 }}>×</button>
             </div>
           ))}
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <Input id="catInput" placeholder="Nouvelle catégorie..." style={{ flex: 1 }} />
-          <Button variant="ghost" onClick={() => { const el = document.getElementById('catInput'); if (el?.value.trim()) { setCats(p => [...p, el.value.trim()]); el.value = ''; } }}>Ajouter</Button>
+          <Input id="catInput" placeholder={`${t('NewTask').split(' ')[1]}...`} style={{ flex: 1 }} />
+          <Button variant="ghost" onClick={() => { const el = document.getElementById('catInput'); if (el?.value.trim()) { handleAdd(el.value.trim()); el.value = ''; } }}>{t('AddUser').split(' ')[0]}</Button>
         </div>
-        <Button onClick={save} icon={saved ? <IoCheckmarkOutline size={16}/> : <IoSaveOutline size={16}/>}>
-          {saved ? 'Enregistré !' : 'Sauvegarder'}
-        </Button>
       </div>
     </Card>
   );
 }
 
-function PanelAssignments({ onBack }) {
-  return (
-    <Card>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={onBack} style={{ padding: '6px', border: 'none', background: 'var(--bg)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}><IoArrowBackOutline size={18}/></button>
-        <h2 style={{ fontSize: '18px', fontWeight: 700 }}>👥 Attribution encadreurs</h2>
-      </div>
-      <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.5 }}>👥</div>
-        <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>Assignation automatique</p>
-        <p style={{ fontSize: '14px' }}>Sera connecté à l'API Django — endpoint <code style={{ background: 'var(--bg)', padding: '2px 6px', borderRadius: '4px', fontSize: '13px' }}>/api/groups/assign/</code></p>
-      </div>
-    </Card>
-  );
-}
 
-function PanelEmails({ onBack }) {
-  const [smtp,    setSmtp]    = useState('smtp.esi.dz');
-  const [port,    setPort]    = useState('587');
-  const [sender,  setSender]  = useState('noreply@esi.dz');
-  const [saved,   setSaved]   = useState(false);
-  const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
-  return (
-    <Card>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={onBack} style={{ padding: '6px', border: 'none', background: 'var(--bg)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}><IoArrowBackOutline size={18}/></button>
-        <h2 style={{ fontSize: '18px', fontWeight: 700 }}>📧 Notifications email</h2>
-      </div>
-      <div style={{ maxWidth: 420 }}>
-        {[
-          { label: 'Serveur SMTP', value: smtp, set: setSmtp },
-          { label: 'Port',         value: port, set: setPort },
-          { label: 'Expéditeur',   value: sender, set: setSender },
-        ].map((f, i) => (
-          <div key={i} style={{ marginBottom: '14px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{f.label}</label>
-            <Input value={f.value} onChange={e => f.set(e.target.value)} placeholder={f.label} />
-          </div>
-        ))}
-        <Button onClick={save} icon={saved ? <IoCheckmarkOutline size={16}/> : <IoSaveOutline size={16}/>} style={{ marginTop: '6px' }}>
-          {saved ? 'Enregistré !' : 'Sauvegarder'}
-        </Button>
-      </div>
-    </Card>
-  );
-}
 
-function PanelVisibility({ onBack }) {
+
+function PanelVisibility() {
   const { t } = useLanguage();
-  const [studentArchive, setStudentArchive] = useState(() => localStorage.getItem('hideStudentArchive') === 'true');
-  const [teacherJury, setTeacherJury] = useState(() => localStorage.getItem('hideTeacherJury') === 'true');
-  const [loading, setLoading] = useState(true);
+  const { platformSettings, updatePlatformSettings } = useAdmin();
+  const [local, setLocal] = useState(platformSettings || {});
 
-  // Load current platform settings from API on mount
-  useEffect(() => {
-    import('../../api/client').then(({ default: client }) => {
-      import('../../api/config').then(({ ENDPOINTS }) => {
-        client.get(ENDPOINTS.admin.platformSettings)
-          .then(res => {
-            const val = res.data?.students_can_see_archived_projects;
-            if (val !== undefined) setStudentArchive(!val);
-          })
-          .catch(() => {})
-          .finally(() => setLoading(false));
-      });
-    });
-  }, []);
+  useEffect(() => { setLocal(platformSettings || {}); }, [platformSettings]);
 
-  const save = async () => {
-    try {
-      const { default: client } = await import('../../api/client');
-      const { ENDPOINTS } = await import('../../api/config');
-      await client.patch(ENDPOINTS.admin.platformSettings, {
-        students_can_see_archived_projects: !studentArchive,
-      });
-      localStorage.setItem('hideStudentArchive', studentArchive);
-      localStorage.setItem('hideTeacherJury', teacherJury);
-      toast.success(t('Success'));
-    } catch {
-      toast.error('Erreur lors de la sauvegarde');
-    }
+  const toggle = (key) => {
+    const newVal = !local[key];
+    const updated = { ...local, [key]: newVal };
+    setLocal(updated);
+    updatePlatformSettings(updated);
   };
 
   const toggleStyle = (active) => ({
@@ -310,83 +406,343 @@ function PanelVisibility({ onBack }) {
     background: '#fff',
     position: 'absolute',
     top: '3px',
-    left: active ? '23px' : '3px',
+    left: active ? '22px' : '3px',
     transition: 'all 0.2s'
   });
 
   return (
     <Card>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-        <button onClick={onBack} style={{ padding: '6px', border: 'none', background: 'var(--bg)', borderRadius: '8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}><IoArrowBackOutline size={18}/></button>
-        <h2 style={{ fontSize: '18px', fontWeight: 700 }}>👁️ {t('Settings')}</h2>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>👁️ {t('VisibilityAccess')}</h2>
       </div>
       <div style={{ maxWidth: 500 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', background: 'var(--bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div>
-              <p style={{ fontSize: '14px', fontWeight: 600 }}>{t('HideArchiveStudent') || 'Masquer l\'Archive (Étudiants)'}</p>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('HideArchiveStudent_Desc') || 'Les étudiants ne pourront plus voir l\'archive des projets.'}</p>
+          {[
+            { key: 'students_can_see_archived_projects', label: t('ShowArchiveStudents'), desc: t('ShowArchiveStudents_Desc') },
+            { key: 'students_can_see_jury_column', label: 'Afficher la colonne jury pour les étudiants', desc: 'Permet aux étudiants de voir les notes détaillées de chaque juré' },
+          ].map(s => (
+            <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+              <div style={{ flex: 1, marginRight: '16px' }}>
+                <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '2px' }}>{s.label}</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.desc}</p>
+              </div>
+              <div onClick={() => toggle(s.key)} style={toggleStyle(local[s.key])}>
+                <div style={circleStyle(local[s.key])} />
+              </div>
             </div>
-            <div onClick={() => setStudentArchive(!studentArchive)} style={toggleStyle(studentArchive)}>
-              <div style={circleStyle(studentArchive)} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', background: 'var(--bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div>
-              <p style={{ fontSize: '14px', fontWeight: 600 }}>{t('HideJuryTeacher') || 'Masquer les Jurys (Enseignants)'}</p>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('HideJuryTeacher_Desc') || 'Les enseignants ne pourront plus accéder à l\'évaluation des jurys.'}</p>
-            </div>
-            <div onClick={() => setTeacherJury(!teacherJury)} style={toggleStyle(teacherJury)}>
-              <div style={circleStyle(teacherJury)} />
-            </div>
+          ))}
+        </div>
+
+        {/* Email de contact pour mot de passe oublié */}
+        <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', marginTop: '8px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '6px' }}>
+            E-mail de contact (Mot de passe oublié)
+          </label>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            Cette adresse sera affichée dans la boîte de dialogue d'aide lorsque l'utilisateur clique sur "Mot de passe oublié".
+          </p>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="email"
+              value={local.contact_email || ''}
+              onChange={(e) => setLocal({ ...local, contact_email: e.target.value })}
+              placeholder="Ex: aced@esi.dz"
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid var(--border)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+            <button
+              onClick={() => updatePlatformSettings({ contact_email: local.contact_email })}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '10px',
+                background: 'var(--primary)',
+                color: '#fff',
+                border: 'none',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+            >
+              {t('Save') || 'Enregistrer'}
+            </button>
           </div>
         </div>
-        <Button onClick={save} icon={<IoSaveOutline size={16}/>}>{t('Save')}</Button>
       </div>
     </Card>
   );
 }
 
-const PANELS = { years: PanelYears, categories: PanelCategories, assignments: PanelAssignments, emails: PanelEmails, visibility: PanelVisibility };
+function PanelGradingFormula() {
+  const { t } = useLanguage();
+  const { platformSettings, updatePlatformSettings } = useAdmin();
+  const [formulas, setFormulas] = useState([]);
+  const [newFormula, setNewFormula] = useState({ name: '', expression: '', description: '' });
+  const [weights, setWeights] = useState({
+    presentation: platformSettings?.presentation_weight || 20,
+    document: platformSettings?.document_weight || 30,
+    demo: platformSettings?.demo_weight || 50
+  });
+  const [roleWeights, setRoleWeights] = useState({
+    president: platformSettings?.president_weight || 40,
+    supervisor: platformSettings?.supervisor_weight || 40,
+    other: platformSettings?.other_weight || 20
+  });
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    if (platformSettings) {
+      setWeights({
+        presentation: platformSettings.presentation_weight,
+        document: platformSettings.document_weight,
+        demo: platformSettings.demo_weight
+      });
+      setRoleWeights({
+        president: platformSettings.president_weight || 0,
+        supervisor: platformSettings.supervisor_weight || 0,
+        other: platformSettings.other_weight || 0
+      });
+    }
+  }, [platformSettings]);
+
+  const loadFormulas = async () => {
+    try {
+      const { data } = await client.get(ENDPOINTS.admin.gradeFormula);
+      setFormulas(Array.isArray(data) ? data : []);
+      setLoadError('');
+    } catch (e) {
+      setLoadError('Impossible de charger les formules. Vérifiez la connexion au serveur.');
+    }
+  };
+
+  useEffect(() => { loadFormulas(); }, []);
+
+  const handleCreate = async () => {
+    if (!newFormula.name || !newFormula.expression) return toast.error("Nom et expression requis");
+    setLoading(true);
+    try {
+      await client.post(ENDPOINTS.admin.gradeFormula, {
+        name: newFormula.name,
+        expression: newFormula.expression,
+        description: newFormula.description
+      });
+      toast.success("Formule ajoutée");
+      setNewFormula({ name: '', expression: '', description: '' });
+      loadFormulas();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Erreur de création");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleActivate = async (id) => {
+    try {
+      await client.patch(ENDPOINTS.admin.gradeFormulaActivate(id));
+      toast.success("Formule activée");
+      loadFormulas();
+    } catch (err) {
+      toast.error("Erreur d'activation");
+    }
+  };
+
+  const saveWeights = async () => {
+    const total = parseInt(weights.presentation) + parseInt(weights.document) + parseInt(weights.demo);
+    if (total !== 100) return toast.error(`Le total doit être 100% (actuel: ${total}%)`);
+    
+    setLoading(true);
+    await updatePlatformSettings({
+      presentation_weight: parseInt(weights.presentation),
+      document_weight: parseInt(weights.document),
+      demo_weight: parseInt(weights.demo)
+    });
+    setLoading(false);
+  };
+
+  const saveRoleWeights = async () => {
+    const total = parseInt(roleWeights.president) + parseInt(roleWeights.supervisor) + parseInt(roleWeights.other);
+    if (total !== 100) return toast.error(`Le total doit être 100% (actuel: ${total}%)`);
+    
+    setLoading(true);
+    await updatePlatformSettings({
+      president_weight: parseInt(roleWeights.president),
+      supervisor_weight: parseInt(roleWeights.supervisor),
+      other_weight: parseInt(roleWeights.other)
+    });
+    setLoading(false);
+  };
+
+  return (
+    <Card>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 800 }}>📊 {t('GradingFormula')}</h2>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('FeaturesSubtitle')}</p>
+      </div>
+
+      {/* Component Weights */}
+      <div style={{ marginBottom: '32px', padding: '20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          ⚖️ Pondération des notes individuelles
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Présentation (%)</label>
+            <Input type="number" value={weights.presentation} onChange={e => setWeights({...weights, presentation: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Document (%)</label>
+            <Input type="number" value={weights.document} onChange={e => setWeights({...weights, document: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Démo (%)</label>
+            <Input type="number" value={weights.demo} onChange={e => setWeights({...weights, demo: e.target.value})} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '12px', color: (parseInt(weights.presentation)+parseInt(weights.document)+parseInt(weights.demo)) === 100 ? 'var(--success)' : '#EF4444', fontWeight: 600 }}>
+            Total: {parseInt(weights.presentation || 0) + parseInt(weights.document || 0) + parseInt(weights.demo || 0)}%
+          </p>
+          <Button size="sm" onClick={saveWeights} loading={loading} icon={<IoSaveOutline size={14}/>}>Sauvegarder pondération</Button>
+        </div>
+      </div>
+
+      {/* Role Weights */}
+      <div style={{ marginBottom: '32px', padding: '20px', borderRadius: '16px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          ⚖️ Pondération par rôle du jury
+        </h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Président (%)</label>
+            <Input type="number" value={roleWeights.president} onChange={e => setRoleWeights({...roleWeights, president: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Encadreur (%)</label>
+            <Input type="number" value={roleWeights.supervisor} onChange={e => setRoleWeights({...roleWeights, supervisor: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Autre membre (%)</label>
+            <Input type="number" value={roleWeights.other} onChange={e => setRoleWeights({...roleWeights, other: e.target.value})} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '12px', color: (parseInt(roleWeights.president)+parseInt(roleWeights.supervisor)+parseInt(roleWeights.other)) === 100 ? 'var(--success)' : '#EF4444', fontWeight: 600 }}>
+            Total: {parseInt(roleWeights.president || 0) + parseInt(roleWeights.supervisor || 0) + parseInt(roleWeights.other || 0)}%
+          </p>
+          <Button size="sm" onClick={saveRoleWeights} loading={loading} icon={<IoSaveOutline size={14}/>}>Sauvegarder pondération rôles</Button>
+        </div>
+      </div>
+
+
+    </Card>
+  );
+}
+
+const PANELS = { years: PanelYears, categories: PanelCategories, grading: PanelGradingFormula, visibility: PanelVisibility };
 
 const MENUS = [
   { id: 'years',       title: '🎓 Années académiques',      desc: 'Gérer les années et promotions actives',    icon: <IoSchoolOutline size={22}/> },
-  { id: 'categories',  title: '📂 Catégories de projets',   desc: 'Gérer les thèmes et spécialités',           icon: <IoFolderOutline size={22}/> },
-  { id: 'assignments', title: '👥 Attribution encadreurs',  desc: 'Assigner des enseignants aux groupes',      icon: <IoPeopleOutline size={22}/> },
-  { id: 'emails',      title: '📧 Notifications email',     desc: 'Configurer les emails automatiques',        icon: <IoMailOutline size={22}/> },
-  { id: 'visibility',  title: '👁️ Visibilité des modules',   desc: 'Contrôler l\'affichage des archives et jurys', icon: <IoSettingsOutline size={22}/> },
+  { id: 'categories',  title: '📂 Spécialités & Thèmes',    desc: 'Gérer les spécialités académiques',         icon: <IoFolderOutline size={22}/> },
+  { id: 'grading',     title: '📊 Formule de calcul',       desc: 'Définir la formule de calcul des moyennes', icon: <IoBarChartOutline size={22}/> },
+  { id: 'visibility',  title: '👁️ Visibilité',              desc: 'Contrôler l\'affichage des archives et jurys', icon: <IoSettingsOutline size={22}/> },
 ];
 
 export function AdminSettings() {
   const { t } = useLanguage();
-  const [activeMenu, setActiveMenu] = useState(null);
-  const Panel = activeMenu ? PANELS[activeMenu] : null;
+  const [activeMenu, setActiveMenu] = useState('years');
+  const [modal, setModal] = useState({ isOpen: false, type: 'warning', title: '', message: '', onConfirm: () => {}, initialValue: '' });
+
+  // Expose modal globally for child panels
+  useEffect(() => {
+    window.showConfirm = (cfg) => setModal({ ...cfg, isOpen: true, type: cfg.type || 'warning' });
+    window.showPrompt = (cfg) => setModal({ ...cfg, isOpen: true, type: 'prompt' });
+    return () => { delete window.showConfirm; delete window.showPrompt; };
+  }, []);
+
+  const Panel = PANELS[activeMenu];
+
+  const menuStyle = (id) => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    borderRadius: '12px',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    background: activeMenu === id ? 'var(--primary)' : 'transparent',
+    color: activeMenu === id ? '#fff' : 'var(--text-secondary)',
+    marginBottom: '4px',
+    fontWeight: activeMenu === id ? 600 : 500,
+    fontSize: '14px',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left'
+  });
 
   return (
     <DashboardLayout>
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>{t('Settings')}</h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('FeaturesSubtitle')}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '32px', alignItems: 'start' }}>
+        
+        {/* Sidebar */}
+        <aside style={{ position: 'sticky', top: '20px' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '4px' }}>{t('Settings')}</h1>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Configuration plateforme</p>
+          </div>
+          
+          <nav>
+            {MENUS.map(m => (
+              <button key={m.id} onClick={() => setActiveMenu(m.id)} style={menuStyle(m.id)}>
+                <span style={{ display: 'flex', opacity: activeMenu === m.id ? 1 : 0.7 }}>{m.icon}</span>
+                {m.title.split(' ').slice(1).join(' ')}
+              </button>
+            ))}
+          </nav>
+
+          <div style={{ marginTop: '40px', padding: '16px', borderRadius: '16px', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)' }}>
+            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px', textTransform: 'uppercase' }}>Besoin d'aide ?</p>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Consultez la documentation pour configurer les paramètres avancés de la plateforme.
+            </p>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main style={{ minHeight: '600px', animation: 'fadeIn 0.3s ease-out' }}>
+          <Panel onBack={() => {}} />
+        </main>
+
       </div>
 
-      {!activeMenu ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', maxWidth: '860px' }}>
-          {MENUS.map((s) => (
-            <div key={s.id} onClick={() => setActiveMenu(s.id)} style={{ padding: '22px', borderRadius: 'var(--radius-lg)', background: 'var(--bg-card)', border: '1.5px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(79,70,229,0.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}>
-              <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', marginBottom: '14px' }}>
-                {s.icon}
-              </div>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '6px' }}>{s.title}</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{s.desc}</p>
-              <div style={{ marginTop: '16px', fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>Configurer →</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <Panel onBack={() => setActiveMenu(null)} />
-      )}
+      <ConfirmModal 
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        onConfirm={(val) => {
+          modal.onConfirm(val);
+          setModal({ ...modal, isOpen: false });
+        }}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        confirmText={modal.confirmText}
+        initialValue={modal.initialValue}
+        loading={modal.loading}
+      />
+      
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </DashboardLayout>
   );
 }

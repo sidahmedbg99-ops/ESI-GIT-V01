@@ -62,6 +62,7 @@ export function StudentProvider({ children }) {
       final_submission_approved: myGroup.final_submission_approved,
       supervisorFeedback: myGroup.supervisor_feedback,
       supervisor_feedback: myGroup.supervisor_feedback,
+      supervisorRequest: myGroup.supervisor_request,
     };
   }, [user]);
 
@@ -78,7 +79,8 @@ export function StudentProvider({ children }) {
         const arr = Array.isArray(fetchedTasks) ? fetchedTasks : [];
         const mapped = { todo: [], inprogress: [], done: [] };
         arr.forEach(t => {
-          const state = (t.state || t.status)?.toLowerCase();
+          let state = (t.state || t.status)?.toLowerCase();
+          if (state === 'in_progress') state = 'inprogress';
           const normalizedTask = {
             ...t,
             _id: t.id || t._id,
@@ -127,7 +129,7 @@ export function StudentProvider({ children }) {
       const assignees = taskData.assigneeIds || [];
       for (const cid of assignees) {
         try {
-          await tasksApi.assign(newTask.id || newTask._id, cid);
+          await tasksApi.assignTask(newTask.id || newTask._id, cid);
         } catch(e) { console.error('Failed to assign', cid); }
       }
 

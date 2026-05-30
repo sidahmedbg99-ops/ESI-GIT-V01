@@ -6,7 +6,7 @@ import {
   IoChevronForwardOutline,
   IoLogOutOutline, IoBookOutline, IoSettingsOutline,
   IoBarChartOutline, IoRibbonOutline, IoLanguageOutline,
-  IoSwapHorizontalOutline, IoPersonOutline
+  IoSwapHorizontalOutline, IoPersonOutline, IoSchoolOutline
 } from 'react-icons/io5';
 import Logo from '../ui/Logo';
 import { useAuth } from '../../context/AuthContext';
@@ -18,6 +18,7 @@ const studentNav = [
   { path: '/student/reunions',  labelKey: 'Meetings',   icon: <IoCalendarOutline size={20}/> },
   { path: '/student/taches',    labelKey: 'Tasks',      icon: <IoCheckboxOutline size={20}/> },
   { path: '/student/archive',   labelKey: 'Archive',    icon: <IoArchiveOutline size={20}/> },
+  { path: '/student/encadreur', labelKey: 'Supervisor', icon: <IoPersonOutline size={20}/> },
 ];
 
 const teacherNav = [
@@ -26,11 +27,13 @@ const teacherNav = [
   { path: '/teacher/reunions',  labelKey: 'Meetings',   icon: <IoCalendarOutline size={20}/> },
   { path: '/teacher/jury',      labelKey: 'Juries',     icon: <IoRibbonOutline size={20}/> },
   { path: '/teacher/archive',   labelKey: 'Archive',    icon: <IoArchiveOutline size={20}/> },
+  { path: '/teacher/requests', labelKey: 'Requests', icon: <IoCalendarOutline size={20}/> },
 ];
 
 const adminNav = [
   { path: '/admin/dashboard',   labelKey: 'Dashboard',  icon: <IoGridOutline size={20}/> },
   { path: '/admin/users',       labelKey: 'Users',      icon: <IoPeopleOutline size={20}/> },
+  { path: '/admin/students', labelKey: 'Students', icon: <IoPersonOutline size={20}/> },
   { path: '/admin/groupes',     labelKey: 'Groups',     icon: <IoBookOutline size={20}/> },
   { path: '/admin/analytics',   labelKey: 'Projects',   icon: <IoBarChartOutline size={20}/> },
   { path: '/admin/archive',     labelKey: 'Archive',    icon: <IoArchiveOutline size={20}/> },
@@ -90,7 +93,7 @@ export default function Sidebar() {
       </nav>
 
       <div style={{ padding: '10px', borderTop: '1px solid var(--border)' }}>
-        {user?.isAdmin && user?.isTeacher && (
+        {user?.is_admin && (
            <button onClick={handleSwitchRole} style={{ width: '100%', padding: collapsed ? '11px' : '9px 11px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: '10px', cursor: 'pointer', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
               <IoSwapHorizontalOutline size={18}/>
               {!collapsed && <span>{user.role === 'admin' ? t('SwitchToTeacher') : t('SwitchToAdmin')}</span>}

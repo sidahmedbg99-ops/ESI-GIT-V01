@@ -4,8 +4,8 @@ import { ENDPOINTS } from './config';
 export const usersApi = {
   // GET /api/admin/users/
   // Backend returns: { page, limit, total_users, total_students, total_staff, filters, users: [...] }
-  getAll: async () => {
-    const { data } = await client.get(ENDPOINTS.admin.users);
+  getAll: async (limit = 1000) => {
+    const { data } = await client.get(ENDPOINTS.admin.users, { params: { limit } });
     return data.users || [];
   },
 
@@ -18,7 +18,6 @@ export const usersApi = {
       name: t.name ?? t.full_name,       // UI renders t.name
     }));
   },
-
   // GET /api/projects/available-supervisors/ — filtered: available=True, not blocked, is_teacher=True
   getAvailableSupervisors: async () => {
     const { data } = await client.get(ENDPOINTS.groups.availableSupervisors);
@@ -40,9 +39,8 @@ export const usersApi = {
     const isStudent = userData.role === 'student';
     const endpoint = isStudent ? ENDPOINTS.admin.student.create : ENDPOINTS.admin.staff.create;
 
-    const nameParts = (userData.name || '').trim().split(' ');
-    const first_name = nameParts[0] || '';
-    const last_name = nameParts.slice(1).join(' ') || nameParts[0] || '';
+    const first_name = userData.firstName || userData.first_name || '';
+    const last_name = userData.lastName || userData.last_name || '';
 
     let payload;
     if (isStudent) {
@@ -56,6 +54,7 @@ export const usersApi = {
         specialty: userData.specialite || userData.specialty || 'ISI',
         academic_year: userData.promo || userData.academic_year || '2024/2025',
         level: levelMap[userData.year] || 3,
+        department: userData.department,
         password: userData.password,
         is_active: true,
       };
@@ -65,8 +64,8 @@ export const usersApi = {
         email: userData.email,
         first_name,
         last_name,
-        is_admin: userData.role === 'admin',
-        is_teacher: userData.role === 'teacher',
+        is_admin: userData.is_admin !== undefined ? userData.is_admin : (userData.role === 'admin'),
+        is_teacher: userData.is_teacher !== undefined ? userData.is_teacher : (userData.role === 'teacher' || userData.role === 'staff'),
         department: userData.department,
         specialty: userData.specialty,
         password: userData.password,
@@ -84,11 +83,33 @@ export const usersApi = {
     const endpoint = isStudent ? ENDPOINTS.admin.student.update(id) : ENDPOINTS.admin.staff.update(id);
     
     let payload = { ...patch };
+    
+    if (payload.firstName !== undefined || payload.lastName !== undefined) {
+      if (payload.firstName !== undefined) payload.first_name = payload.firstName;
+      if (payload.lastName !== undefined) payload.last_name = payload.lastName;
+      delete payload.firstName;
+      delete payload.lastName;
+    }
+    if (payload.status !== undefined) {
+      payload.is_blocked = (payload.status === 'blocked');
+      payload.is_active = (payload.status === 'active');
+      delete payload.status;
+    }
+    if (payload.name) delete payload.name;
+    
+    // Remove empty password so it doesn't overwrite
+    if (!payload.password) {
+      delete payload.password;
+    }
+
     if (isStudent) {
       const levelMap = { 'L1': 1, 'L2': 2, 'L3': 3, 'M1': 4, 'M2': 5 };
+      payload.CID = patch.cid || patch.id || id;
       if (patch.specialite) payload.specialty = patch.specialite;
       if (patch.promo)      payload.academic_year = patch.promo;
       if (patch.year)       payload.level = levelMap[patch.year] || 3;
+    } else {
+      payload.TID = patch.tid || patch.id || id;
     }
     
     const { data } = await client.put(endpoint, payload);

@@ -18,7 +18,8 @@ export function useApi(apiFunc) {
       setData(result);
       return result;
     } catch (err) {
-      setError(err.message || "Une erreur inattendue est survenue");
+      const msg = err.response?.data?.error || err.response?.data?.detail || err.message || "Une erreur inattendue est survenue";
+      setError(msg);
       throw err;
     } finally {
       setLoading(false);

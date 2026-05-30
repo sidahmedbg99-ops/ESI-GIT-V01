@@ -5,7 +5,11 @@ export const archiveApi = {
   // GET /api/projects/projects/archived/ → role-based archived projects list
   getArchive: async () => {
     const { data } = await client.get(ENDPOINTS.archive.all);
-    return data;
+    const list = Array.isArray(data) ? data : [];
+    return list.map(p => ({
+      ...p,
+      tech: (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
+    }));
   },
 
   // GET /api/projects/admin/projects/<id>/ → admin gets project detail
@@ -14,9 +18,14 @@ export const archiveApi = {
     return data;
   },
 
-  // PUT /api/projects/admin/projects/<id>/ → admin updates project
+  // PATCH /api/projects/admin/projects/<id>/ → admin partially updates project (e.g. is_public)
   updateArchiveEntry: async (id, patch) => {
-    const { data } = await client.put(ENDPOINTS.archive.update(id), patch);
+    const { data } = await client.patch(ENDPOINTS.archive.update(id), patch);
     return data;
+  },
+
+  // DELETE /api/projects/admin/projects/<id>/ → admin deletes project
+  deleteArchiveEntry: async (id) => {
+    await client.delete(ENDPOINTS.archive.byId(id));
   },
 };

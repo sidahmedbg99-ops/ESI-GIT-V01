@@ -32,6 +32,17 @@ export function AdminProvider({ children }) {
   const [messages,       setMessages]       = useState({});
   const [activeContact,  setActiveContact]  = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [advancedAnalytics, setAdvancedAnalytics] = useState(null);
+  const [specialties, setSpecialties] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [platformSettings, setPlatformSettings] = useState({
+    students_can_see_archived_projects: false,
+    current_academic_year: '2024-2025',
+    project_types: 'PFE,Stage,Projet',
+    presentation_weight: 20,
+    document_weight: 30,
+    demo_weight: 50
+  });
 
   const [stats,          setStats]          = useState(null);
   const [evaluationFormula, setEvaluationFormula] = useState({
@@ -70,7 +81,7 @@ export function AdminProvider({ children }) {
     }).catch(err => console.error('Stats load failed', err));
 
     // GET /api/admin/users/ → { page, limit, total_users, users: [...] }
-    loadUsers().then(res => {
+    loadUsers(1000).then(res => {
       const raw = Array.isArray(res) ? res : [];
       setUsers(raw.map(u => {
         const levelMapInv = { 1: 'L1', 2: 'L2', 3: 'L3', 4: 'M1', 5: 'M2' };
@@ -78,14 +89,18 @@ export function AdminProvider({ children }) {
           ...u,
           _id:    u.id || u.CID || u.TID,
           name:   u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+          firstName: u.first_name || '',
+          lastName: u.last_name || '',
           role:   u.type === 'staff' ? (u.is_admin ? 'admin' : 'teacher') : (u.type || 'student'),
           avatar: (u.full_name || u.first_name || 'U')[0].toUpperCase(),
-          status: u.is_blocked ? 'blocked' : 'active',
+          status: u.is_blocked ? 'blocked' : (u.is_active ? 'active' : 'pending'),
           // Field normalization for the form
           specialite: u.specialty,
           promo:      u.academic_year,
           year:       levelMapInv[u.level] || 'L3',
-          department: u.department || 'Informatique',
+          department: u.department,
+          available:  u.available ?? true,
+          type:       u.type,
         };
       }));
     }).catch(() => setUsers([]));
@@ -98,7 +113,7 @@ export function AdminProvider({ children }) {
         title:    g.name,
         teacherId: g.TID,
         groupCode: g.invite_code,
-        supervisorApproved: g.status === 'approved',
+        supervisorApproved: g.final_submission_approved === true,
       }));
       setGroups(all.filter(g => !g.archived));
     }).catch(() => setGroups([]));
@@ -113,12 +128,28 @@ export function AdminProvider({ children }) {
         year:      p.year || new Date().getFullYear().toString(),
         specialite: p.specialty,
         encadreur: p.teacher_name,
-        members:   (p.members || []).map(m => m.student_name || m.name),
-        grade:     p.grades?.final_grade || null,
+        members:   (p.members || []).map(m => typeof m === 'object' ? (m.name || m.student_name) : m),
+        grade:     p.grade ?? p.grades?.final_grade ?? null,
+        tech:      (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
         archived:  true,
       }));
       setArchive(archived);
     }).catch(() => setArchive([]));
+
+    // GET /api/admin/platform-settings/
+    client.get(ENDPOINTS.admin.platformSettings).then(res => {
+      setPlatformSettings(res.data);
+    }).catch(err => console.error('Settings load failed', err));
+
+    // GET /api/admin/specialties/
+    client.get(ENDPOINTS.admin.specialties).then(res => {
+      setSpecialties(Array.isArray(res.data) ? res.data : []);
+    }).catch(err => console.error('Specialties load failed', err));
+
+    // GET /api/admin/departments/
+    client.get(ENDPOINTS.admin.departments).then(res => {
+      setDepartments(Array.isArray(res.data) ? res.data : []);
+    }).catch(err => console.error('Departments load failed', err));
 
     setMeetings([]);
   }, [user]);
@@ -146,18 +177,33 @@ export function AdminProvider({ children }) {
       return normalized;
     } catch (e) {
       console.error(e);
-      toast.error(e?.response?.data?.error || e?.response?.data?.email?.[0] || 'Erreur lors de la création');
+      const data = e?.response?.data;
+      let msg = 'Erreur lors de la création';
+      if (data) {
+        // Try to get the first error message from any field
+        const firstErr = Object.values(data)[0];
+        msg = Array.isArray(firstErr) ? firstErr[0] : (data.error || data.detail || msg);
+      }
+      toast.error(msg);
     }
   }, [pushActivity]);
 
-  const updateUser = useCallback(async (userId, patch) => {
+  const updateUser = useCallback(async (userId, patch, passedRole) => {
     try {
       const u = users?.find(usr => usr.id === userId || usr._id === userId);
-      const role = patch.role || u?.type || u?.role;
+      const role = passedRole || patch.role || u?.type || u?.role;
       await usersApi.update(userId, { ...patch, role });
       
       setUsers(prev => prev?.map(usr => (usr._id === userId || usr.id === userId)
-        ? { ...usr, ...patch, name: patch.name || usr.name }
+        ? { 
+            ...usr, 
+            ...patch, 
+            name: patch.name || usr.name,
+            is_blocked: patch.status === 'blocked' ? true : (patch.status === 'active' ? false : usr.is_blocked),
+            is_active: patch.status === 'active' ? true : (patch.status === 'blocked' ? false : usr.is_active),
+            status: (patch.status === 'blocked' || (patch.status === undefined && usr.is_blocked)) ? 'blocked' : 
+                    ((patch.status === 'active' || (patch.status === undefined && usr.is_active)) ? 'active' : 'pending')
+          }
         : usr) ?? prev);
       
       toast.success('Utilisateur mis à jour');
@@ -205,21 +251,34 @@ export function AdminProvider({ children }) {
   // ── GROUPS ────────────────────────────────────────────────────────
   const addGroup = useCallback(async (groupData) => {
     try {
-      const newGroup = await groupApi.createGroup(groupData);
-      setGroups(prev => [...(prev ?? []), newGroup]);
-      pushActivity({ type: 'group_created', action: 'Groupe créé', desc: newGroup.name, color: '#F59E0B' });
-      toast.success('Groupe créé');
-      return newGroup;
+      const newGroup = await groupApi.adminCreateGroup(groupData);
+      const normalized = {
+        ...newGroup,
+        _id: newGroup.PID || newGroup.id,
+        title: newGroup.name,
+        teacherId: newGroup.TID,
+        groupCode: newGroup.invite_code,
+        supervisorApproved: newGroup.final_submission_approved === true,
+        Student_count: (groupData.studentIds || []).length,
+      };
+      setGroups(prev => [...(prev ?? []), normalized]);
+      pushActivity({ type: 'group_created', action: 'Groupe créé', desc: normalized.title, color: '#F59E0B' });
+      toast.success('Groupe créé avec succès !');
+      return normalized;
     } catch (e) {
       console.error(e);
-      toast.error('Erreur lors de la création');
+      const msg = e?.response?.data?.error || e?.response?.data?.detail || 'Erreur lors de la création';
+      toast.error(msg);
     }
   }, [pushActivity]);
 
   const updateGroup = useCallback(async (groupId, patch) => {
     try {
       const updated = await groupApi.updateGroup(groupId, patch);
-      setGroups(prev => prev?.map(g => g._id === groupId ? updated : g) ?? prev);
+      // Sync with active groups
+      setGroups(prev => prev?.map(g => (g._id === groupId || g.id === groupId) ? { ...g, ...updated, _id: updated.PID || updated.id } : g) ?? prev);
+      // Sync with archive
+      setArchive(prev => prev?.map(g => (g._id === groupId || g.id === groupId) ? { ...g, ...updated, _id: updated.PID || updated.id } : g) ?? prev);
       return updated;
     } catch (e) { console.error(e); }
   }, []);
@@ -242,9 +301,17 @@ export function AdminProvider({ children }) {
 
   const assignJury = useCallback(async (groupId, selection) => {
     try {
-      const president = selection.find(x => x.role === 'president')?.teacherId;
-      const examiner1  = selection.filter(x => x.role === 'member')[0]?.teacherId;
-      const examiner2  = selection.filter(x => x.role === 'member')[1]?.teacherId;
+      // selection = [{teacherId, role}, ...] — 3 teachers, supervisor auto-added by backend
+      const president = selection.find(x => x.role === 'president')?.teacherId
+        || selection[0]?.teacherId;
+      const members = selection.filter(x => x.teacherId !== president);
+      const examiner1 = members[0]?.teacherId;
+      const examiner2 = members[1]?.teacherId;
+
+      if (!president || !examiner1 || !examiner2) {
+        toast.error("Veuillez sélectionner exactement 3 membres de jury");
+        return false;
+      }
 
       await groupApi.assignJury(groupId, {
         teacher1_id: parseInt(president),
@@ -254,25 +321,31 @@ export function AdminProvider({ children }) {
 
       setGroups(prev => prev?.map(g => {
         if (g._id !== groupId) return g;
+        const pres  = users?.find(u => u._id === president  || u.id === president);
+        const ex1   = users?.find(u => u._id === examiner1  || u.id === examiner1);
+        const ex2   = users?.find(u => u._id === examiner2  || u.id === examiner2);
+        const sup   = users?.find(u => u._id === g.teacherId || u.id === g.teacherId);
+
         return {
           ...g,
           jury: {
-            president: selection.find(x => x.role === 'president')?.name || '',
-            examiner1: selection.filter(x => x.role === 'member')[0]?.name || '',
-            examiner2: selection.filter(x => x.role === 'member')[1]?.name || '',
+            supervisor: sup?.name || sup?.full_name || '—',
+            president: pres?.name || pres?.full_name || '—',
+            examiner1: ex1?.name  || ex1?.full_name  || '—',
+            examiner2: ex2?.name  || ex2?.full_name  || '—',
           }
         };
       }));
 
       pushActivity({ type: 'jury_assigned', action: 'Jury assigné', desc: groupId, color: '#8B5CF6' });
-      toast.success('Jury assigné');
+      toast.success('Jury assigné (4 membres)');
       return true;
     } catch (e) {
       console.error(e);
-      toast.error('Erreur lors de l\'assignation');
+      toast.error(e?.response?.data?.error || 'Erreur lors de l\'assignation');
       return false;
     }
-  }, [pushActivity]);
+  }, [pushActivity, users]);
 
   const restoreGroup = useCallback(async (groupId) => {
     try {
@@ -298,6 +371,62 @@ export function AdminProvider({ children }) {
       toast.error('Erreur lors de la suppression');
     }
   }, [pushActivity]);
+
+  const deleteArchiveProject = useCallback(async (projectId) => {
+    try {
+      const proj = archive?.find(p => p._id === projectId);
+      await archiveApi.deleteArchiveEntry(projectId);
+      setArchive(prev => prev?.filter(p => p._id !== projectId));
+      pushActivity({ type: 'archive_deleted', action: 'Projet supprimé (Archive)', desc: proj?.name || projectId, color: '#EF4444' });
+      toast.success('Projet supprimé définitivement');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de la suppression');
+    }
+  }, [archive, pushActivity]);
+
+  const updatePlatformSettings = useCallback(async (patch) => {
+    try {
+      const res = await client.patch(ENDPOINTS.admin.platformSettings, patch);
+      const updatedFields = res.data.data || res.data; // Handle nested or flat response
+      setPlatformSettings(prev => ({ ...prev, ...updatedFields }));
+      if (patch.current_academic_year) {
+        // Refresh groups and archive if year changed as many projects might have been archived
+        loadGroups().then(res => {
+          const all = (Array.isArray(res) ? res : []).map(g => ({
+            ...g,
+            _id:      g.PID,
+            title:    g.name,
+            teacherId: g.TID,
+            groupCode: g.invite_code,
+            supervisorApproved: g.final_submission_approved === true,
+          }));
+          setGroups(all.filter(g => !g.archived));
+        });
+        loadArchive().then(res => {
+          const archived = (Array.isArray(res) ? res : []).map(p => ({
+            ...p,
+            _id:       p.PID || p.id,
+            name:      p.name,
+            group:     p.invite_code,
+            year:      p.year || new Date().getFullYear().toString(),
+            specialite: p.specialty,
+            encadreur: p.teacher_name,
+            members:   (p.members || []).map(m => m.student_name || m.name),
+            grade:     p.grades?.final_grade || null,
+            tech:      (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
+            archived:  true,
+          }));
+          setArchive(archived);
+        });
+      }
+      toast.success('Paramètres mis à jour');
+      return res.data.data;
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de la mise à jour des paramètres');
+    }
+  }, [loadGroups, loadArchive]);
 
   // ── MEETINGS ──────────────────────────────────────────────────────
   const addMeeting = useCallback(async (meetingData) => {
@@ -380,8 +509,24 @@ export function AdminProvider({ children }) {
     };
   });
 
+  const { request: fetchAdvancedAnalytics, data: advAnalytics } = useApi(async () => {
+    const { data } = await client.get(ENDPOINTS.admin.advancedAnalytics);
+    return data;
+  });
+
+  const toggleProjectVisibility = useCallback(async (id, isPublic) => {
+    try {
+      await archiveApi.updateArchiveEntry(id, { is_public: isPublic });
+      setArchive(p => p?.map(g => (g._id === id || g.PID === id) ? { ...g, is_public: isPublic } : g) ?? p);
+      toast.success(isPublic ? 'Projet rendu public' : 'Projet rendu privé');
+    } catch (e) { toast.error("Erreur de visibilité"); }
+  }, []);
+
   useEffect(() => {
-    if (user?._id && user.role === 'admin') fetchAnalytics();
+    if (user?._id && user.role === 'admin') {
+      fetchAnalytics();
+      fetchAdvancedAnalytics().then(data => setAdvancedAnalytics(data));
+    }
   }, [user]);
 
   // ── Derived stats ─────────────────────────────────────────────────
@@ -397,10 +542,12 @@ export function AdminProvider({ children }) {
 
   const value = {
     users, groups, meetings, archive, messages, activeContact, recentActivity,
+    platformSettings, advancedAnalytics, specialties, departments,
     stats: currentStats, analytics,
     usersLoading, groupsLoading, archiveLoading,
     addUser, updateUser, removeUser, blockUser, unblockUser,
-    addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup,
+    addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup, deleteArchiveProject, toggleProjectVisibility,
+    updatePlatformSettings, fetchAdvancedAnalytics,
     assignJury,
     addMeeting, updateMeetingStatus,
     loadThread, sendMessage, receiveMessage, markThreadRead,

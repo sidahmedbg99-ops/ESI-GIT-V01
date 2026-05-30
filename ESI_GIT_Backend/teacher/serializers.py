@@ -33,9 +33,11 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = [
-            "PID", "name", "invite_code", "specialty", "year",
-            "status", "member_count", "progress", "members",
-        ]
+        "PID", "name", "invite_code", "specialty", "year",
+        "status", "member_count", "progress", "members",
+        "submitted_to_supervisor", "final_submission_approved",
+        "supervisor_feedback", "github_url",
+    ]
 
     def get_member_count(self, obj):
         return SProjects.objects.filter(PID=obj).count()

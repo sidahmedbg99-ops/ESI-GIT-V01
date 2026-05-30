@@ -33,5 +33,6 @@ export const TECH_COLORS = {
   Python:'#3B7ACF', React:'#61DAFB', 'Node.js':'#43A047', MongoDB:'#4CAF50',
   TensorFlow:'#FF6F00', FastAPI:'#009688', 'Vue.js':'#42B883', Laravel:'#FF2D20',
   MySQL:'#4479A1', Flask:'#222', spaCy:'#09A3D5', 'Scikit-learn':'#F7931E',
-  Wireshark:'#1679A7', Docker:'#2496ED', WebRTC:'#4285F4',
+  Django:'#092E20', PostgreSQL:'#336791', Java:'#ED8B00', Spring:'#6DB33F',
+  TypeScript:'#3178C6', Tailwind:'#38B2AC',
 };

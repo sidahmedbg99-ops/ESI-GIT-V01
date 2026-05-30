@@ -20,6 +20,7 @@ class Projects(models.Model):
     # taken from student.level
     TID            = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, blank=True)
     github_url     = models.URLField(max_length=300, blank=True, null=True)
+    tech_stack = models.CharField(max_length=255, null=True, blank=True)
 
     # added: project description and tech stack
     description    = models.TextField(null=True, blank=True)
