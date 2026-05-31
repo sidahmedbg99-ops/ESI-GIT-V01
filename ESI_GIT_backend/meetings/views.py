@@ -28,7 +28,7 @@ class MeetingListCreateView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        meetings = Meeting.objects.filter(PID=membership.PID)
+        meetings = Meeting.objects.filter(PID=membership.PID).order_by('-date', '-time')
         return Response(MeetingSerializer(meetings, many=True).data)
 
     def post(self, request):

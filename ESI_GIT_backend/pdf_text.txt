@@ -1,0 +1,695 @@
+=== PAGE 1 ===
+Mardi 02/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+1 KHELKHAL Khadidja
+2 KHELFAOUI Doua
+3 BENLAGRA Meriem nour
+4 MAZIZ Samah hadjria
+5 MOSBAH Messaoud
+6 DIAF Wafaa
+7 SOUALMI Abdennour
+8 BENAISSA Bochra nardjis
+9 BEHLOULI Mohamed hassan
+10 AZEROUAL Taha elamine
+11 BENDRAOU Abdelkader nadhir
+12 BENTABET Elhabib
+13 CHEKLAT Ahmed
+14 BOUDEBZA Mohammed ridha
+15 KHALFI Zakaria louai
+16 BOUADOU Mohamed louai
+17 DAHANE Ilyes
+18 GRINA Abderrahmane
+19 BEZZEGHLI Moncef
+20 BENBAKRETI Ramzi
+21 BOUGHENDJOUR Basma
+22 BOUKHRISSA Malak
+23 HENNI DOUMA Amina
+24 RABAH Rihab
+25 GUETTICHE Loudjaine
+26 DOUIFI Sarah
+27 LOT Abdel malek
+28 BERMAK Oussama
+29 BENKRIMA Mohamed
+32 Mardi 02/06/2026
+12h00-13h00 Salle TP B3
+Mme ANANI                  
+Melle Berkani          
+Mme Belmekki
+Learning platform based on learning science 
+10 Mardi 02/06/2026
+15h00-16h00 Salle TP B3
+Mr. BEDJAOUI           
+Mr. Bekkouche            
+Mr. Aced
+Pos System and Inventory management
+29 Mardi 02/06/2026
+11h00-12h00 Salle TP B3
+Melle BERKANI       
+Mme Anani                
+Mme Belmekki      
+Mediora
+2 Mardi 02/06/2026
+14h00-15h00 Salle TP B3
+Mr. BEDJAOUI             
+Mr. Bekkouche            
+Mr. Aced
+GYMRAT : ecosystem de fitness 
+6 Mardi 02/06/2026
+09h00-10h00 Salle TP B3
+Melle BERKANI       
+Mme Anani           
+Mme Belmekki       
+StudyHub 
+8 Mardi 02/06/2026
+10h00-11h00 Salle TP B3
+Mme ANANI                  
+Melle Berkani          
+Mme Belmekki
+Dz community food
+
+
+=== PAGE 2 ===
+Mardi 02/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+30 BENDJERIOU Lamis
+31 BEZZOU Meriem
+32 SAFA Youcef
+33 BEKRI Mohamed taha el amine
+34 GHANEM Seif arselan
+35 BOUCHIBA Ahmed aimen
+36 YAHIAOUI Abdelbasset
+37 BOUTOUIL Salsabil
+38 BOUTOBBA Khouloud
+39 NAIT HAMMOU Malek
+40 BOUNEDJAR Ibtihal
+41 LARIBI Mohammed amin
+42 ATMANE Alaa
+43 GHELLAMALLAH Abdelaziz
+44 NAADJI Ahmed sadjed
+45 REZGUI Abdelhadi
+46 BENTAALLAH Mohammed houssam
+47 MAZARI Nor el imane
+48 HAMLAOUI Nada
+49 DERRAR Yousra
+50 FARADJI Ouail salah eddine
+51 MESSAI Nacim omar yasser
+52 BENYOUCEF Mohammed anes
+53 MESSADIA Ishak
+54 MAHAMMED El hadj abdeldjallil
+55 KACIMI Nadjiba
+56 MEHIMDA Ibrahim el khalil
+57 HALA Chemseddine
+58 ZIATI Hadjer
+59 BENBAGHDAD Abdelhak ibrahim
+60 BABOURI Mohamed el amine
+47 Mardi 02/06/2026
+14h00-15h00 Salle TP 5
+Mr. SERHANE          
+Mr. Saidi                     
+Mme Mezrar
+Application de Gestion et d’Organisation des Activités Portuaires
+31 Mardi 02/06/2026
+11h00-12h00 Salle TP 5
+Mr. SERHANE            
+Mr Louheb               
+Mme Mezrar
+Transport card management system
+44 Mardi 02/06/2026
+12h00-13h00 Salle TP 5
+Mr. SERHANE            
+Mr. Saidi                   
+Mme Mezrar
+Un site web pour guider les élèves de Baccalauréat
+5 Mardi 02/06/2026
+09h00-10h00 Salle TP 5
+Mr. SERHANE            
+Mr Louheb               
+Mme Mezrar
+Quadruped Robot 
+19 Mardi 02/06/2026
+10h00-11h00 Salle TP 5
+Mr. SERHANE            
+Mr Louheb               
+Mme Mezrar
+Smart parking system 
+13 Mardi 02/06/2026
+16h00-17h00 Salle TP B3
+Mr. BEDJAOUI            
+Mr. Bekkouche            
+Mr. Aced
+ResQAid: a platforme connected to drone monitoring and  aid missions
+
+=== PAGE 3 ===
+Mardi 02/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+61 ADDA Lokman
+62 FADEL Abdelkader
+63 RAHALI Noussaiba
+64 BOUZIDI Anwar
+65 DJELLOULI Rawda
+66 BEKHEIRA Walid
+67 BENHAMMOU Ilyas
+68 ZABOUR Reihana
+69 STAALI Ahlam nour el houda
+70 MADANI Aya
+71 MEDDAH Rania
+72 ZEGRAR Taha abderrahim
+73 DIFI Raouane
+74 DJEBBAR Chaimaa
+75 LARBI Nour el houda
+76 BOUALI Djamila
+77 BENDOUMA Hadil
+78 BENACER Selma
+79 BELAID Merwa
+80 MECHEHOUD Amira
+81 YETTOU Zine el abidine
+82 KOURDI Ilyas
+83 LAIDI Hicham
+84 BESKRI Aiméne
+85 GHALEM Mohamed yassine
+86 MEHENNI Mohamed
+87 DERRAR Ahmed
+88 BENELHADJ DJELLOUL Aymen walid
+89 MAAMAR Mohamed amine
+90 MADANI Mohamed seifeddine
+91 REGOUAT Mohamed mahdi
+37 Mardi 02/06/2026
+14h00-15h00 Salle TP 1
+Mr. Z. LOUHEB           
+Mme Allal                    
+Mme Daoudi        
+A Smart Mobile Shopping Platform for Local Clothing Stores
+3 Mardi 02/06/2026
+11h00-12h00 Salle TP 1
+Mr. BEKKOUCHE        
+Mme Allal                      
+Mme Daoudi
+A Hybrid Eye-Control System for Speech & Physical Mobility
+18 Mardi 02/06/2026
+12h00-13h00 Salle TP 1
+Mr. Z. LOUHEB         
+Mme Allal               
+Mme Daoudi
+Library management system 
+4 Mardi 02/06/2026
+09h00-10h00 Salle TP 1
+Mme BOUSMAHA        
+Mme Allal                     
+Mme Daoudi
+Job hunting agent
+24 Mardi 02/06/2026
+10h00-11h00 Salle TP 1
+Mme BOUSMAHA        
+Mme Allal                     
+Mme Daoudi
+ ' Hadanati ’ a website 
+51 Mardi 02/06/2026
+15h00-16h00 Salle TP 5
+Mr. SERHANE          
+Mr. Saidi                     
+Mme Mezrar
+Gestion de materiele de esi sba
+
+=== PAGE 4 ===
+Mardi 02/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+92 BOUKHALFA Achraf baha eddine
+93 CHELLI Adel
+94 MAHMOUDI Sid ali
+95 NOUI Hammoud
+96 BOUKHARI Abdeldjalile
+97 SENOUSSAOUI Manel
+98 ZOUAOUI Djihane
+99 ZENASNI Sara
+100KADDOUR Dounia
+101ZEROUALI Alaa
+102BELKHEIR Asmae
+103GHERNAOUT Mohamed yacine
+104MEKHATRIA Mohamed islam
+105REZALI Lakhdar mohamed el amine
+106AGBOUBI Abdelkader
+107BELABBES Ibrahim abdelbadie
+108BAKHTAOUI Boubakeur seddik
+109MEDJIAH Zakaria
+110MAHI Meriem manel
+111SOLTANI Assia
+112BOUABIDA Bouchra
+113HISSOUS Abdelmalek
+114MOUSLI Tayeb
+115TRIG Mohamed
+116BENNOUI Rabie
+117MEBAREK Ismail
+118BENSAOU Abdelwahab
+119BENNI Mohamed abderrahmane elkhidr
+120BENMESAHEL Roumaissa
+121KAHOUADJI Israa
+122RAIS Mayar
+123BOUZIDI Abdou
+124BOUCHERIT Yasser
+23 Mardi 02/06/2026
+14h00-15h00 Salle TP 3
+Mr. CHAIB                 
+Mr. B. Khaldi              
+Mr Simohamed
+P&P providing services
+11 Mardi 02/06/2026
+11h00-12h00 Salle TP 3
+Mr. CHAIB                 
+Mr. B. Khaldi              
+Mr Simohamed
+Verdigo
+25 Mardi 02/06/2026
+12h00-13h00 Salle TP 3
+Mr. B. KHALDI           
+Mr. Chaib                 
+Mr. Simohamed
+Autonomous Game Agent & Analytics Platform:
+Integrating Computer Vision with Hybrid Imitation-Reinforcement Learning
+7 Mardi 02/06/2026
+09h00-10h00 Salle TP 3
+Mr. CHAIB                 
+Mr. B. Khaldi              
+Mr Simohamed
+Dental meet
+16 Mardi 02/06/2026
+10h00-11h00 Salle TP 3
+Mr. B. KHALDI           
+Mr. Chaib                 
+Mr. Simohamed
+OneLastBite 
+22 Mardi 02/06/2026
+15h00-16h00 Salle TP 1
+Mr. Z. LOUHEB          
+Mme Allal                    
+Mme Daoudi
+Internship finde
+
+=== PAGE 5 ===
+Mardi 02/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+125BENLAZREG Sid ahmed chakib
+126TERRAH Youcef
+127BELGHAIT Mohamed ayoub
+128CHAGHI Fadi riadh eddine
+129MERGUEB Mohamed yacine
+130ABIDAT Abderrahmane
+131GHEZAL Omar el farouk
+132SEBIH Abderrahmane oussama
+133DAR ZEHAF Imad
+134BOUDELLAA Mustapha yacine
+135BENFRIDJA Elias
+136BELOUCIF Sidali
+An Intelligent Companion System for Bean 
+Crop Monitoring and Disease Detection43 Mardi 02/06/2026
+16h00-17h00 Salle TP 3
+Mr. B. KHALDI           
+Mr. Chaib                 
+Mr. Simohamed
+26 Mardi 02/06/2026
+15h00-16h00 Salle TP 3
+Mr. CHAIB                 
+Mr. B. Khaldi              
+Mr Simohamed
+ESI GIT
+
+=== PAGE 6 ===
+Mercredi 03/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+1 ABDELLICHE Ayoub abdelhalim
+2 BOUMESHAL Hossam abdelmouain
+3 SALAG Oussama
+4 CHEBLAOUI Ahmed amine
+5 OUDDANE Mohammed islem lakhale
+6 BENANTAR Abderraouf
+7 ZIDANE Mohamed mahdi
+8 BELKHIRI Ilyas
+9 TOLEHI Abdessamed
+10 TRAIA Aymen
+11 SAHRAOUI Mohammed raouf
+12 KHALFA Tadj eddine
+13 GHEZOU Ayoub
+14 BELMILI Siradj
+15 BASSOU Mohammed amdjed
+16 HEBAICHE Younes
+17 SEHIL Abdelhak
+18 DAHMANE Rachid rayane
+19 MEKHFI Wissal kheira
+20 BENBAKHTA Sadjida
+21 SILINI Hadjer
+22 LAKEHAL Lyna
+23 SEDDIKI Anis
+24 KOUIDRI Salah eddine
+25 MECHERI Issam eddine
+26 MEFTI Zakaria
+27 YACIA Mehdi akram
+28 BELABBAS Younes oussama
+29 AOUF Fares baha eddine
+30 BOUZIANE Nada tensime
+31 LABBACI Wail
+32 HADJOU BELAID Khalil
+28 Mercredi 03/06/2026
+14h00-15h00 Salle TP B3
+Mr. BENDELLA      
+Mr. Z. Louheb            
+Mr. Aced
+The Algeria Developer Survey
+52 Mercredi 03/06/2026
+15h00-16h00 Salle TP B3
+Mr. Z. LOUHEB      
+Mr. Bendella             
+Mr. Aced
+Esi guide line App
+40 Mercredi 03/06/2026
+11h00-12h00 Salle TP B3
+Mr. Z. LOUHEB      
+Mr. Bendella             
+Mme Souyah
+Covoiturage 
+(plateforme pour partager des trajets et réduire les frais de transport)
+14 Mercredi 03/06/2026
+12h00-13h00 Salle TP B3
+Mr. BENDELLA      
+Mr. Z. Louheb            
+Mme Souyah
+Pinnest
+38 Mercredi 03/06/2026
+09h00-10h00 Salle TP B3
+Mr. Z. LOUHEB      
+Mr. Bendella             
+Mr. Aced
+TeamUp
+9 Mercredi 03/06/2026
+10h00-11h00 Salle TP B3
+Mr. BENDELLA      
+Mr. Z. Louheb            
+Mr. Aced
+Shifa - Your All-in-One Medical Appointment Solution
+
+
+=== PAGE 7 ===
+Mercredi 03/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+33 BENACEUR Meriem
+34 ENFOUSSI Anfel malak
+35 IKHLEF Meriem
+36 OMAR Zeyneb
+37 SI CHAIB Amina
+38 DADOU Nour el yakine
+39 HANNOUNA Ilyas
+40 MAMMERI Djaouad afif
+41 HANSALI Anis abd el hak
+42 KASMI Benaoumeur
+43 BELAID Siradj eddine
+44 MAAMERI Bouchra
+45 MOHAMMEDI Marwa
+46 MIDOUN Nour el houda fatiha
+47 FERHANE Nour el houda
+48 CHOUAL Ikram
+49 BENELMOUAZ Oussama abdelillah
+50 BENRABAH Mokrane walid
+51 BOUAMRA Ahmed mokhtar
+52 KLOUCH Yassine
+53 HOUACHINE Fouad
+54 DIFAOUI Abdellah
+55 MILOUDI Rihab
+56 LATRECHE Hana
+57 FEZZAA Roua nour el imene
+58 TALHI Hadil
+59 MAHROUZ Sarra
+60 HALASSI Abdelmoumene
+61 SOUIDI Yasmine
+62 MEDELCI DJEZZAR Malek djihene
+63 OUCHENE Mohamed dhia eddine
+64 KENDOUCI Mohammed yacine
+65 TENALA Djawad
+27 Mercredi 03/06/2026
+14h00-15h00 Salle TP 5
+Mme BEZZAOUCHA   
+Mme  I.Saidi               
+Mme Belmekki
+OrgaSmart
+36 Mercredi 03/06/2026
+15h00-16h00 Salle TP 5
+Mme BEZZAOUCHA   
+Mme  I.Saidi               
+Mme Belmekki
+Plateforme web d’aide aux animaux et d’intégration dans des refuges
+12 Mercredi 03/06/2026
+11h00-12h00 Salle TP 5
+Mme BEZZAOUCHA   
+Mme  I.Saidi               
+Mme Belmekki
+Web Platform for Connecting Blood Donors with Patients in Need
+57 Mercredi 03/06/2026
+12h00-13h00 Salle TP 5
+Mme I.SAIDI               
+Mme Bezzaoucha        
+Mme Belmekki
+Plate-forme pour résoudre le problème de chômage en algerie
+20 Mercredi 03/06/2026
+09h00-10h00 Salle TP 5
+Mme DIF                           
+Mme Souyah           
+Mme Belmekki           
+ManoVox , Un Traducteur de langue des signes bidirectionnelle 
+21 Mercredi 03/06/2026
+10h00-11h00 Salle TP 5
+Mme SOUYAH       
+Mme Dif                  
+Mme Belmekki
+Animal management 
+
+=== PAGE 8 ===
+Mercredi 03/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+66 HABRI Meriem lamis
+67 OULD KADDOUR Aya
+68 BOUNOUA Houda
+69 BEKAKCHA Abdelmalik
+70 BOUKHATEM Abdelmadjid
+71 BERKANE Mohamed amine
+72 MADI Lynda
+73 DERROUCHE Raouane
+74 HITEM Wissam
+75 AMORIA Naila
+76 TILMATINE Youcef
+77 KHAMES Raouassi rihab
+78 METAKKELELARD Nour
+79 BOUSAADIA Chaimaa
+80 BOUDERBALA Achwak
+81 AMIRI Radjaa ghoufrane
+82 BOUOUDEN Dia eddine
+83 DJELLOULI Fatima zohra
+84 ADDA Youcef
+85 DERIET AMAR TOUIL SAG Mohammed
+86 OUKSILI Abde errahmane
+87 GUERDA Zina
+88 GHILES Wafaa
+89 TOUAMI Mohammed rayane
+90 OUALHI Amina
+91 SAMAI Malak
+92 HAMMANE Ritadj
+93 DROUCHE Mounir
+94 AHMED OUAMEUR Nour
+95 BANCHOUR Abderrahmane
+96 BENKROUIDEM Nassireddine
+97 MOUMNI Mohamed oussama
+98 LAKHDAR HAMINA Younes
+45 Mercredi 03/06/2026
+14h00-15h00 Salle TP 1
+Mme DAOUDI 
+Mme ELHANNANI       
+Mme Mamnine
+Tahwissa
+54 Mercredi 03/06/2026
+09h00-10h00 Salle TP 3
+Mr. BEDJAOUI           
+Mr.  F.Saidi                      
+Mr. Bekkouche
+CRM with agentic AI
+17 Mercredi 03/06/2026
+11h00-12h00 Salle TP 1
+Mr. AWAD            
+Mme Mezrar            
+Mme Mamine
+HealthConnect
+60 Mercredi 03/06/2026
+12h00-13h00 Salle TP 1
+Mme MEZRAR         
+Mr Awad                       
+Mme Mamine
+Conception et implémentation d’une base de données
+électronique pour le suivi des patients en pneumo-allergologie pédiatrique
+15 Mercredi 03/06/2026
+09h00-10h00 Salle TP 1
+Mr. AWAD            
+Mme Mezrar            
+Mme Mamine
+Forsalik
+33 Mercredi 03/06/2026
+10h00-11h00 Salle TP 1
+Mme MEZRAR         
+Mr Awad                       
+Mme Mamine
+Relation between doctor and patient 
+
+=== PAGE 9 ===
+Mercredi 03/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+99 BERBOUCHI Allida
+100 MAIZIA Mohamed
+101 BENTAYEB Ali tayeb
+102 BOUKHANOUFA Hamza
+103 SERIR Abd errahmane
+104 YAHIAOUI Marwa
+105 BENAOUALI Meriem
+106 SALLOUHI Sajida
+107 BOUHERAMA Aya
+108 HABIB ZAHMANI Rekaia safaa
+109 TAHRI Soundes
+110 KHOUDOUR Fatima
+111 HAYANI Mohamed azzeddine
+112 HADDOU Kholoud
+113 BOUDISSA Imene
+114 MECHTRI Salah eddine louai abderrahmane
+115 HARIRI Rayane
+116 AICHOUR Ilyes
+117 BOUCHOUCHA Khaled
+118 BACHA Ilyas abdelmalik
+119 CHERAITIA Sofiane
+49 Mercredi 03/06/2026
+12h00-13h00 Salle TP 3
+Mr. F. SAIDI           
+Mr. Bendaoud                   
+Mr. Bekkouche
+Travel Guide 
+42 Mercredi 03/06/2026
+14h00-15h00 Salle TP 3
+Melle BERKANI      
+Mr. F.Saidi                 
+Mr. Bekkouche
+Wassali – A Crowd-sourced Local Delivery Platform Web
+46 Mercredi 03/06/2026
+10h00-11h00 Salle TP 3
+Mr. F.SAIDI           Mr. 
+Bendaoud                   
+Mr. Bekkouche
+Mufed (web app to learn and develop skills)
+41 Mercredi 03/06/2026
+11h00-12h00 Salle TP 3
+Mr. BENDAOUD     
+Mr. F.Saidi                 
+Mr. Bekkouche
+Herafi 
+
+=== PAGE 10 ===
+Jeudi 04/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+1 KHATIR BENMEHEIMDA Ayoub sofiane
+2 BENALI Mohammed
+3 KESKAS Nazim
+4 MAAFA Abdelhadi
+5 BENMEHENNI Ali
+6 TABNI Oussama
+7 MEHELLOU Abderrahmane
+8 ZAFFOUR Mohammed abdellah
+9 ASSAMI Akram abderrahmane
+10FEZRITA Haytam
+11ALIAT Mohammed
+12CHOUITEM Ahmed rami
+13BERREZOUG Abdellah
+14TOUMI Mohamed
+15BRACHDA Aimene
+16MOHRAT Mouna
+17ARIANI Chahinaze hanane
+18ACHOUR Naila serrine
+19BOUGUERRA Mohamed taki eddine
+20MAHDI Anes essdic
+21KRIDI Mohamed hassen
+22ASROUN Imene
+23MADANI Khaoula nihad
+24REMIL Tessnim
+25HADJERI Asmaa
+26MOKHTARI Hiba
+27BEN YELLES Ikram fadela
+28BENOUTI Roua rihem
+29KHEDIM Mouna
+30SENOUSSAOUI Sara
+31BOUHADDA Mohammed djaoued
+32CHETTAT Yahia
+33MEHENNI Abderrahmene
+53 Jeudi 04/06/2026
+13h00-14h00 Salle TP B3
+Mr. KAZI-TANI          Mr 
+Z. Louheb                 Mr. 
+Keskes
+BridgeWork:App of Job Search and Candidate–Employer Matching Platform
+34 Jeudi 04/06/2026
+09h00-10h00 Salle TP 5
+Mme BELALIA         
+Melle Berkani               
+Mme I.Saidi
+Healio : healthcare platform that connects doctors and patients
+35 Jeudi 04/06/2026
+11h00-12h00 Salle TP B3
+Mr. KAZI-TANI          Mr 
+Z.Louheb                 Mr. 
+Keskes
+Clinique degital 
+50 Jeudi 04/06/2026
+12h00-13h00 Salle TP B3
+Mr. Z. LOUHEB          
+Mr Kazi-Tani                   
+Mr. Keskes
+E-Store
+30 Jeudi 04/06/2026
+09h00-10h00 Salle TP B3
+Mr. KAZI-TANI          Mr 
+Z. Louheb                 Mr. 
+Keskes
+School manager
+48 Jeudi 04/06/2026
+10h00-11h00 Salle TP B3
+Mr. Z. LOUHEB          
+Mr Kazi-Tani                   
+Mr. Keskes
+First team work
+
+
+=== PAGE 11 ===
+Jeudi 04/06/2026 Soutenances des Projets Pluridisciplinaires – 2ème  Année Cycle Préparatoire-CPI
+ N Nom Prénom N°equipe Date & Heure Lieu Jury Thème
+34BOUHENNOUCHE Reda
+35ALLOU Nour ellah
+36CHAMA Oussama
+37SABOUR Abdellah
+38MOUFFOKES Mohamed elhabib
+39LELLOUCHI Zakaria abderahmen
+40ZAID Abderraouf
+41DERRADJI Mohamed rafik
+42AMIEUR Hamza
+43MERZOUGUI Abdelmouiz
+44BEN MAIDI Zakaria djamal eddine
+45DAHMANI Abdessamed
+46BECHEROUL Ilyas
+47OTHMANI MARABOUT Rachad
+48LOUBAR Mohammed el amine
+39 Jeudi 04/06/2026
+10h00-11h00 Salle TP 5
+Melle BERKANI        
+Mme Belalia               
+Mme I.Saidi
+Evolve
+55 Jeudi 04/06/2026
+11h00-12h00 Salle TP 5
+Mme BELALIA         
+Melle Berkani               
+Mme I.Saidi
+Stocki
+59 Jeudi 04/06/2026
+12h00-13h00 Salle TP 5
+Melle BERKANI        
+Mme Belalia               
+Mme I.Saidi
+Ta3awano
+

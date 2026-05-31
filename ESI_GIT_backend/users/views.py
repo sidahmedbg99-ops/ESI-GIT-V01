@@ -98,6 +98,7 @@ class LoginView(APIView):
                         "is_teacher": user.is_teacher,
                         "department": user.department,
                         "specialty": user.specialty,
+                        "available": user.available,
                     },
                     **tokens,
                 }
@@ -180,6 +181,7 @@ class MeView(APIView):
                     "is_first_login": user.is_first_login,
                     "department": user.department,
                     "specialty": user.specialty,
+                    "available": user.available,
                 }
             )
 
@@ -188,13 +190,18 @@ class TeacherListView(APIView):
     """
     GET /api/teachers/
     Returns a list of all available teachers.
-    Accessible by all authenticated users (students need this to pick a supervisor).
+    Optional query parameter: ?available=true to get only available teachers.
     """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        teachers = Staff.objects.filter(is_teacher=True, is_active=True, is_first_login=False)
+        only_available = request.query_params.get('available') == 'true'
+        
+        teachers = Staff.objects.filter(is_teacher=True, is_active=True, is_blocked=False)
+        if only_available:
+            teachers = teachers.filter(available=True)
+            
         data = [
             {
                 "TID": t.TID,
@@ -211,6 +218,29 @@ class TeacherListView(APIView):
             for t in teachers
         ]
         return Response(data)
+
+
+class ToggleAvailabilityView(APIView):
+    """
+    PATCH /api/users/toggle-availability/
+    
+    Allows a teacher to toggle their availability for supervision.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        if not hasattr(user, 'is_teacher') or not user.is_teacher:
+            return Response({"error": "Only teachers can toggle availability"}, status=403)
+        
+        staff = Staff.objects.get(TID=user.TID)
+        staff.available = not staff.available
+        staff.save()
+        
+        return Response({
+            "message": f"Availability set to {staff.available}",
+            "available": staff.available
+        })
 
 
 class ForgotPasswordView(APIView):

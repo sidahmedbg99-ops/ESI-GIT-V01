@@ -101,31 +101,82 @@ def assign_jury(request, pk):
     except Projects.DoesNotExist:
         return Response({"error": "Project not found"}, status=404)
 
-    data = cast(Dict[str, Any], request.data)
+    from .serializers import AssignJurySerializer
+    serializer = AssignJurySerializer(data=request.data)
+    if serializer.is_valid():
+        jury = serializer.save(project)
+        return Response(
+            {
+                "message": "Jury assigned successfully",
+                "jury": {
+                    "president": jury.teacher1_id.full_name,
+                    "examiner": jury.teacher2_id.full_name,
+                    "date": jury.presentation_date,
+                    "time": jury.presentation_time,
+                    "room": jury.room
+                }
+            },
+            status=status.HTTP_200_OK,
+        )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["POST"])
+def auto_assign_juries(request):
+    if not IsAdmin().has_permission(request, None):
+        return Response({"error": "Admin only"}, status=403)
+
+    # All projects without a jury (active only)
+    projects_without_jury = Projects.objects.filter(
+        archived=False,
+        projectjury__isnull=True
+    )
+    
+    teachers = list(Staff.objects.filter(is_teacher=True, is_blocked=False, available=True))
+    if len(teachers) < 3:
+        return Response({"error": "Not enough available teachers to assign juries (need at least 3 available teachers)"}, status=400)
+
+    assigned_count = 0
+    for project in projects_without_jury:
+        supervisor = project.TID
+        # We need at least 2 other teachers for the jury (President + Examiner)
+        # and the supervisor is already known.
+        
+        # Exclude supervisor from the random pool
+        pool = [t for t in teachers if t != supervisor]
+        
+        if len(pool) < 2:
+            continue # Skip if we can't find 2 others
+            
+        selected = random.sample(pool, 2)
+        ProjectJury.objects.create(
+            PID=project,
+            supervisor_id=supervisor,
+            teacher1_id=selected[0], # President
+            teacher2_id=selected[1]  # Examiner
+        )
+        assigned_count += 1
+
+    return Response({"message": f"Auto-assigned juries to {assigned_count} projects."})
+
+
+@api_view(["PATCH"])
+def toggle_project_visibility(request, pk):
+    if not IsAdmin().has_permission(request, None):
+        return Response({"error": "Admin only"}, status=403)
 
     try:
-        teacher1 = Staff.objects.get(TID=data.get("teacher1_id"))
-        teacher2 = Staff.objects.get(TID=data.get("teacher2_id"))
-        teacher3 = Staff.objects.get(TID=data.get("teacher3_id"))
-    except Staff.DoesNotExist:
-        return Response({"error": "Teacher not found"}, status=404)
+        project = Projects.objects.get(pk=pk)
+    except Projects.DoesNotExist:
+        return Response({"error": "Project not found"}, status=404)
 
-    jury, created = ProjectJury.objects.update_or_create(
-        PID=project,
-        defaults={
-            "teacher1_id": teacher1,
-            "teacher2_id": teacher2,
-            "teacher3_id": teacher3,
-        },
-    )
+    project.is_public = not project.is_public
+    project.save()
 
-    return Response(
-        {
-            "message": "Jury assigned successfully",
-            "created": created,
-        },
-        status=status.HTTP_200_OK,
-    )
+    return Response({
+        "message": f"Visibility updated to {'public' if project.is_public else 'private'}",
+        "is_public": project.is_public
+    })
 
 
 @api_view(["GET"])
@@ -139,25 +190,26 @@ def admin_projects_analytics(request):
     total_archived = Projects.objects.filter(archived=True).count()
 
     submissions_this_month = ProjectAttachment.objects.filter(
-        uploaded_at__date__gte=start_month
+        uploaded_at__date__gte=start_month,
+        PID__archived=False
     ).count()
 
-    total_projects = Projects.objects.count()
-    completed_projects = Projects.objects.filter(archived=True).count()
+    total_projects = Projects.objects.filter(archived=False).count()
+    completed_projects = Projects.objects.filter(archived=False, final_submission_approved=True).count()
 
     completion_rate = 0
     if total_projects > 0:
         completion_rate = int((completed_projects / total_projects) * 100)
 
     progress_by_year = (
-        Projects.objects.values("year").annotate(total=Count("PID")).order_by("year")
+        Projects.objects.filter(archived=False).values("year").annotate(total=Count("PID")).order_by("year")
     )
 
     six_months_ago = today - timedelta(days=180)
 
     from django.db.models.functions import TruncMonth
     monthly_submissions = (
-        ProjectAttachment.objects.filter(uploaded_at__date__gte=six_months_ago)
+        ProjectAttachment.objects.filter(uploaded_at__date__gte=six_months_ago, PID__archived=False)
         .annotate(month=TruncMonth("uploaded_at"))
         .values("month")
         .annotate(total=Count("id"))

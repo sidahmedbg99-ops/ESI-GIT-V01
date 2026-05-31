@@ -679,59 +679,73 @@ class AdvancedAnalyticsAPI(APIView):
         now = datetime.now()
         thirty_days_ago = now - timedelta(days=30)
 
-        # 1. Active vs Inactive Students
+        # 1. Active vs Inactive Students (Only for current active projects)
         total_students = Student.objects.count()
-        students_with_group = SProjects.objects.values('CID').distinct().count()
-        
-        # 2. At-risk Students (Past-due tasks)
+        students_with_group = SProjects.objects.filter(PID__archived=False).values('CID').distinct().count()
+
+        # 2. At-risk Students (Past-due tasks in active projects)
         at_risk_count = Task.objects.filter(
-            state__in=['todo', 'in_progress'], 
+            PID__archived=False,
+            state__in=['todo', 'in_progress'],
             deadline__lt=now.date()
         ).values('assignments__CID').distinct().count()
 
-        # 3. Grade Trends (by month)
+        # 3. Grade Trends (by month, only active)
         grade_trends = (
-            Grades.objects.filter(final_grade__isnull=False)
+            Grades.objects.filter(PID__archived=False, final_grade__isnull=False)
             .annotate(month=TruncMonth('PID__creation_date'))
             .values('month')
             .annotate(avg_grade=Avg('final_grade'))
             .order_by('month')
         )
-
         # 4. Specialty Performance (Module difficulty)
         specialty_performance = (
-            Projects.objects.filter(grades__final_grade__isnull=False)
+            Projects.objects.filter(archived=False, grades__final_grade__isnull=False)
             .values('specialty')
             .annotate(avg_grade=Avg('grades__final_grade'), count=Count('PID'))
             .order_by('-avg_grade')
         )
 
-        # 5. Pass/Fail Rates
-        final_grades_qs = Grades.objects.filter(final_grade__isnull=False)
+        # 5. Groups per Specialty
+        groups_by_specialty = (
+            Projects.objects.filter(archived=False)
+            .values('specialty')
+            .annotate(count=Count('PID'))
+            .order_by('-count')
+        )
+
+        # 6. Project Status Distribution
+        projects_by_status = (
+            Projects.objects.filter(archived=False)
+            .values('status')
+            .annotate(count=Count('PID'))
+            .order_by('-count')
+        )
+
+        # 7. Pass/Fail Rates
+        final_grades_qs = Grades.objects.filter(PID__archived=False, final_grade__isnull=False)
         pass_count = final_grades_qs.filter(final_grade__gte=10).count()
         fail_count = final_grades_qs.filter(final_grade__lt=10).count()
         total_final_grades = final_grades_qs.count()
 
         # 6. Task Completion Rate
-        total_tasks = Task.objects.count()
-        done_tasks = Task.objects.filter(state='done').count()
+        total_tasks = Task.objects.filter(PID__archived=False).count()
+        done_tasks = Task.objects.filter(PID__archived=False, state='done').count()
 
         # 7. Late Submissions (Approximate: Past due tasks)
-        late_tasks_count = Task.objects.filter(deadline__lt=now.date()).exclude(state='done').count()
+        late_tasks_count = Task.objects.filter(PID__archived=False, deadline__lt=now.date()).exclude(state='done').count()
 
         # 8. Teacher Grading Patterns (Average grade given across all juries)
-        # We look at the actual grades given in each slot (g1, g2, g3)
+        # We look at the actual grades given in each slot (g1, g2)
         teacher_patterns = []
         teachers = Staff.objects.filter(is_teacher=True)
         for t in teachers:
             # Grades given as President (grade1)
-            g1_list = list(Grades.objects.filter(PID__projectjury__teacher1_id=t, grade1__isnull=False).values_list('grade1', flat=True))
-            # Grades given as Examiner 1 (grade2)
-            g2_list = list(Grades.objects.filter(PID__projectjury__teacher2_id=t, grade2__isnull=False).values_list('grade2', flat=True))
-            # Grades given as Examiner 2 (grade3)
-            g3_list = list(Grades.objects.filter(PID__projectjury__teacher3_id=t, grade3__isnull=False).values_list('grade3', flat=True))
+            g1_list = list(Grades.objects.filter(PID__archived=False, PID__projectjury__teacher1_id=t, grade1__isnull=False).values_list('grade1', flat=True))
+            # Grades given as Examiner (grade2)
+            g2_list = list(Grades.objects.filter(PID__archived=False, PID__projectjury__teacher2_id=t, grade2__isnull=False).values_list('grade2', flat=True))
             
-            all_teacher_grades = g1_list + g2_list + g3_list
+            all_teacher_grades = g1_list + g2_list
             if all_teacher_grades:
                 avg = sum(all_teacher_grades) / len(all_teacher_grades)
                 teacher_patterns.append({
@@ -746,25 +760,56 @@ class AdvancedAnalyticsAPI(APIView):
         teacher_patterns.sort(key=lambda x: x['avg_given'], reverse=True)
         teacher_patterns = teacher_patterns[:10]
 
-        # 9. Detailed Student List for Export
-        # [Student Name, Project, Supervisor, Grade]
+        # 9. Detailed Student List for Export (previous academic year only)
         student_list = []
-        memberships = SProjects.objects.select_related('CID', 'PID', 'PID__TID').all()
-        
-        # Pre-fetch grades to avoid N+1
-        project_grades_map = {g.PID_id: g.final_grade for g in Grades.objects.all()}
-        
+        platform_settings = PlatformSettings.objects.first()
+        current_academic_year = platform_settings.current_academic_year if platform_settings else None
+        previous_academic_year = None
+        if current_academic_year:
+            if '-' in current_academic_year:
+                parts = current_academic_year.split('-', 1)
+                if parts[0].isdigit():
+                    previous_academic_year = f"{int(parts[0]) - 1}-{parts[0]}"
+            elif '/' in current_academic_year:
+                parts = current_academic_year.split('/', 1)
+                if parts[0].isdigit():
+                    previous_academic_year = f"{int(parts[0]) - 1}/{parts[0]}"
+
+        year_filter = Q()
+        if previous_academic_year:
+            if '-' in previous_academic_year:
+                alternate_year = previous_academic_year.replace('-', '/')
+            else:
+                alternate_year = previous_academic_year.replace('/', '-')
+            year_filter = (
+                Q(CID__academic_year__iexact=previous_academic_year) |
+                Q(CID__academic_year__iexact=alternate_year)
+            )
+
+        memberships = (
+            SProjects.objects.filter(year_filter)
+            .select_related('CID', 'PID', 'PID__TID')
+            .all()
+        ) if previous_academic_year else SProjects.objects.none()
+
+        project_ids = [m.PID_id for m in memberships]
+        project_grades_map = {
+            g.PID_id: g.final_grade
+            for g in Grades.objects.filter(PID_id__in=project_ids)
+        }
+
         for m in memberships:
             student_list.append({
                 "student_name": m.CID.full_name,
                 "project_name": m.PID.name,
                 "supervisor": m.PID.TID.full_name if m.PID.TID else "—",
-                "grade": project_grades_map.get(m.PID.PID, "—")
+                "grade": project_grades_map.get(m.PID_id, "—"),
+                "academic_year": m.CID.academic_year,
             })
 
         # 10. System Usage (Creations per month)
         usage_trends = (
-            Projects.objects.annotate(month=TruncMonth('creation_date'))
+            Projects.objects.filter(archived=False).annotate(month=TruncMonth('creation_date'))
             .values('month')
             .annotate(projects=Count('PID'))
             .order_by('month')
@@ -789,6 +834,8 @@ class AdvancedAnalyticsAPI(APIView):
             },
             "teacher_patterns": teacher_patterns,
             "usage_trends": list(usage_trends),
+            "specialty_groups": list(groups_by_specialty),
+            "projects_by_status": list(projects_by_status),
             "student_list": student_list,
         })
 

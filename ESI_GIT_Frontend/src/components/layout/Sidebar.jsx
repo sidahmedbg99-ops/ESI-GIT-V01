@@ -11,6 +11,7 @@ import {
 import Logo from '../ui/Logo';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useTeacher } from '../../context/TeacherContext';
 
 const studentNav = [
   { path: '/student/dashboard', labelKey: 'Dashboard',  icon: <IoGridOutline size={20}/> },
@@ -45,7 +46,12 @@ export default function Sidebar() {
   const { user, logout, switchRole } = useAuth();
   const { toggleLanguage, t, lang } = useLanguage();
   const navigate = useNavigate();
-  const nav = navByRole[user?.role] || studentNav;
+  
+  // Conditionally hide jury for teachers with no assignments
+  let teacherCtx = null;
+  try { teacherCtx = useTeacher(); } catch(e) { /* not in teacher context */ }
+  
+  let nav = navByRole[user?.role] || studentNav;
 
   const handleLogout = () => { logout(); navigate('/login'); };
   const goToProfile  = () => navigate(`/${user?.role}/profil`);

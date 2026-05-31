@@ -32,7 +32,7 @@ export default function Supervisor() {
   const teachersPerPage = 10;
 
   useEffect(() => {
-    loadTeachers();
+    loadTeachers(true);
     fetchRequests();
   }, [loadTeachers]);
 

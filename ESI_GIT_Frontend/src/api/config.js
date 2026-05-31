@@ -24,6 +24,11 @@ export const ENDPOINTS = {
     me: 'me/',                             // GET   → user info
     changePassword: 'change-password/',    // POST  { old_password, new_password }
     teachers: 'teachers/',                 // GET   → list of teachers
+    toggleAvailability: 'users/toggle-availability/', // PATCH
+  },
+  users: {
+    changePassword: 'change-password/',
+    toggleAvailability: 'users/toggle-availability/',
   },
 
   // ── Groups / Projects ─────────────────────────────────────────────
@@ -32,7 +37,6 @@ export const ENDPOINTS = {
     all: 'projects/admin/groups/',                                 // GET
     byId: (id) => `projects/admin/groups/${id}/`,                 // GET
     adminProject: (id) => `projects/admin/projects/${id}/`,       // GET/PUT/DELETE
-    assignJury: (id) => `projects/admin/groups/${id}/assign-jury/`, // POST
     archive: (id) => `projects/admin/projects/${id}/archive/`,    // PATCH
     restore: (id) => `projects/admin/projects/${id}/restore/`,    // PATCH
     archived: 'projects/projects/archived/',                      // GET (role-based)
@@ -110,6 +114,9 @@ export const ENDPOINTS = {
     analytics: 'projects/admin/analytics/',        // GET
     users: 'admin/users/',                         // GET → paginated user list
     panelStats: 'admin/dashboard/',                // GET → { students, staff, roles }
+    assignJury: (id) => `projects/admin/groups/${id}/assign-jury/`,
+    autoAssignJuries: 'projects/admin/groups/auto-assign-juries/',
+    toggleProjectVisibility: (id) => `projects/admin/groups/${id}/toggle-visibility/`,
 
     student: {
       create: 'admin/students/create/',

@@ -298,31 +298,20 @@ export function AdminProvider({ children }) {
     }
   }, [groups, pushActivity]);
 
-  const assignJury = useCallback(async (groupId, selection) => {
+  const assignJury = useCallback(async (groupId, data) => {
     try {
-      // selection = [{teacherId, role}, ...] — 3 teachers, supervisor auto-added by backend
-      const president = selection.find(x => x.role === 'president')?.teacherId
-        || selection[0]?.teacherId;
-      const members = selection.filter(x => x.teacherId !== president);
-      const examiner1 = members[0]?.teacherId;
-      const examiner2 = members[1]?.teacherId;
-
-      if (!president || !examiner1 || !examiner2) {
-        toast.error("Veuillez sélectionner exactement 3 membres de jury");
+      // data = { teacher1_id, teacher2_id, presentation_date, presentation_time, room }
+      if (!data.teacher1_id || !data.teacher2_id) {
+        toast.error("Veuillez sélectionner exactement 2 membres de jury");
         return false;
       }
 
-      await groupApi.assignJury(groupId, {
-        teacher1_id: parseInt(president),
-        teacher2_id: parseInt(examiner1),
-        teacher3_id: parseInt(examiner2),
-      });
+      await client.post(ENDPOINTS.admin.assignJury(groupId), data);
 
       setGroups(prev => prev?.map(g => {
-        if (g._id !== groupId) return g;
-        const pres  = users?.find(u => u._id === president  || u.id === president);
-        const ex1   = users?.find(u => u._id === examiner1  || u.id === examiner1);
-        const ex2   = users?.find(u => u._id === examiner2  || u.id === examiner2);
+        if (g._id !== groupId && g.PID !== groupId) return g;
+        const pres  = users?.find(u => u._id === data.teacher1_id  || u.id === data.teacher1_id);
+        const ex1   = users?.find(u => u._id === data.teacher2_id  || u.id === data.teacher2_id);
         const sup   = users?.find(u => u._id === g.teacherId || u.id === g.teacherId);
 
         return {
@@ -330,14 +319,16 @@ export function AdminProvider({ children }) {
           jury: {
             supervisor: sup?.name || sup?.full_name || '—',
             president: pres?.name || pres?.full_name || '—',
-            examiner1: ex1?.name  || ex1?.full_name  || '—',
-            examiner2: ex2?.name  || ex2?.full_name  || '—',
+            examiner: ex1?.name  || ex1?.full_name  || '—',
+            presentation_date: data.presentation_date,
+            presentation_time: data.presentation_time,
+            room: data.room
           }
         };
       }));
 
       pushActivity({ type: 'jury_assigned', action: 'Jury assigné', desc: groupId, color: '#8B5CF6' });
-      toast.success('Jury assigné (4 membres)');
+      toast.success('Jury assigné (3 membres)');
       return true;
     } catch (e) {
       console.error(e);

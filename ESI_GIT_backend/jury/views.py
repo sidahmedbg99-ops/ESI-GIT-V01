@@ -13,31 +13,28 @@ from users.permissions import IsAdmin, IsStaff, IsStudent
 def assign_jury(request):
     """
     POST /api/jury/admin/jury/assign/
-    Body: { PID, teacher1_id, teacher2_id, teacher3_id }
-    The supervisor (project.TID) is automatically added as the 4th member.
+    Body: { PID, teacher1_id, teacher2_id }
+    The supervisor (project.TID) is automatically added as the jury supervisor.
     """
     pid = request.data.get("PID")
     t1 = request.data.get("teacher1_id")
     t2 = request.data.get("teacher2_id")
-    t3 = request.data.get("teacher3_id")
 
-    if not all([pid, t1, t2, t3]):
-        return Response({"error": "PID, teacher1_id, teacher2_id, teacher3_id are required"}, status=400)
+    if not all([pid, t1, t2]):
+        return Response({"error": "PID, teacher1_id, teacher2_id are required"}, status=400)
 
     try:
         project = Projects.objects.get(pk=pid)
     except Projects.DoesNotExist:
         return Response({"error": "Project not found"}, status=404)
 
-    # Validate 3 jury teachers are distinct
-    ids = {int(t1), int(t2), int(t3)}
-    if len(ids) != 3:
-        return Response({"error": "The 3 jury teachers must be different"}, status=400)
+    # Validate the two jury teachers are distinct
+    if int(t1) == int(t2):
+        return Response({"error": "The 2 jury teachers must be different"}, status=400)
 
     try:
         teacher1 = Staff.objects.get(TID=t1)
         teacher2 = Staff.objects.get(TID=t2)
-        teacher3 = Staff.objects.get(TID=t3)
     except Staff.DoesNotExist as e:
         return Response({"error": f"Teacher not found: {e}"}, status=404)
 
@@ -50,7 +47,6 @@ def assign_jury(request):
             "supervisor_id": supervisor,
             "teacher1_id": teacher1,
             "teacher2_id": teacher2,
-            "teacher3_id": teacher3,
         },
     )
     # Ensure a Grades row exists
@@ -61,8 +57,7 @@ def assign_jury(request):
         "jury": {
             "supervisor": supervisor.full_name if supervisor else None,
             "president": teacher1.full_name,
-            "examiner1": teacher2.full_name,
-            "examiner2": teacher3.full_name,
+            "examiner": teacher2.full_name,
         }
     }, status=201 if created else 200)
 
@@ -162,8 +157,6 @@ class TeacherSubmitGradeView(APIView):
             grades_obj.grade1 = grade_value
         elif jury.teacher2_id_id == teacher.pk:
             grades_obj.grade2 = grade_value
-        elif jury.teacher3_id_id == teacher.pk:
-            grades_obj.grade3 = grade_value
         elif jury.supervisor_id_id == teacher.pk:
             grades_obj.grade4 = grade_value
         else:
@@ -178,7 +171,6 @@ class TeacherSubmitGradeView(APIView):
             "message": "Grade submitted successfully",
             "final_grade": grades_obj.final_grade,
             "all_grades_in": all([
-                grades_obj.grade1, grades_obj.grade2,
-                grades_obj.grade3, grades_obj.grade4
+                grades_obj.grade1, grades_obj.grade2, grades_obj.grade4
             ])
         })

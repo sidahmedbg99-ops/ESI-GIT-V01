@@ -1,0 +1,2030 @@
+{
+    "6": {
+        "team_number": "6",
+        "date_heure": "Mardi 02/06/2026\n09h00-10h00",
+        "lieu": "Salle TP B3",
+        "jury": "Melle BERKANI\nMme Anani\nMme Belmekki",
+        "theme": "StudyHub",
+        "students": [
+            {
+                "n": "1",
+                "nom": "KHELKHAL",
+                "prenom": "Khadidja"
+            },
+            {
+                "n": "2",
+                "nom": "KHELFAOUI",
+                "prenom": "Doua"
+            },
+            {
+                "n": "3",
+                "nom": "BENLAGRA",
+                "prenom": "Meriem nour"
+            },
+            {
+                "n": "4",
+                "nom": "MAZIZ",
+                "prenom": "Samah hadjria"
+            }
+        ]
+    },
+    "8": {
+        "team_number": "8",
+        "date_heure": "Mardi 02/06/2026\n10h00-11h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mme ANANI\nMelle Berkani\nMme Belmekki",
+        "theme": "Dz community food",
+        "students": [
+            {
+                "n": "5",
+                "nom": "MOSBAH",
+                "prenom": "Messaoud"
+            },
+            {
+                "n": "6",
+                "nom": "DIAF",
+                "prenom": "Wafaa"
+            },
+            {
+                "n": "7",
+                "nom": "SOUALMI",
+                "prenom": "Abdennour"
+            },
+            {
+                "n": "8",
+                "nom": "BENAISSA",
+                "prenom": "Bochra nardjis"
+            },
+            {
+                "n": "9",
+                "nom": "BEHLOULI",
+                "prenom": "Mohamed hassan"
+            },
+            {
+                "n": "10",
+                "nom": "AZEROUAL",
+                "prenom": "Taha elamine"
+            }
+        ]
+    },
+    "29": {
+        "team_number": "29",
+        "date_heure": "Mardi 02/06/2026\n11h00-12h00",
+        "lieu": "Salle TP B3",
+        "jury": "Melle BERKANI\nMme Anani\nMme Belmekki",
+        "theme": "Mediora",
+        "students": [
+            {
+                "n": "11",
+                "nom": "BENDRAOU",
+                "prenom": "Abdelkader nadhir"
+            },
+            {
+                "n": "12",
+                "nom": "BENTABET",
+                "prenom": "Elhabib"
+            },
+            {
+                "n": "13",
+                "nom": "CHEKLAT",
+                "prenom": "Ahmed"
+            },
+            {
+                "n": "14",
+                "nom": "BOUDEBZA",
+                "prenom": "Mohammed ridha"
+            },
+            {
+                "n": "15",
+                "nom": "KHALFI",
+                "prenom": "Zakaria louai"
+            }
+        ]
+    },
+    "32": {
+        "team_number": "32",
+        "date_heure": "Mardi 02/06/2026\n12h00-13h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mme ANANI\nMelle Berkani\nMme Belmekki",
+        "theme": "Learning platform based on learning science",
+        "students": [
+            {
+                "n": "16",
+                "nom": "BOUADOU",
+                "prenom": "Mohamed louai"
+            },
+            {
+                "n": "17",
+                "nom": "DAHANE",
+                "prenom": "Ilyes"
+            },
+            {
+                "n": "18",
+                "nom": "GRINA",
+                "prenom": "Abderrahmane"
+            },
+            {
+                "n": "19",
+                "nom": "BEZZEGHLI",
+                "prenom": "Moncef"
+            },
+            {
+                "n": "20",
+                "nom": "BENBAKRETI",
+                "prenom": "Ramzi"
+            }
+        ]
+    },
+    "2": {
+        "team_number": "2",
+        "date_heure": "Mardi 02/06/2026\n14h00-15h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. BEDJAOUI\nMr. Bekkouche\nMr. Aced",
+        "theme": "GYMRAT : ecosystem de fitness",
+        "students": [
+            {
+                "n": "21",
+                "nom": "BOUGHENDJOUR",
+                "prenom": "Basma"
+            },
+            {
+                "n": "22",
+                "nom": "BOUKHRISSA",
+                "prenom": "Malak"
+            },
+            {
+                "n": "23",
+                "nom": "HENNI DOUMA",
+                "prenom": "Amina"
+            },
+            {
+                "n": "24",
+                "nom": "RABAH",
+                "prenom": "Rihab"
+            }
+        ]
+    },
+    "10": {
+        "team_number": "10",
+        "date_heure": "Mardi 02/06/2026\n15h00-16h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. BEDJAOUI\nMr. Bekkouche\nMr. Aced",
+        "theme": "Pos System and Inventory management",
+        "students": [
+            {
+                "n": "25",
+                "nom": "GUETTICHE",
+                "prenom": "Loudjaine"
+            },
+            {
+                "n": "26",
+                "nom": "DOUIFI",
+                "prenom": "Sarah"
+            },
+            {
+                "n": "27",
+                "nom": "LOT",
+                "prenom": "Abdel malek"
+            },
+            {
+                "n": "28",
+                "nom": "BERMAK",
+                "prenom": "Oussama"
+            },
+            {
+                "n": "29",
+                "nom": "BENKRIMA",
+                "prenom": "Mohamed"
+            }
+        ]
+    },
+    "13": {
+        "team_number": "13",
+        "date_heure": "Mardi 02/06/2026\n16h00-17h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. BEDJAOUI\nMr. Bekkouche\nMr. Aced",
+        "theme": "ResQAid: a platforme connected to drone monitoring and aid missions",
+        "students": [
+            {
+                "n": "30",
+                "nom": "BENDJERIOU",
+                "prenom": "Lamis"
+            },
+            {
+                "n": "31",
+                "nom": "BEZZOU",
+                "prenom": "Meriem"
+            },
+            {
+                "n": "32",
+                "nom": "SAFA",
+                "prenom": "Youcef"
+            },
+            {
+                "n": "33",
+                "nom": "BEKRI",
+                "prenom": "Mohamed taha el amine"
+            }
+        ]
+    },
+    "5": {
+        "team_number": "5",
+        "date_heure": "Mardi 02/06/2026\n09h00-10h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mr. SERHANE\nMr Louheb\nMme Mezrar",
+        "theme": "Quadruped Robot",
+        "students": [
+            {
+                "n": "34",
+                "nom": "GHANEM",
+                "prenom": "Seif arselan"
+            },
+            {
+                "n": "35",
+                "nom": "BOUCHIBA",
+                "prenom": "Ahmed aimen"
+            },
+            {
+                "n": "36",
+                "nom": "YAHIAOUI",
+                "prenom": "Abdelbasset"
+            },
+            {
+                "n": "37",
+                "nom": "BOUTOUIL",
+                "prenom": "Salsabil"
+            },
+            {
+                "n": "38",
+                "nom": "BOUTOBBA",
+                "prenom": "Khouloud"
+            }
+        ]
+    },
+    "19": {
+        "team_number": "19",
+        "date_heure": "Mardi 02/06/2026\n10h00-11h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mr. SERHANE\nMr Louheb\nMme Mezrar",
+        "theme": "Smart parking system",
+        "students": [
+            {
+                "n": "39",
+                "nom": "NAIT HAMMOU",
+                "prenom": "Malek"
+            },
+            {
+                "n": "40",
+                "nom": "BOUNEDJAR",
+                "prenom": "Ibtihal"
+            },
+            {
+                "n": "41",
+                "nom": "LARIBI",
+                "prenom": "Mohammed amin"
+            },
+            {
+                "n": "42",
+                "nom": "ATMANE",
+                "prenom": "Alaa"
+            },
+            {
+                "n": "43",
+                "nom": "GHELLAMALLAH",
+                "prenom": "Abdelaziz"
+            },
+            {
+                "n": "44",
+                "nom": "NAADJI",
+                "prenom": "Ahmed sadjed"
+            }
+        ]
+    },
+    "31": {
+        "team_number": "31",
+        "date_heure": "Mardi 02/06/2026\n11h00-12h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mr. SERHANE\nMr Louheb\nMme Mezrar",
+        "theme": "Transport card management system",
+        "students": [
+            {
+                "n": "45",
+                "nom": "REZGUI",
+                "prenom": "Abdelhadi"
+            },
+            {
+                "n": "46",
+                "nom": "BENTAALLAH",
+                "prenom": "Mohammed houssam"
+            },
+            {
+                "n": "47",
+                "nom": "MAZARI",
+                "prenom": "Nor el imane"
+            },
+            {
+                "n": "48",
+                "nom": "HAMLAOUI",
+                "prenom": "Nada"
+            },
+            {
+                "n": "49",
+                "nom": "DERRAR",
+                "prenom": "Yousra"
+            }
+        ]
+    },
+    "44": {
+        "team_number": "44",
+        "date_heure": "Mardi 02/06/2026\n12h00-13h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mr. SERHANE\nMr. Saidi\nMme Mezrar",
+        "theme": "Un site web pour guider les élèves de Baccalauréat",
+        "students": [
+            {
+                "n": "50",
+                "nom": "FARADJI",
+                "prenom": "Ouail salah eddine"
+            },
+            {
+                "n": "51",
+                "nom": "MESSAI",
+                "prenom": "Nacim omar yasser"
+            },
+            {
+                "n": "52",
+                "nom": "BENYOUCEF",
+                "prenom": "Mohammed anes"
+            },
+            {
+                "n": "53",
+                "nom": "MESSADIA",
+                "prenom": "Ishak"
+            },
+            {
+                "n": "54",
+                "nom": "MAHAMMED",
+                "prenom": "El hadj abdeldjallil"
+            }
+        ]
+    },
+    "47": {
+        "team_number": "47",
+        "date_heure": "Mardi 02/06/2026\n14h00-15h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mr. SERHANE\nMr. Saidi\nMme Mezrar",
+        "theme": "Application de Gestion et d’Organisation des Activités Portuaires",
+        "students": [
+            {
+                "n": "55",
+                "nom": "KACIMI",
+                "prenom": "Nadjiba"
+            },
+            {
+                "n": "56",
+                "nom": "MEHIMDA",
+                "prenom": "Ibrahim el khalil"
+            },
+            {
+                "n": "57",
+                "nom": "HALA",
+                "prenom": "Chemseddine"
+            },
+            {
+                "n": "58",
+                "nom": "ZIATI",
+                "prenom": "Hadjer"
+            },
+            {
+                "n": "59",
+                "nom": "BENBAGHDAD",
+                "prenom": "Abdelhak ibrahim"
+            },
+            {
+                "n": "60",
+                "nom": "BABOURI",
+                "prenom": "Mohamed el amine"
+            }
+        ]
+    },
+    "51": {
+        "team_number": "51",
+        "date_heure": "Mardi 02/06/2026\n15h00-16h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mr. SERHANE\nMr. Saidi\nMme Mezrar",
+        "theme": "Gestion de materiele de esi sba",
+        "students": [
+            {
+                "n": "61",
+                "nom": "ADDA",
+                "prenom": "Lokman"
+            },
+            {
+                "n": "62",
+                "nom": "FADEL",
+                "prenom": "Abdelkader"
+            },
+            {
+                "n": "63",
+                "nom": "RAHALI",
+                "prenom": "Noussaiba"
+            },
+            {
+                "n": "64",
+                "nom": "BOUZIDI",
+                "prenom": "Anwar"
+            },
+            {
+                "n": "65",
+                "nom": "DJELLOULI",
+                "prenom": "Rawda"
+            },
+            {
+                "n": "66",
+                "nom": "BEKHEIRA",
+                "prenom": "Walid"
+            }
+        ]
+    },
+    "4": {
+        "team_number": "4",
+        "date_heure": "Mardi 02/06/2026\n09h00-10h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mme BOUSMAHA\nMme Allal\nMme Daoudi",
+        "theme": "Job hunting agent",
+        "students": [
+            {
+                "n": "67",
+                "nom": "BENHAMMOU",
+                "prenom": "Ilyas"
+            },
+            {
+                "n": "68",
+                "nom": "ZABOUR",
+                "prenom": "Reihana"
+            },
+            {
+                "n": "69",
+                "nom": "STAALI",
+                "prenom": "Ahlam nour el houda"
+            },
+            {
+                "n": "70",
+                "nom": "MADANI",
+                "prenom": "Aya"
+            },
+            {
+                "n": "71",
+                "nom": "MEDDAH",
+                "prenom": "Rania"
+            },
+            {
+                "n": "72",
+                "nom": "ZEGRAR",
+                "prenom": "Taha abderrahim"
+            }
+        ]
+    },
+    "24": {
+        "team_number": "24",
+        "date_heure": "Mardi 02/06/2026\n10h00-11h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mme BOUSMAHA\nMme Allal\nMme Daoudi",
+        "theme": "' Hadanati ’ a website",
+        "students": [
+            {
+                "n": "73",
+                "nom": "DIFI",
+                "prenom": "Raouane"
+            },
+            {
+                "n": "74",
+                "nom": "DJEBBAR",
+                "prenom": "Chaimaa"
+            },
+            {
+                "n": "75",
+                "nom": "LARBI",
+                "prenom": "Nour el houda"
+            },
+            {
+                "n": "76",
+                "nom": "BOUALI",
+                "prenom": "Djamila"
+            },
+            {
+                "n": "77",
+                "nom": "BENDOUMA",
+                "prenom": "Hadil"
+            }
+        ]
+    },
+    "3": {
+        "team_number": "3",
+        "date_heure": "Mardi 02/06/2026\n11h00-12h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mr. BEKKOUCHE\nMme Allal\nMme Daoudi",
+        "theme": "A Hybrid Eye-Control System for Speech & Physical Mobility",
+        "students": [
+            {
+                "n": "78",
+                "nom": "BENACER",
+                "prenom": "Selma"
+            },
+            {
+                "n": "79",
+                "nom": "BELAID",
+                "prenom": "Merwa"
+            },
+            {
+                "n": "80",
+                "nom": "MECHEHOUD",
+                "prenom": "Amira"
+            }
+        ]
+    },
+    "18": {
+        "team_number": "18",
+        "date_heure": "Mardi 02/06/2026\n12h00-13h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mr. Z. LOUHEB\nMme Allal\nMme Daoudi",
+        "theme": "Library management system",
+        "students": [
+            {
+                "n": "81",
+                "nom": "YETTOU",
+                "prenom": "Zine el abidine"
+            },
+            {
+                "n": "82",
+                "nom": "KOURDI",
+                "prenom": "Ilyas"
+            },
+            {
+                "n": "83",
+                "nom": "LAIDI",
+                "prenom": "Hicham"
+            },
+            {
+                "n": "84",
+                "nom": "BESKRI",
+                "prenom": "Aiméne"
+            },
+            {
+                "n": "85",
+                "nom": "GHALEM",
+                "prenom": "Mohamed yassine"
+            }
+        ]
+    },
+    "37": {
+        "team_number": "37",
+        "date_heure": "Mardi 02/06/2026\n14h00-15h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mr. Z. LOUHEB\nMme Allal\nMme Daoudi",
+        "theme": "A Smart Mobile Shopping Platform for Local Clothing Stores",
+        "students": [
+            {
+                "n": "86",
+                "nom": "MEHENNI",
+                "prenom": "Mohamed"
+            },
+            {
+                "n": "87",
+                "nom": "DERRAR",
+                "prenom": "Ahmed"
+            },
+            {
+                "n": "88",
+                "nom": "BENELHADJ DJELLOUL",
+                "prenom": "Aymen walid"
+            },
+            {
+                "n": "89",
+                "nom": "MAAMAR",
+                "prenom": "Mohamed amine"
+            },
+            {
+                "n": "90",
+                "nom": "MADANI",
+                "prenom": "Mohamed seifeddine"
+            },
+            {
+                "n": "91",
+                "nom": "REGOUAT",
+                "prenom": "Mohamed mahdi"
+            }
+        ]
+    },
+    "22": {
+        "team_number": "22",
+        "date_heure": "Mardi 02/06/2026\n15h00-16h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mr. Z. LOUHEB\nMme Allal\nMme Daoudi",
+        "theme": "Internship finde",
+        "students": [
+            {
+                "n": "92",
+                "nom": "BOUKHALFA",
+                "prenom": "Achraf baha eddine"
+            },
+            {
+                "n": "93",
+                "nom": "CHELLI",
+                "prenom": "Adel"
+            },
+            {
+                "n": "94",
+                "nom": "MAHMOUDI",
+                "prenom": "Sid ali"
+            },
+            {
+                "n": "95",
+                "nom": "NOUI",
+                "prenom": "Hammoud"
+            },
+            {
+                "n": "96",
+                "nom": "BOUKHARI",
+                "prenom": "Abdeldjalile"
+            }
+        ]
+    },
+    "7": {
+        "team_number": "7",
+        "date_heure": "Mardi 02/06/2026\n09h00-10h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. CHAIB\nMr. B. Khaldi\nMr Simohamed",
+        "theme": "Dental meet",
+        "students": [
+            {
+                "n": "97",
+                "nom": "SENOUSSAOUI",
+                "prenom": "Manel"
+            },
+            {
+                "n": "98",
+                "nom": "ZOUAOUI",
+                "prenom": "Djihane"
+            },
+            {
+                "n": "99",
+                "nom": "ZENASNI",
+                "prenom": "Sara"
+            },
+            {
+                "n": "100",
+                "nom": "KADDOUR",
+                "prenom": "Dounia"
+            },
+            {
+                "n": "101",
+                "nom": "ZEROUALI",
+                "prenom": "Alaa"
+            },
+            {
+                "n": "102",
+                "nom": "BELKHEIR",
+                "prenom": "Asmae"
+            }
+        ]
+    },
+    "16": {
+        "team_number": "16",
+        "date_heure": "Mardi 02/06/2026\n10h00-11h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. B. KHALDI\nMr. Chaib\nMr. Simohamed",
+        "theme": "OneLastBite",
+        "students": [
+            {
+                "n": "103",
+                "nom": "GHERNAOUT",
+                "prenom": "Mohamed yacine"
+            },
+            {
+                "n": "104",
+                "nom": "MEKHATRIA",
+                "prenom": "Mohamed islam"
+            },
+            {
+                "n": "105",
+                "nom": "REZALI",
+                "prenom": "Lakhdar mohamed el amine"
+            },
+            {
+                "n": "106",
+                "nom": "AGBOUBI",
+                "prenom": "Abdelkader"
+            },
+            {
+                "n": "107",
+                "nom": "BELABBES",
+                "prenom": "Ibrahim abdelbadie"
+            },
+            {
+                "n": "108",
+                "nom": "BAKHTAOUI",
+                "prenom": "Boubakeur seddik"
+            }
+        ]
+    },
+    "11": {
+        "team_number": "11",
+        "date_heure": "Mardi 02/06/2026\n11h00-12h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. CHAIB\nMr. B. Khaldi\nMr Simohamed",
+        "theme": "Verdigo",
+        "students": [
+            {
+                "n": "109",
+                "nom": "MEDJIAH",
+                "prenom": "Zakaria"
+            },
+            {
+                "n": "110",
+                "nom": "MAHI",
+                "prenom": "Meriem manel"
+            },
+            {
+                "n": "111",
+                "nom": "SOLTANI",
+                "prenom": "Assia"
+            },
+            {
+                "n": "112",
+                "nom": "BOUABIDA",
+                "prenom": "Bouchra"
+            }
+        ]
+    },
+    "25": {
+        "team_number": "25",
+        "date_heure": "Mardi 02/06/2026\n12h00-13h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. B. KHALDI\nMr. Chaib\nMr. Simohamed",
+        "theme": "Autonomous Game Agent & Analytics Platform:\nIntegrating Computer Vision with Hybrid Imitation-Reinforcement Learning",
+        "students": [
+            {
+                "n": "113",
+                "nom": "HISSOUS",
+                "prenom": "Abdelmalek"
+            },
+            {
+                "n": "114",
+                "nom": "MOUSLI",
+                "prenom": "Tayeb"
+            },
+            {
+                "n": "115",
+                "nom": "TRIG",
+                "prenom": "Mohamed"
+            },
+            {
+                "n": "116",
+                "nom": "BENNOUI",
+                "prenom": "Rabie"
+            },
+            {
+                "n": "117",
+                "nom": "MEBAREK",
+                "prenom": "Ismail"
+            },
+            {
+                "n": "118",
+                "nom": "BENSAOU",
+                "prenom": "Abdelwahab"
+            },
+            {
+                "n": "119",
+                "nom": "BENNI",
+                "prenom": "Mohamed abderrahmane elkhidr"
+            }
+        ]
+    },
+    "23": {
+        "team_number": "23",
+        "date_heure": "Mardi 02/06/2026\n14h00-15h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. CHAIB\nMr. B. Khaldi\nMr Simohamed",
+        "theme": "P&P providing services",
+        "students": [
+            {
+                "n": "120",
+                "nom": "BENMESAHEL",
+                "prenom": "Roumaissa"
+            },
+            {
+                "n": "121",
+                "nom": "KAHOUADJI",
+                "prenom": "Israa"
+            },
+            {
+                "n": "122",
+                "nom": "RAIS",
+                "prenom": "Mayar"
+            },
+            {
+                "n": "123",
+                "nom": "BOUZIDI",
+                "prenom": "Abdou"
+            },
+            {
+                "n": "124",
+                "nom": "BOUCHERIT",
+                "prenom": "Yasser"
+            }
+        ]
+    },
+    "26": {
+        "team_number": "26",
+        "date_heure": "Mardi 02/06/2026\n15h00-16h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. CHAIB\nMr. B. Khaldi\nMr Simohamed",
+        "theme": "ESI GIT",
+        "students": [
+            {
+                "n": "125",
+                "nom": "BENLAZREG",
+                "prenom": "Sid ahmed chakib"
+            },
+            {
+                "n": "126",
+                "nom": "TERRAH",
+                "prenom": "Youcef"
+            },
+            {
+                "n": "127",
+                "nom": "BELGHAIT",
+                "prenom": "Mohamed ayoub"
+            },
+            {
+                "n": "128",
+                "nom": "CHAGHI",
+                "prenom": "Fadi riadh eddine"
+            },
+            {
+                "n": "129",
+                "nom": "MERGUEB",
+                "prenom": "Mohamed yacine"
+            },
+            {
+                "n": "130",
+                "nom": "ABIDAT",
+                "prenom": "Abderrahmane"
+            }
+        ]
+    },
+    "43": {
+        "team_number": "43",
+        "date_heure": "Mardi 02/06/2026\n16h00-17h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. B. KHALDI\nMr. Chaib\nMr. Simohamed",
+        "theme": "An Intelligent Companion System for Bean\nCrop Monitoring and Disease Detection",
+        "students": [
+            {
+                "n": "131",
+                "nom": "GHEZAL",
+                "prenom": "Omar el farouk"
+            },
+            {
+                "n": "132",
+                "nom": "SEBIH",
+                "prenom": "Abderrahmane oussama"
+            },
+            {
+                "n": "133",
+                "nom": "DAR ZEHAF",
+                "prenom": "Imad"
+            },
+            {
+                "n": "134",
+                "nom": "BOUDELLAA",
+                "prenom": "Mustapha yacine"
+            },
+            {
+                "n": "135",
+                "nom": "BENFRIDJA",
+                "prenom": "Elias"
+            },
+            {
+                "n": "136",
+                "nom": "BELOUCIF",
+                "prenom": "Sidali"
+            }
+        ]
+    },
+    "38": {
+        "team_number": "38",
+        "date_heure": "Mercredi 03/06/2026\n09h00-10h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. Z. LOUHEB\nMr. Bendella\nMr. Aced",
+        "theme": "TeamUp",
+        "students": [
+            {
+                "n": "1",
+                "nom": "ABDELLICHE",
+                "prenom": "Ayoub abdelhalim"
+            },
+            {
+                "n": "2",
+                "nom": "BOUMESHAL",
+                "prenom": "Hossam abdelmouain"
+            },
+            {
+                "n": "3",
+                "nom": "SALAG",
+                "prenom": "Oussama"
+            },
+            {
+                "n": "4",
+                "nom": "CHEBLAOUI",
+                "prenom": "Ahmed amine"
+            },
+            {
+                "n": "5",
+                "nom": "OUDDANE",
+                "prenom": "Mohammed islem lakhale"
+            }
+        ]
+    },
+    "9": {
+        "team_number": "9",
+        "date_heure": "Mercredi 03/06/2026\n10h00-11h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. BENDELLA\nMr. Z. Louheb\nMr. Aced",
+        "theme": "Shifa - Your All-in-One Medical Appointment Solution",
+        "students": [
+            {
+                "n": "6",
+                "nom": "BENANTAR",
+                "prenom": "Abderraouf"
+            },
+            {
+                "n": "7",
+                "nom": "ZIDANE",
+                "prenom": "Mohamed mahdi"
+            },
+            {
+                "n": "8",
+                "nom": "BELKHIRI",
+                "prenom": "Ilyas"
+            },
+            {
+                "n": "9",
+                "nom": "TOLEHI",
+                "prenom": "Abdessamed"
+            },
+            {
+                "n": "10",
+                "nom": "TRAIA",
+                "prenom": "Aymen"
+            },
+            {
+                "n": "11",
+                "nom": "SAHRAOUI",
+                "prenom": "Mohammed raouf"
+            }
+        ]
+    },
+    "40": {
+        "team_number": "40",
+        "date_heure": "Mercredi 03/06/2026\n11h00-12h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. Z. LOUHEB\nMr. Bendella\nMme Souyah",
+        "theme": "Covoiturage\n(plateforme pour partager des trajets et réduire les frais de transport)",
+        "students": [
+            {
+                "n": "12",
+                "nom": "KHALFA",
+                "prenom": "Tadj eddine"
+            },
+            {
+                "n": "13",
+                "nom": "GHEZOU",
+                "prenom": "Ayoub"
+            },
+            {
+                "n": "14",
+                "nom": "BELMILI",
+                "prenom": "Siradj"
+            },
+            {
+                "n": "15",
+                "nom": "BASSOU",
+                "prenom": "Mohammed amdjed"
+            },
+            {
+                "n": "16",
+                "nom": "HEBAICHE",
+                "prenom": "Younes"
+            }
+        ]
+    },
+    "14": {
+        "team_number": "14",
+        "date_heure": "Mercredi 03/06/2026\n12h00-13h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. BENDELLA\nMr. Z. Louheb\nMme Souyah",
+        "theme": "Pinnest",
+        "students": [
+            {
+                "n": "17",
+                "nom": "SEHIL",
+                "prenom": "Abdelhak"
+            },
+            {
+                "n": "18",
+                "nom": "DAHMANE",
+                "prenom": "Rachid rayane"
+            },
+            {
+                "n": "19",
+                "nom": "MEKHFI",
+                "prenom": "Wissal kheira"
+            },
+            {
+                "n": "20",
+                "nom": "BENBAKHTA",
+                "prenom": "Sadjida"
+            },
+            {
+                "n": "21",
+                "nom": "SILINI",
+                "prenom": "Hadjer"
+            },
+            {
+                "n": "22",
+                "nom": "LAKEHAL",
+                "prenom": "Lyna"
+            }
+        ]
+    },
+    "28": {
+        "team_number": "28",
+        "date_heure": "Mercredi 03/06/2026\n14h00-15h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. BENDELLA\nMr. Z. Louheb\nMr. Aced",
+        "theme": "The Algeria Developer Survey",
+        "students": [
+            {
+                "n": "23",
+                "nom": "SEDDIKI",
+                "prenom": "Anis"
+            },
+            {
+                "n": "24",
+                "nom": "KOUIDRI",
+                "prenom": "Salah eddine"
+            },
+            {
+                "n": "25",
+                "nom": "MECHERI",
+                "prenom": "Issam eddine"
+            },
+            {
+                "n": "26",
+                "nom": "MEFTI",
+                "prenom": "Zakaria"
+            },
+            {
+                "n": "27",
+                "nom": "YACIA",
+                "prenom": "Mehdi akram"
+            },
+            {
+                "n": "28",
+                "nom": "BELABBAS",
+                "prenom": "Younes oussama"
+            }
+        ]
+    },
+    "52": {
+        "team_number": "52",
+        "date_heure": "Mercredi 03/06/2026\n15h00-16h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. Z. LOUHEB\nMr. Bendella\nMr. Aced",
+        "theme": "Esi guide line App",
+        "students": [
+            {
+                "n": "29",
+                "nom": "AOUF",
+                "prenom": "Fares baha eddine"
+            },
+            {
+                "n": "30",
+                "nom": "BOUZIANE",
+                "prenom": "Nada tensime"
+            },
+            {
+                "n": "31",
+                "nom": "LABBACI",
+                "prenom": "Wail"
+            },
+            {
+                "n": "32",
+                "nom": "HADJOU BELAID",
+                "prenom": "Khalil"
+            }
+        ]
+    },
+    "20": {
+        "team_number": "20",
+        "date_heure": "Mercredi 03/06/2026\n09h00-10h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme DIF\nMme Souyah\nMme Belmekki",
+        "theme": "ManoVox , Un Traducteur de langue des signes bidirectionnelle",
+        "students": [
+            {
+                "n": "33",
+                "nom": "BENACEUR",
+                "prenom": "Meriem"
+            },
+            {
+                "n": "34",
+                "nom": "ENFOUSSI",
+                "prenom": "Anfel malak"
+            },
+            {
+                "n": "35",
+                "nom": "IKHLEF",
+                "prenom": "Meriem"
+            },
+            {
+                "n": "36",
+                "nom": "OMAR",
+                "prenom": "Zeyneb"
+            },
+            {
+                "n": "37",
+                "nom": "SI CHAIB",
+                "prenom": "Amina"
+            },
+            {
+                "n": "38",
+                "nom": "DADOU",
+                "prenom": "Nour el yakine"
+            }
+        ]
+    },
+    "21": {
+        "team_number": "21",
+        "date_heure": "Mercredi 03/06/2026\n10h00-11h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme SOUYAH\nMme Dif\nMme Belmekki",
+        "theme": "Animal management",
+        "students": [
+            {
+                "n": "39",
+                "nom": "HANNOUNA",
+                "prenom": "Ilyas"
+            },
+            {
+                "n": "40",
+                "nom": "MAMMERI",
+                "prenom": "Djaouad afif"
+            },
+            {
+                "n": "41",
+                "nom": "HANSALI",
+                "prenom": "Anis abd el hak"
+            },
+            {
+                "n": "42",
+                "nom": "KASMI",
+                "prenom": "Benaoumeur"
+            },
+            {
+                "n": "43",
+                "nom": "BELAID",
+                "prenom": "Siradj eddine"
+            }
+        ]
+    },
+    "12": {
+        "team_number": "12",
+        "date_heure": "Mercredi 03/06/2026\n11h00-12h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme BEZZAOUCHA\nMme I.Saidi\nMme Belmekki",
+        "theme": "Web Platform for Connecting Blood Donors with Patients in Need",
+        "students": [
+            {
+                "n": "44",
+                "nom": "MAAMERI",
+                "prenom": "Bouchra"
+            },
+            {
+                "n": "45",
+                "nom": "MOHAMMEDI",
+                "prenom": "Marwa"
+            },
+            {
+                "n": "46",
+                "nom": "MIDOUN",
+                "prenom": "Nour el houda fatiha"
+            },
+            {
+                "n": "47",
+                "nom": "FERHANE",
+                "prenom": "Nour el houda"
+            },
+            {
+                "n": "48",
+                "nom": "CHOUAL",
+                "prenom": "Ikram"
+            }
+        ]
+    },
+    "57": {
+        "team_number": "57",
+        "date_heure": "Mercredi 03/06/2026\n12h00-13h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme I.SAIDI\nMme Bezzaoucha\nMme Belmekki",
+        "theme": "Plate-forme pour résoudre le problème de chômage en algerie",
+        "students": [
+            {
+                "n": "49",
+                "nom": "BENELMOUAZ",
+                "prenom": "Oussama abdelillah"
+            },
+            {
+                "n": "50",
+                "nom": "BENRABAH",
+                "prenom": "Mokrane walid"
+            },
+            {
+                "n": "51",
+                "nom": "BOUAMRA",
+                "prenom": "Ahmed mokhtar"
+            },
+            {
+                "n": "52",
+                "nom": "KLOUCH",
+                "prenom": "Yassine"
+            },
+            {
+                "n": "53",
+                "nom": "HOUACHINE",
+                "prenom": "Fouad"
+            },
+            {
+                "n": "54",
+                "nom": "DIFAOUI",
+                "prenom": "Abdellah"
+            }
+        ]
+    },
+    "27": {
+        "team_number": "27",
+        "date_heure": "Mercredi 03/06/2026\n14h00-15h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme BEZZAOUCHA\nMme I.Saidi\nMme Belmekki",
+        "theme": "OrgaSmart",
+        "students": [
+            {
+                "n": "55",
+                "nom": "MILOUDI",
+                "prenom": "Rihab"
+            },
+            {
+                "n": "56",
+                "nom": "LATRECHE",
+                "prenom": "Hana"
+            },
+            {
+                "n": "57",
+                "nom": "FEZZAA",
+                "prenom": "Roua nour el imene"
+            },
+            {
+                "n": "58",
+                "nom": "TALHI",
+                "prenom": "Hadil"
+            },
+            {
+                "n": "59",
+                "nom": "MAHROUZ",
+                "prenom": "Sarra"
+            }
+        ]
+    },
+    "36": {
+        "team_number": "36",
+        "date_heure": "Mercredi 03/06/2026\n15h00-16h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme BEZZAOUCHA\nMme I.Saidi\nMme Belmekki",
+        "theme": "Plateforme web d’aide aux animaux et d’intégration dans des refuges",
+        "students": [
+            {
+                "n": "60",
+                "nom": "HALASSI",
+                "prenom": "Abdelmoumene"
+            },
+            {
+                "n": "61",
+                "nom": "SOUIDI",
+                "prenom": "Yasmine"
+            },
+            {
+                "n": "62",
+                "nom": "MEDELCI DJEZZAR",
+                "prenom": "Malek djihene"
+            },
+            {
+                "n": "63",
+                "nom": "OUCHENE",
+                "prenom": "Mohamed dhia eddine"
+            },
+            {
+                "n": "64",
+                "nom": "KENDOUCI",
+                "prenom": "Mohammed yacine"
+            },
+            {
+                "n": "65",
+                "nom": "TENALA",
+                "prenom": "Djawad"
+            }
+        ]
+    },
+    "15": {
+        "team_number": "15",
+        "date_heure": "Mercredi 03/06/2026\n09h00-10h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mr. AWAD\nMme Mezrar\nMme Mamine",
+        "theme": "Forsalik",
+        "students": [
+            {
+                "n": "66",
+                "nom": "HABRI",
+                "prenom": "Meriem lamis"
+            },
+            {
+                "n": "67",
+                "nom": "OULD KADDOUR",
+                "prenom": "Aya"
+            },
+            {
+                "n": "68",
+                "nom": "BOUNOUA",
+                "prenom": "Houda"
+            },
+            {
+                "n": "69",
+                "nom": "BEKAKCHA",
+                "prenom": "Abdelmalik"
+            },
+            {
+                "n": "70",
+                "nom": "BOUKHATEM",
+                "prenom": "Abdelmadjid"
+            },
+            {
+                "n": "71",
+                "nom": "BERKANE",
+                "prenom": "Mohamed amine"
+            }
+        ]
+    },
+    "33": {
+        "team_number": "33",
+        "date_heure": "Mercredi 03/06/2026\n10h00-11h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mme MEZRAR\nMr Awad\nMme Mamine",
+        "theme": "Relation between doctor and patient",
+        "students": [
+            {
+                "n": "72",
+                "nom": "MADI",
+                "prenom": "Lynda"
+            },
+            {
+                "n": "73",
+                "nom": "DERROUCHE",
+                "prenom": "Raouane"
+            },
+            {
+                "n": "74",
+                "nom": "HITEM",
+                "prenom": "Wissam"
+            },
+            {
+                "n": "75",
+                "nom": "AMORIA",
+                "prenom": "Naila"
+            },
+            {
+                "n": "76",
+                "nom": "TILMATINE",
+                "prenom": "Youcef"
+            },
+            {
+                "n": "77",
+                "nom": "KHAMES",
+                "prenom": "Raouassi rihab"
+            }
+        ]
+    },
+    "17": {
+        "team_number": "17",
+        "date_heure": "Mercredi 03/06/2026\n11h00-12h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mr. AWAD\nMme Mezrar\nMme Mamine",
+        "theme": "HealthConnect",
+        "students": [
+            {
+                "n": "78",
+                "nom": "METAKKELELARD",
+                "prenom": "Nour"
+            },
+            {
+                "n": "79",
+                "nom": "BOUSAADIA",
+                "prenom": "Chaimaa"
+            },
+            {
+                "n": "80",
+                "nom": "BOUDERBALA",
+                "prenom": "Achwak"
+            },
+            {
+                "n": "81",
+                "nom": "AMIRI",
+                "prenom": "Radjaa ghoufrane"
+            },
+            {
+                "n": "82",
+                "nom": "BOUOUDEN",
+                "prenom": "Dia eddine"
+            },
+            {
+                "n": "83",
+                "nom": "DJELLOULI",
+                "prenom": "Fatima zohra"
+            }
+        ]
+    },
+    "60": {
+        "team_number": "60",
+        "date_heure": "Mercredi 03/06/2026\n12h00-13h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mme MEZRAR\nMr Awad\nMme Mamine",
+        "theme": "Conception et implémentation d’une base de données\nélectronique pour le suivi des patients en pneumo-allergologie pédiatrique",
+        "students": [
+            {
+                "n": "84",
+                "nom": "ADDA",
+                "prenom": "Youcef"
+            },
+            {
+                "n": "85",
+                "nom": "DERIET AMAR TOUIL SAG",
+                "prenom": "Mohammed"
+            },
+            {
+                "n": "86",
+                "nom": "OUKSILI",
+                "prenom": "Abde errahmane"
+            },
+            {
+                "n": "87",
+                "nom": "GUERDA",
+                "prenom": "Zina"
+            },
+            {
+                "n": "88",
+                "nom": "GHILES",
+                "prenom": "Wafaa"
+            }
+        ]
+    },
+    "45": {
+        "team_number": "45",
+        "date_heure": "Mercredi 03/06/2026\n14h00-15h00",
+        "lieu": "Salle TP 1",
+        "jury": "Mme DAOUDI\nMme ELHANNANI\nMme Mamnine",
+        "theme": "Tahwissa",
+        "students": [
+            {
+                "n": "89",
+                "nom": "TOUAMI",
+                "prenom": "Mohammed rayane"
+            },
+            {
+                "n": "90",
+                "nom": "OUALHI",
+                "prenom": "Amina"
+            },
+            {
+                "n": "91",
+                "nom": "SAMAI",
+                "prenom": "Malak"
+            },
+            {
+                "n": "92",
+                "nom": "HAMMANE",
+                "prenom": "Ritadj"
+            },
+            {
+                "n": "93",
+                "nom": "DROUCHE",
+                "prenom": "Mounir"
+            },
+            {
+                "n": "94",
+                "nom": "AHMED OUAMEUR",
+                "prenom": "Nour"
+            }
+        ]
+    },
+    "54": {
+        "team_number": "54",
+        "date_heure": "Mercredi 03/06/2026\n09h00-10h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. BEDJAOUI\nMr. F.Saidi\nMr. Bekkouche",
+        "theme": "CRM with agentic AI",
+        "students": [
+            {
+                "n": "95",
+                "nom": "BANCHOUR",
+                "prenom": "Abderrahmane"
+            },
+            {
+                "n": "96",
+                "nom": "BENKROUIDEM",
+                "prenom": "Nassireddine"
+            },
+            {
+                "n": "97",
+                "nom": "MOUMNI",
+                "prenom": "Mohamed oussama"
+            },
+            {
+                "n": "98",
+                "nom": "LAKHDAR HAMINA",
+                "prenom": "Younes"
+            }
+        ]
+    },
+    "46": {
+        "team_number": "46",
+        "date_heure": "Mercredi 03/06/2026\n10h00-11h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. F.SAIDI Mr.\nBendaoud\nMr. Bekkouche",
+        "theme": "Mufed (web app to learn and develop skills)",
+        "students": [
+            {
+                "n": "99",
+                "nom": "BERBOUCHI",
+                "prenom": "Allida"
+            },
+            {
+                "n": "100",
+                "nom": "MAIZIA",
+                "prenom": "Mohamed"
+            },
+            {
+                "n": "101",
+                "nom": "BENTAYEB",
+                "prenom": "Ali tayeb"
+            },
+            {
+                "n": "102",
+                "nom": "BOUKHANOUFA",
+                "prenom": "Hamza"
+            },
+            {
+                "n": "103",
+                "nom": "SERIR",
+                "prenom": "Abd errahmane"
+            }
+        ]
+    },
+    "41": {
+        "team_number": "41",
+        "date_heure": "Mercredi 03/06/2026\n11h00-12h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. BENDAOUD\nMr. F.Saidi\nMr. Bekkouche",
+        "theme": "Herafi",
+        "students": [
+            {
+                "n": "104",
+                "nom": "YAHIAOUI",
+                "prenom": "Marwa"
+            },
+            {
+                "n": "105",
+                "nom": "BENAOUALI",
+                "prenom": "Meriem"
+            },
+            {
+                "n": "106",
+                "nom": "SALLOUHI",
+                "prenom": "Sajida"
+            },
+            {
+                "n": "107",
+                "nom": "BOUHERAMA",
+                "prenom": "Aya"
+            },
+            {
+                "n": "108",
+                "nom": "HABIB ZAHMANI",
+                "prenom": "Rekaia safaa"
+            }
+        ]
+    },
+    "49": {
+        "team_number": "49",
+        "date_heure": "Mercredi 03/06/2026\n12h00-13h00",
+        "lieu": "Salle TP 3",
+        "jury": "Mr. F. SAIDI\nMr. Bendaoud\nMr. Bekkouche",
+        "theme": "Travel Guide",
+        "students": [
+            {
+                "n": "109",
+                "nom": "TAHRI",
+                "prenom": "Soundes"
+            },
+            {
+                "n": "110",
+                "nom": "KHOUDOUR",
+                "prenom": "Fatima"
+            },
+            {
+                "n": "111",
+                "nom": "HAYANI",
+                "prenom": "Mohamed azzeddine"
+            },
+            {
+                "n": "112",
+                "nom": "HADDOU",
+                "prenom": "Kholoud"
+            },
+            {
+                "n": "113",
+                "nom": "BOUDISSA",
+                "prenom": "Imene"
+            },
+            {
+                "n": "114",
+                "nom": "MECHTRI",
+                "prenom": "Salah eddine louai abderrahmane"
+            }
+        ]
+    },
+    "42": {
+        "team_number": "42",
+        "date_heure": "Mercredi 03/06/2026\n14h00-15h00",
+        "lieu": "Salle TP 3",
+        "jury": "Melle BERKANI\nMr. F.Saidi\nMr. Bekkouche",
+        "theme": "Wassali – A Crowd-sourced Local Delivery Platform Web",
+        "students": [
+            {
+                "n": "115",
+                "nom": "HARIRI",
+                "prenom": "Rayane"
+            },
+            {
+                "n": "116",
+                "nom": "AICHOUR",
+                "prenom": "Ilyes"
+            },
+            {
+                "n": "117",
+                "nom": "BOUCHOUCHA",
+                "prenom": "Khaled"
+            },
+            {
+                "n": "118",
+                "nom": "BACHA",
+                "prenom": "Ilyas abdelmalik"
+            },
+            {
+                "n": "119",
+                "nom": "CHERAITIA",
+                "prenom": "Sofiane"
+            }
+        ]
+    },
+    "30": {
+        "team_number": "30",
+        "date_heure": "Jeudi 04/06/2026\n09h00-10h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. KAZI-TANI Mr\nZ. Louheb Mr.\nKeskes",
+        "theme": "School manager",
+        "students": [
+            {
+                "n": "1",
+                "nom": "KHATIR BENMEHEIMDA",
+                "prenom": "Ayoub sofiane"
+            },
+            {
+                "n": "2",
+                "nom": "BENALI",
+                "prenom": "Mohammed"
+            },
+            {
+                "n": "3",
+                "nom": "KESKAS",
+                "prenom": "Nazim"
+            },
+            {
+                "n": "4",
+                "nom": "MAAFA",
+                "prenom": "Abdelhadi"
+            },
+            {
+                "n": "5",
+                "nom": "BENMEHENNI",
+                "prenom": "Ali"
+            },
+            {
+                "n": "6",
+                "nom": "TABNI",
+                "prenom": "Oussama"
+            }
+        ]
+    },
+    "48": {
+        "team_number": "48",
+        "date_heure": "Jeudi 04/06/2026\n10h00-11h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. Z. LOUHEB\nMr Kazi-Tani\nMr. Keskes",
+        "theme": "First team work",
+        "students": [
+            {
+                "n": "7",
+                "nom": "MEHELLOU",
+                "prenom": "Abderrahmane"
+            },
+            {
+                "n": "8",
+                "nom": "ZAFFOUR",
+                "prenom": "Mohammed abdellah"
+            },
+            {
+                "n": "9",
+                "nom": "ASSAMI",
+                "prenom": "Akram abderrahmane"
+            },
+            {
+                "n": "10",
+                "nom": "FEZRITA",
+                "prenom": "Haytam"
+            },
+            {
+                "n": "11",
+                "nom": "ALIAT",
+                "prenom": "Mohammed"
+            },
+            {
+                "n": "12",
+                "nom": "CHOUITEM",
+                "prenom": "Ahmed rami"
+            }
+        ]
+    },
+    "35": {
+        "team_number": "35",
+        "date_heure": "Jeudi 04/06/2026\n11h00-12h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. KAZI-TANI Mr\nZ.Louheb Mr.\nKeskes",
+        "theme": "Clinique degital",
+        "students": [
+            {
+                "n": "13",
+                "nom": "BERREZOUG",
+                "prenom": "Abdellah"
+            },
+            {
+                "n": "14",
+                "nom": "TOUMI",
+                "prenom": "Mohamed"
+            },
+            {
+                "n": "15",
+                "nom": "BRACHDA",
+                "prenom": "Aimene"
+            },
+            {
+                "n": "16",
+                "nom": "MOHRAT",
+                "prenom": "Mouna"
+            },
+            {
+                "n": "17",
+                "nom": "ARIANI",
+                "prenom": "Chahinaze hanane"
+            },
+            {
+                "n": "18",
+                "nom": "ACHOUR",
+                "prenom": "Naila serrine"
+            }
+        ]
+    },
+    "50": {
+        "team_number": "50",
+        "date_heure": "Jeudi 04/06/2026\n12h00-13h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. Z. LOUHEB\nMr Kazi-Tani",
+        "theme": "E-Store",
+        "students": [
+            {
+                "n": "19",
+                "nom": "BOUGUERRA",
+                "prenom": "Mohamed taki eddine"
+            },
+            {
+                "n": "20",
+                "nom": "MAHDI",
+                "prenom": "Anes essdic"
+            },
+            {
+                "n": "21",
+                "nom": "KRIDI",
+                "prenom": "Mohamed hassen"
+            }
+        ]
+    },
+    "53": {
+        "team_number": "53",
+        "date_heure": "Jeudi 04/06/2026\n13h00-14h00",
+        "lieu": "Salle TP B3",
+        "jury": "Mr. KAZI-TANI Mr\nZ. Louheb Mr.\nKeskes",
+        "theme": "BridgeWork:App of Job Search and Candidate–Employer Matching Platform",
+        "students": [
+            {
+                "n": "22",
+                "nom": "ASROUN",
+                "prenom": "Imene"
+            },
+            {
+                "n": "23",
+                "nom": "MADANI",
+                "prenom": "Khaoula nihad"
+            },
+            {
+                "n": "24",
+                "nom": "REMIL",
+                "prenom": "Tessnim"
+            },
+            {
+                "n": "25",
+                "nom": "HADJERI",
+                "prenom": "Asmaa"
+            },
+            {
+                "n": "26",
+                "nom": "MOKHTARI",
+                "prenom": "Hiba"
+            }
+        ]
+    },
+    "34": {
+        "team_number": "34",
+        "date_heure": "Jeudi 04/06/2026\n09h00-10h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme BELALIA\nMelle Berkani\nMme I.Saidi",
+        "theme": "Healio : healthcare platform that connects doctors and patients",
+        "students": [
+            {
+                "n": "27",
+                "nom": "BEN YELLES",
+                "prenom": "Ikram fadela"
+            },
+            {
+                "n": "28",
+                "nom": "BENOUTI",
+                "prenom": "Roua rihem"
+            },
+            {
+                "n": "29",
+                "nom": "KHEDIM",
+                "prenom": "Mouna"
+            },
+            {
+                "n": "30",
+                "nom": "SENOUSSAOUI",
+                "prenom": "Sara"
+            },
+            {
+                "n": "31",
+                "nom": "BOUHADDA",
+                "prenom": "Mohammed djaoued"
+            },
+            {
+                "n": "32",
+                "nom": "CHETTAT",
+                "prenom": "Yahia"
+            },
+            {
+                "n": "33",
+                "nom": "MEHENNI",
+                "prenom": "Abderrahmene"
+            }
+        ]
+    },
+    "39": {
+        "team_number": "39",
+        "date_heure": "Jeudi 04/06/2026\n10h00-11h00",
+        "lieu": "Salle TP 5",
+        "jury": "Melle BERKANI\nMme Belalia\nMme I.Saidi",
+        "theme": "Evolve",
+        "students": [
+            {
+                "n": "34",
+                "nom": "BOUHENNOUCHE",
+                "prenom": "Reda"
+            },
+            {
+                "n": "35",
+                "nom": "ALLOU",
+                "prenom": "Nour ellah"
+            },
+            {
+                "n": "36",
+                "nom": "CHAMA",
+                "prenom": "Oussama"
+            },
+            {
+                "n": "37",
+                "nom": "SABOUR",
+                "prenom": "Abdellah"
+            },
+            {
+                "n": "38",
+                "nom": "MOUFFOKES",
+                "prenom": "Mohamed elhabib"
+            },
+            {
+                "n": "39",
+                "nom": "LELLOUCHI",
+                "prenom": "Zakaria abderahmen"
+            },
+            {
+                "n": "40",
+                "nom": "ZAID",
+                "prenom": "Abderraouf"
+            }
+        ]
+    },
+    "55": {
+        "team_number": "55",
+        "date_heure": "Jeudi 04/06/2026\n11h00-12h00",
+        "lieu": "Salle TP 5",
+        "jury": "Mme BELALIA\nMelle Berkani\nMme I.Saidi",
+        "theme": "Stocki",
+        "students": [
+            {
+                "n": "41",
+                "nom": "DERRADJI",
+                "prenom": "Mohamed rafik"
+            },
+            {
+                "n": "42",
+                "nom": "AMIEUR",
+                "prenom": "Hamza"
+            },
+            {
+                "n": "43",
+                "nom": "MERZOUGUI",
+                "prenom": "Abdelmouiz"
+            },
+            {
+                "n": "44",
+                "nom": "BEN MAIDI",
+                "prenom": "Zakaria djamal eddine"
+            }
+        ]
+    },
+    "59": {
+        "team_number": "59",
+        "date_heure": "Jeudi 04/06/2026\n12h00-13h00",
+        "lieu": "Salle TP 5",
+        "jury": "Melle BERKANI\nMme Belalia\nMme I.Saidi",
+        "theme": "Ta3awano",
+        "students": [
+            {
+                "n": "45",
+                "nom": "DAHMANI",
+                "prenom": "Abdessamed"
+            },
+            {
+                "n": "46",
+                "nom": "BECHEROUL",
+                "prenom": "Ilyas"
+            },
+            {
+                "n": "47",
+                "nom": "OTHMANI MARABOUT",
+                "prenom": "Rachad"
+            },
+            {
+                "n": "48",
+                "nom": "LOUBAR",
+                "prenom": "Mohammed el amine"
+            }
+        ]
+    }
+}

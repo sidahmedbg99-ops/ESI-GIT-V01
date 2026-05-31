@@ -33,7 +33,7 @@ class AdminProjectSerializer(serializers.ModelSerializer):
             return {
                 "grade1": grades.grade1,
                 "grade2": grades.grade2,
-                "grade3": grades.grade3,
+                "grade4": grades.grade4,
                 "final_grade": grades.final_grade,
                 "comments": grades.comments,
             }
@@ -63,8 +63,10 @@ class AdminProjectSerializer(serializers.ModelSerializer):
             return {
                 "supervisor": jury.supervisor_id.full_name if jury.supervisor_id else None,
                 "president": jury.teacher1_id.full_name,
-                "examiner1": jury.teacher2_id.full_name,
-                "examiner2": jury.teacher3_id.full_name,
+                "examiner": jury.teacher2_id.full_name,
+                "presentation_date": jury.presentation_date,
+                "presentation_time": jury.presentation_time,
+                "room": jury.room,
                 "assigned_at": jury.assigned_at,
             }
         except Exception:
@@ -165,6 +167,7 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
             "grades",
             "description",
             "tech_stack",
+            "is_public",
         ]
 
     def get_teacher_name(self, obj):
@@ -187,8 +190,10 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
             jury = ProjectJury.objects.get(PID=obj)
             return {
                 "president": jury.teacher1_id.full_name,
-                "examiner1": jury.teacher2_id.full_name,
-                "examiner2": jury.teacher3_id.full_name,
+                "examiner": jury.teacher2_id.full_name,
+                "presentation_date": jury.presentation_date,
+                "presentation_time": jury.presentation_time,
+                "room": jury.room,
                 "assigned_at": jury.assigned_at,
             }
         except Exception:
@@ -196,7 +201,17 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
 
     def get_schedule(self, obj):
         try:
-            from jury.models import Schedule
+            from jury.models import Schedule, ProjectJury
+
+            # Try to get from ProjectJury first
+            jury = ProjectJury.objects.filter(PID=obj).first()
+            if jury and jury.presentation_date:
+                return {
+                    "presentation_date": jury.presentation_date,
+                    "presentation_time": jury.presentation_time,
+                    "room": jury.room,
+                    "duration_minutes": 30,
+                }
 
             schedule = Schedule.objects.filter(PID=obj).first()
             if not schedule:
@@ -231,7 +246,7 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
                 data.update({
                     "grade1": grades.grade1,
                     "grade2": grades.grade2,
-                    "grade3": grades.grade3,
+                    "grade4": grades.grade4,
                 })
             return data
         except Exception:
@@ -244,6 +259,9 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
     attachments_count = serializers.SerializerMethodField()
     supervisor_requests = serializers.SerializerMethodField()
     meetings_stats = serializers.SerializerMethodField()
+    jury = serializers.SerializerMethodField()
+    schedule = serializers.SerializerMethodField()
+    grades = serializers.SerializerMethodField()
 
     class Meta:
         model = Projects
@@ -263,6 +281,7 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
             "jury",
             "schedule",
             "grades",
+            "is_public",
         ]
 
     def get_teacher_name(self, obj):
@@ -317,14 +336,26 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
             jury = ProjectJury.objects.get(PID=obj)
             return {
                 "president": jury.teacher1_id.full_name,
-                "examiner1": jury.teacher2_id.full_name,
-                "examiner2": jury.teacher3_id.full_name,
+                "examiner": jury.teacher2_id.full_name,
+                "presentation_date": jury.presentation_date,
+                "presentation_time": jury.presentation_time,
+                "room": jury.room,
                 "assigned_at": jury.assigned_at,
             }
         except ProjectJury.DoesNotExist:
             return None
 
     def get_schedule(self, obj):
+        # Try ProjectJury first
+        jury = ProjectJury.objects.filter(PID=obj).first()
+        if jury and jury.presentation_date:
+            return {
+                "presentation_date": jury.presentation_date,
+                "presentation_time": jury.presentation_time,
+                "room": jury.room,
+                "duration_minutes": 30,
+            }
+
         schedule = Schedule.objects.filter(PID=obj).first()
 
         if not schedule:
@@ -344,7 +375,7 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
             return {
                 "grade1": grades.grade1,
                 "grade2": grades.grade2,
-                "grade3": grades.grade3,
+                "grade4": grades.grade4,
                 "final_grade": grades.final_grade,
                 "comments": grades.comments,
             }
@@ -355,10 +386,12 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
 class AssignJurySerializer(serializers.Serializer):
     teacher1_id = serializers.IntegerField()
     teacher2_id = serializers.IntegerField()
-    teacher3_id = serializers.IntegerField()
+    presentation_date = serializers.DateField(required=False)
+    presentation_time = serializers.TimeField(required=False)
+    room = serializers.CharField(max_length=50, required=False)
 
     def validate(self, data):
-        if len({data["teacher1_id"], data["teacher2_id"], data["teacher3_id"]}) != 3:
+        if data["teacher1_id"] == data["teacher2_id"]:
             raise serializers.ValidationError("Teachers must be different")
         return data
 
@@ -367,14 +400,16 @@ class AssignJurySerializer(serializers.Serializer):
 
         teacher1 = Staff.objects.get(TID=data["teacher1_id"])
         teacher2 = Staff.objects.get(TID=data["teacher2_id"])
-        teacher3 = Staff.objects.get(TID=data["teacher3_id"])
 
         jury, created = ProjectJury.objects.update_or_create(
             PID=project,
             defaults={
                 "teacher1_id": teacher1,
                 "teacher2_id": teacher2,
-                "teacher3_id": teacher3,
+                "supervisor_id": project.TID,
+                "presentation_date": data.get("presentation_date"),
+                "presentation_time": data.get("presentation_time"),
+                "room": data.get("room"),
             },
         )
 
@@ -500,7 +535,6 @@ class StudentProjectSerializer(serializers.ModelSerializer):
                     "final_grade": grades.final_grade,
                     "grade1": grades.grade1,
                     "grade2": grades.grade2,
-                    "grade3": grades.grade3,
                     "grade4": grades.grade4,
                 }
             else:
@@ -508,7 +542,6 @@ class StudentProjectSerializer(serializers.ModelSerializer):
                     "final_grade": grades.final_grade,
                     "grade1": None,
                     "grade2": None,
-                    "grade3": None,
                     "grade4": None,
                 }
         except Exception:
@@ -579,6 +612,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "supervisor_request",
             "description",
             "tech_stack",
+            "is_public",
         ]
 
     def get_teacher_name(self, obj):

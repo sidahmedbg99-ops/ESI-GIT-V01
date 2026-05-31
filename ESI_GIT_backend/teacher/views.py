@@ -117,7 +117,7 @@ class TeacherDashboardView(APIView):
 
         # supervised groups (projects where TID = this teacher, not archived)
         supervised = Projects.objects.filter(TID=teacher, archived=False)
-        active = supervised.filter(status="approved")
+        active = supervised.filter(status__in=["approved", "active"])
 
         # pending supervisor requests sent by students to this teacher
         pending_requests = SupervisorRequest.objects.filter(
@@ -135,7 +135,6 @@ class TeacherDashboardView(APIView):
         jury_pending = (
             ProjectJury.objects.filter(teacher1_id=teacher)
             | ProjectJury.objects.filter(teacher2_id=teacher)
-            | ProjectJury.objects.filter(teacher3_id=teacher)
         )
         jury_pending_count = jury_pending.exclude(
             PID__in=Grades.objects.values("PID")
@@ -641,7 +640,6 @@ class TeacherJuryListView(APIView):
                 | ProjectJury.objects.filter(PID__TID=teacher)
                 | ProjectJury.objects.filter(teacher1_id=teacher)
                 | ProjectJury.objects.filter(teacher2_id=teacher)
-                | ProjectJury.objects.filter(teacher3_id=teacher)
             )
             .distinct()
             .select_related("PID")
@@ -697,7 +695,7 @@ class TeacherJuryEvaluateView(APIView):
         is_member = teacher in (
             jury.teacher1_id,
             jury.teacher2_id,
-            jury.teacher3_id,
+            jury.supervisor_id,
         )
         if not is_member:
             return Response(
@@ -705,45 +703,62 @@ class TeacherJuryEvaluateView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        serializer = TeacherEvaluationSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # We allow any field in the request data, we'll match it with platform settings
+        data = request.data
+        comments = data.get("comments", "")
+        
+        from admin_panel.models import PlatformSettings
+        settings = PlatformSettings.objects.first()
+        import json
+        try:
+            all_criteria = json.loads(settings.evaluation_criteria) if settings else {}
+        except:
+            all_criteria = {}
 
-        d = cast(Dict[str, Any], serializer.validated_data)
-        final = round(
-            d["presentation"] * 0.20 + d["document"] * 0.30 + d["demo"] * 0.50,
-            2,
-        )
-
-        # determine which grade slot belongs to this teacher
-        grades, _ = Grades.objects.get_or_create(PID_id=pid)
-
-        if jury.teacher1_id == teacher:
-            grades.grade1 = final
-        elif jury.teacher2_id == teacher:
-            grades.grade2 = final
-        elif jury.teacher3_id == teacher:
-            grades.grade3 = final
-        elif jury.supervisor_id == teacher:
-            grades.grade4 = final
+        role = ""
+        if jury.teacher1_id == teacher: role = "president"
+        elif jury.supervisor_id == teacher: role = "supervisor"
+        elif jury.teacher2_id == teacher: role = "examiner"
+        
+        criteria = all_criteria.get(role, [])
+        if not criteria:
+            # Fallback to simple average of whatever is sent if no criteria defined
+            vals = [float(v) for k, v in data.items() if k not in ["comments", "validate_cpi"] and v is not None]
+            if not vals:
+                return Response({"error": "No grade fields provided"}, status=400)
+            role_grade = sum(vals) / len(vals)
         else:
-            return Response(
-                {"error": "You are not a jury member for this project"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            # Calculate weighted average
+            total_weight = 0
+            weighted_sum = 0
+            for c in criteria:
+                # We expect the frontend to send keys that match criteria names (slugified or exact)
+                # For simplicity, let's assume frontend sends exact names as keys or we match them
+                val = data.get(c['name']) or data.get(c['name'].lower().replace(" ", "_"))
+                if val is not None:
+                    weighted_sum += float(val) * (c['weight'] / 100.0)
+                    total_weight += c['weight']
+            
+            if total_weight == 0:
+                role_grade = 0
+            else:
+                # scale to 20 if weights don't sum to 100, but they should
+                role_grade = weighted_sum * (100.0 / total_weight)
 
-        grades.comments = d.get("comments", grades.comments or "")
-        grades.save()  # Grades.save() recalculates final_grade automatically
+        grades_obj, _ = Grades.objects.get_or_create(PID_id=pid)
+        if role == "president": grades_obj.grade1 = role_grade
+        elif role == "supervisor": grades_obj.grade4 = role_grade
+        elif role == "examiner": grades_obj.grade2 = role_grade
+
+        if comments:
+            grades_obj.comments = comments
+        
+        grades_obj.save()
 
         return Response(
             {
                 "message": "Evaluation submitted.",
-                "your_note": final,
-                "final_grade": grades.final_grade,
-                "components": {
-                    "presentation": d["presentation"],
-                    "document": d["document"],
-                    "demo": d["demo"],
-                },
+                "your_note": round(role_grade, 2),
+                "final_grade": grades_obj.final_grade,
             }
         )

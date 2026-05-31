@@ -12,6 +12,9 @@ import Badge from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import { useAdmin } from '../../context/AdminContext';
 import { useLanguage } from '../../context/LanguageContext';
+import client from '../../api/client';
+import { ENDPOINTS } from '../../api/config';
+import toast from 'react-hot-toast';
 
 export default function AdminProfil() {
   const { user } = useAuth();
@@ -59,35 +62,60 @@ export default function AdminProfil() {
           </Card>
         </div>
 
-        {/* ── Right: info + password ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-          {/* Account info */}
+          {/* Change Password */}
           <Card>
             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <IoPersonOutline size={18} color="var(--primary)" /> {t('PersonalInfo')}
+              <IoKeyOutline size={18} color="var(--primary)" /> {t('ChangePassword')}
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { label: 'Matricule (TID)', value: user?.TID || '—', icon: <IoCardOutline size={16}/> },
-                { label: t('FullName'),    value: user?.name  || '—', icon: <IoPersonOutline size={16}/> },
-                { label: t('Email'), value: user?.email || '—', icon: <IoMailOutline size={16}/> },
-                { label: 'Département', value: user?.department || '—', icon: <IoBusinessOutline size={16}/> },
-                { label: 'Spécialité', value: user?.specialty || '—', icon: <IoBookOutline size={16}/> },
-                { label: t('Status'),           value: t('Admin'), icon: <IoShieldCheckmarkOutline size={16}/> },
-              ].map((f, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>{f.icon}</div>
-                  <div>
-                    <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px' }}>{f.label}</p>
-                    <p style={{ fontSize: '14px', fontWeight: 600 }}>{f.value}</p>
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>{t('CurrentPassword')}</label>
+                <Input type="password" value={passForm.current} onChange={e => setPassForm({...passForm, current: e.target.value})} placeholder="••••••••" />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>{t('NewPassword')}</label>
+                <Input type="password" value={passForm.next} onChange={e => setPassForm({...passForm, next: e.target.value})} placeholder="••••••••" />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>{t('ConfirmPassword')}</label>
+                <Input type="password" value={passForm.confirm} onChange={e => setPassForm({...passForm, confirm: e.target.value})} placeholder="••••••••" />
+              </div>
             </div>
+            
+            {passMsg && <p style={{ fontSize: '12px', color: 'var(--danger)', marginBottom: '12px' }}>{passMsg}</p>}
+            
+            <Button onClick={handlePasswordChange} loading={saved} icon={saved ? <IoCheckmarkOutline size={18}/> : <IoLockClosedOutline size={18}/>}>
+              {saved ? t('Saved') : t('UpdatePassword')}
+            </Button>
           </Card>
+
+          {/* Teacher Availability (If applicable) */}
+          {user?.is_teacher && (
+            <Card>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <IoTimeOutline size={18} color="var(--primary)" /> Disponibilité pour l'encadrement
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '14px', fontWeight: 700, marginBottom: '2px' }}>Être disponible pour de nouveaux projets</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Si actif, vous apparaissez dans la liste des encadreurs disponibles pour les étudiants.</p>
+                </div>
+                <div 
+                  onClick={async () => {
+                    try {
+                      await client.patch(ENDPOINTS.auth.toggleAvailability);
+                      // Force local user update if necessary, or just rely on state
+                      window.location.reload(); // Quick way to sync auth user state
+                    } catch(e) { console.error(e); }
+                  }}
+                  style={{ width: '44px', height: '24px', borderRadius: '12px', background: user?.available !== false ? 'var(--primary)' : 'var(--border)', position: 'relative', cursor: 'pointer', transition: 'all 0.3s' }}
+                >
+                  <div style={{ position: 'absolute', top: '2px', left: user?.available !== false ? '22px' : '2px', width: '20px', height: '20px', borderRadius: '50%', background: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', transition: 'all 0.3s' }} />
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
-      </div>
     </DashboardLayout>
   );
 }

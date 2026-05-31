@@ -27,6 +27,9 @@ export default function TeacherDashboard() {
 
   // FIX 4: use real computed analytics
   const a = analytics ?? {};
+  const taskStats = a.task_stats || {};
+  const priorityStats = a.tasksByPriority || a.task_priority || {};
+  const groupProgressRaw = a.groupBreakdown || a.groups_progress || [];
 
   const statCards = [
     { label: t('SupervisedGroups_Stat'), value: a.totalGroups      ?? safeGroups.length,  icon: <IoPeopleOutline size={22}/>,          color: 'var(--primary)' },
@@ -38,22 +41,24 @@ export default function TeacherDashboard() {
   ];
 
   const taskStatusData = [
-    { name: t('Todo'),       value: a.todoTasks      ?? 0, color: '#6B7280' },
-    { name: t('InProgress'), value: a.inProgressTasks ?? 0, color: 'var(--primary)' },
-    { name: t('Done'),       value: a.doneTasks       ?? 0, color: '#10B981' },
+    { name: t('Todo'),       value: a.todoTasks ?? taskStats.todo ?? 0, color: '#6B7280' },
+    { name: t('InProgress'), value: a.inProgressTasks ?? taskStats.in_progress ?? 0, color: 'var(--primary)' },
+    { name: t('Done'),       value: a.doneTasks ?? taskStats.done ?? 0, color: '#10B981' },
   ];
 
   const priorityData = [
-    { name: t('High'),   value: a.tasksByPriority?.high   ?? 0 },
-    { name: t('Medium'), value: a.tasksByPriority?.medium ?? 0 },
-    { name: t('Low'),    value: a.tasksByPriority?.low    ?? 0 },
+    { name: t('High'),   value: priorityStats.high   ?? 0 },
+    { name: t('Medium'), value: priorityStats.medium ?? 0 },
+    { name: t('Low'),    value: priorityStats.low    ?? 0 },
   ];
 
-  const groupBreakdown = a.groupBreakdown ?? safeGroups.map(g => ({
-    name: g.groupCode || g.title,
-    progress: g.progress || 0,
-    tasks: 0, done: 0,
-  }));
+  const groupBreakdown = Array.isArray(groupProgressRaw) && groupProgressRaw.length > 0
+    ? groupProgressRaw.map(item => ({ name: item.name || item.group || item.group_name || item.invite_code || item.title, progress: item.progress ?? 0, tasks: item.tasks ?? 0, done: item.done ?? 0 }))
+    : safeGroups.map(g => ({
+      name: g.groupCode || g.title,
+      progress: g.progress || 0,
+      tasks: 0, done: 0,
+    }));
 
   const columns = [
     { key: 'title',     label: 'Projet',   render: v => <span style={{ fontSize: '13px', fontWeight: 600 }}>{v}</span> },

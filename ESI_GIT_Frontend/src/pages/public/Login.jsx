@@ -20,6 +20,10 @@ export default function Login() {
   const { t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotRole, setForgotRole] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const [contactEmail, setContactEmail] = useState('aced@esi.dz');
   const navigate = useNavigate();
 
@@ -431,31 +435,121 @@ export default function Login() {
         </p>
       </div>
 
-      <Modal isOpen={showForgotModal} onClose={() => setShowForgotModal(false)} title="Mot de passe oublié">
+      <Modal isOpen={showForgotModal} onClose={() => { setShowForgotModal(false); setForgotRole(''); setForgotEmail(''); setForgotLoading(false); setForgotSent(false); }} title="Mot de passe oublié" showRequiredHint={false}>
         <div style={{ padding: '8px 0', lineHeight: 1.6, color: 'var(--text-primary)' }}>
-          <p style={{ marginBottom: '14px' }}>
-            Pour réinitialiser ou récupérer votre mot de passe, veuillez vous présenter au service de la scolarité / <strong>l'administration</strong> de l'ESI.
-          </p>
-          <p>
-            Vous pouvez également contacter l'administrateur système par e-mail à l'adresse suivante :<br />
-            <a href={`mailto:${contactEmail}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{contactEmail}</a>
-          </p>
-          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button 
-              onClick={() => setShowForgotModal(false)}
-              style={{
-                padding: '10px 20px',
-                borderRadius: '10px',
-                background: 'var(--primary)',
-                border: 'none',
-                color: '#fff',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Fermer
-            </button>
-          </div>
+          {!forgotRole ? (
+            <>
+              <p style={{ marginBottom: '16px', fontSize: '14px' }}>Veuillez sélectionner votre rôle :</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { role: 'admin', label: '🔑 Administrateur', desc: 'Réinitialiser par e-mail' },
+                  { role: 'teacher', label: '👨‍🏫 Enseignant', desc: 'Contacter la scolarité' },
+                  { role: 'student', label: '🎓 Étudiant', desc: 'Contacter la scolarité' },
+                ].map(r => (
+                  <button key={r.role} onClick={() => setForgotRole(r.role)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '14px 18px', borderRadius: '12px', background: 'var(--bg)',
+                      border: '1.5px solid var(--border)', cursor: 'pointer', transition: 'all 0.2s',
+                      textAlign: 'left', width: '100%',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'var(--primary-subtle)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg)'; }}
+                  >
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>{r.label}</p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{r.desc}</p>
+                    </div>
+                    <IoChevronForward size={16} style={{ color: 'var(--text-muted)' }} />
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : forgotRole === 'admin' ? (
+            <>
+              {forgotSent ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>✉️</div>
+                  <p style={{ fontWeight: 700, fontSize: '16px', marginBottom: '8px' }}>E-mail envoyé !</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Si un compte existe avec cette adresse, un lien de réinitialisation a été envoyé.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p style={{ marginBottom: '14px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Entrez votre adresse e-mail administrateur pour recevoir un lien de réinitialisation.
+                  </p>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>Adresse e-mail</label>
+                    <input
+                      type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)}
+                      placeholder="admin@esi.dz" required
+                      style={{
+                        width: '100%', padding: '12px 16px',
+                        background: theme === 'dark' ? '#152033' : '#F8FAFC',
+                        border: theme === 'dark' ? '1.5px solid #243347' : '1.5px solid #CBD5E1',
+                        borderRadius: '12px', fontSize: '14px',
+                        color: theme === 'dark' ? '#F1F5F9' : '#0F172A',
+                        outline: 'none',
+                      }}
+                      onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 4px rgba(46, 196, 182, 0.15)'; }}
+                      onBlur={e => { e.target.style.borderColor = theme === 'dark' ? '#243347' : '#CBD5E1'; e.target.style.boxShadow = 'none'; }}
+                    />
+                  </div>
+                </>
+              )}
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button onClick={() => { setForgotRole(''); setForgotEmail(''); setForgotSent(false); }}
+                  style={{ padding: '10px 18px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+                  Retour
+                </button>
+                {!forgotSent && (
+                  <button
+                    disabled={forgotLoading || !forgotEmail.trim()}
+                    onClick={async () => {
+                      setForgotLoading(true);
+                      try {
+                        await authApi.forgotPassword(forgotEmail);
+                        setForgotSent(true);
+                        toast.success('E-mail envoyé');
+                      } catch (err) {
+                        toast.error(err?.response?.data?.error || "Erreur d'envoi");
+                      } finally { setForgotLoading(false); }
+                    }}
+                    style={{
+                      padding: '10px 20px', borderRadius: '10px',
+                      background: (!forgotEmail.trim() || forgotLoading) ? 'var(--border)' : 'var(--primary)',
+                      border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px',
+                      cursor: (!forgotEmail.trim() || forgotLoading) ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {forgotLoading ? 'Envoi...' : 'Envoyer le lien'}
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ marginBottom: '14px' }}>
+                Pour réinitialiser ou récupérer votre mot de passe, veuillez vous présenter au service de la scolarité / <strong>l'administration</strong> de l'ESI.
+              </p>
+              <p>
+                Vous pouvez également contacter l'administrateur système par e-mail à l'adresse suivante :<br />
+                <a href={`mailto:${contactEmail}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{contactEmail}</a>
+              </p>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                <button onClick={() => setForgotRole('')}
+                  style={{ padding: '10px 18px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
+                  Retour
+                </button>
+                <button onClick={() => { setShowForgotModal(false); setForgotRole(''); }}
+                  style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+                  Fermer
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 

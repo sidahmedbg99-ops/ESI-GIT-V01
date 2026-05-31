@@ -6,6 +6,8 @@ from .views import (
     admin_groups_list,
     admin_group_details,
     assign_jury,
+    auto_assign_juries,
+    toggle_project_visibility,
     admin_projects_analytics,
     admin_dashboard_stats,
     archived_projects,
@@ -36,6 +38,8 @@ urlpatterns = [
     path("admin/groups/", admin_groups_list),
     path("admin/groups/<int:pk>/", admin_group_details),
     path("admin/groups/<int:pk>/assign-jury/", assign_jury),
+    path("admin/groups/auto-assign-juries/", auto_assign_juries),
+    path("admin/groups/<int:pk>/toggle-visibility/", toggle_project_visibility),
     # ================= ADMIN DASHBOARD =================
     path("admin/analytics/", admin_projects_analytics),
     path("admin/dashboard/", admin_dashboard_stats),

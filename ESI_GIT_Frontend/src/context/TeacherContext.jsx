@@ -247,12 +247,26 @@ export function TeacherProvider({ children }) {
   // ── Analytics: real backend dashboard ─────────────────────────────
   const { request: fetchDashboard, data: backendAnalytics } = useApi(async () => {
     const { data } = await client.get(ENDPOINTS.teacher.dashboard);
+    const todo = data.task_stats?.todo ?? 0;
+    const inProgress = data.task_stats?.in_progress ?? 0;
+    const done = data.task_stats?.done ?? 0;
     return {
-      totalGroups: data.groups_encadres ?? 0, activeGroups: data.groups_actifs ?? 0,
-      avgProgress: data.avancement_moyen ?? 0, completionRate: data.taux_completion ?? 0,
-      pendingMeetings: data.reunions_en_attente ?? 0, pendingEvals: data.evaluations_en_attente ?? 0,
-      totalTasks: data.task_stats?.total ?? 0, doneTasks: data.task_stats?.done ?? 0,
-      tasksByPriority: { high: data.task_stats?.high_priority ?? 0, medium: data.task_stats?.medium_priority ?? 0, low: data.task_stats?.low_priority ?? 0 },
+      totalGroups: data.groups_encadres ?? 0,
+      activeGroups: data.groups_actifs ?? 0,
+      avgProgress: data.avancement_moyen ?? 0,
+      completionRate: data.taux_completion ?? 0,
+      pendingMeetings: data.reunions_en_attente ?? 0,
+      pendingEvals: data.evaluations_en_attente ?? 0,
+      todoTasks: todo,
+      inProgressTasks: inProgress,
+      doneTasks: done,
+      totalTasks: todo + inProgress + done,
+      tasksByPriority: {
+        high: data.task_priority?.high ?? 0,
+        medium: data.task_priority?.medium ?? 0,
+        low: data.task_priority?.low ?? 0,
+      },
+      groupBreakdown: data.groups_progress ?? [],
       ...data,
     };
   });

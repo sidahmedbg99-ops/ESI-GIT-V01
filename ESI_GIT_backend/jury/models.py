@@ -16,11 +16,13 @@ class ProjectJury(models.Model):
         Staff, on_delete=models.CASCADE, related_name="jury_as_president"
     )
     teacher2_id = models.ForeignKey(
-        Staff, on_delete=models.CASCADE, related_name="jury_as_examiner1"
+        Staff, on_delete=models.CASCADE, related_name="jury_as_examiner"
     )
-    teacher3_id = models.ForeignKey(
-        Staff, on_delete=models.CASCADE, related_name="jury_as_examiner2"
-    )
+    
+    presentation_date = models.DateField(null=True, blank=True)
+    presentation_time = models.TimeField(null=True, blank=True)
+    room = models.CharField(max_length=50, null=True, blank=True)
+    
     assigned_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -52,8 +54,7 @@ class Grades(models.Model):
 
     PID = models.OneToOneField(Projects, on_delete=models.CASCADE, primary_key=True)
     grade1 = models.FloatField(null=True, blank=True)  # president
-    grade2 = models.FloatField(null=True, blank=True)  # examiner1
-    grade3 = models.FloatField(null=True, blank=True)  # examiner2
+    grade2 = models.FloatField(null=True, blank=True)  # examiner
     grade4 = models.FloatField(null=True, blank=True)  # supervisor
     final_grade = models.FloatField(null=True, blank=True)
     comments = models.TextField(blank=True)
@@ -69,7 +70,7 @@ class Grades(models.Model):
         """
         When jury submits grades:
         - Pull active formula
-        - Calculate final grade using g1/g2/g3/g4 (supervisor grade)
+        - Calculate final grade using g1/g2/g4
         - Save result permanently
         """
 
@@ -79,13 +80,11 @@ class Grades(models.Model):
         grades_ready = (
             self.grade1 is not None
             and self.grade2 is not None
-            and self.grade3 is not None
         )
         if grades_ready:
             grades_dict = {
                 "g1": float(self.grade1),
                 "g2": float(self.grade2),
-                "g3": float(self.grade3),
                 "g4": float(self.grade4) if self.grade4 is not None else None,
             }
             final, formula = calculate_final_grade(grades_dict)

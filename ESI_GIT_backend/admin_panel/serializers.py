@@ -273,6 +273,7 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
         fields = [
             "students_can_see_archived_projects",
             "students_can_see_jury_column",
+            "hide_jury_from_jury",
             "current_academic_year",
             "project_types",
             "presentation_weight",
@@ -282,5 +283,6 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
             "supervisor_weight",
             "other_weight",
             "contact_email",
+            "evaluation_criteria",
         ]
 

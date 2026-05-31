@@ -3,7 +3,7 @@ import {
   IoPeopleOutline, IoSearchOutline, IoAddOutline, IoEyeOutline,
   IoTrashOutline, IoCheckmarkCircleOutline, IoCloseCircleOutline,
   IoPersonOutline, IoRibbonOutline, IoSchoolOutline, IoTimeOutline,
-  IoArrowBackOutline,
+  IoArrowBackOutline, IoEyeOffOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -22,13 +22,18 @@ function JuryModal({ group, users, onClose, onAssign }) {
   const otherTeachers = (users || []).filter(u => u.role === 'teacher' && u._id !== group?.teacherId && u.id !== group?.teacherId);
 
   const [selected, setSelected] = useState([]);
+  const [dateTime, setDateTime] = useState({
+    date: group?.jury?.presentation_date || '',
+    time: group?.jury?.presentation_time || '',
+    room: group?.jury?.room || ''
+  });
 
   const toggle = (id) => {
     setSelected(prev => {
       const exists = prev.find(x => x.teacherId === id);
       if (exists) return prev.filter(x => x.teacherId !== id);
-      if (prev.length < 3) return [...prev, { teacherId: id, role: 'member' }];
-      return prev; // max 3 additional (+ supervisor = 4 total)
+      if (prev.length < 2) return [...prev, { teacherId: id, role: 'member' }];
+      return prev; // max 2 additional (+ supervisor = 3 total)
     });
   };
 
@@ -38,7 +43,7 @@ function JuryModal({ group, users, onClose, onAssign }) {
     setSelected(prev => prev.map(x => x.teacherId === id ? { ...x, role } : x));
   };
 
-  const canSubmit = selected.length === 3;
+  const canSubmit = selected.length === 2;
 
   return (
     <Modal isOpen onClose={onClose} title={`${t('AssignJury')} — ${group?.title || group?.groupCode}`} size="md">
@@ -60,17 +65,17 @@ function JuryModal({ group, users, onClose, onAssign }) {
         </div>
       </div>
 
-      {/* 3 selectable jury teachers */}
+      {/* 2 selectable jury teachers */}
       <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.06em' }}>
-        Membres du jury — {selected.length}/3 sélectionnés
+        Membres du jury — {selected.length}/2 sélectionnés
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', maxHeight: '280px', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', maxHeight: '200px', overflowY: 'auto' }}>
         {otherTeachers.map(tVal => {
-          const selection = selected.find(x => x.teacherId === tVal._id);
+          const selection = selected.find(x => x.teacherId === (tVal._id || tVal.id));
           const isSelected = !!selection;
-          const disabled = !isSelected && selected.length >= 3;
+          const disabled = !isSelected && selected.length >= 2;
           return (
-            <div key={tVal._id} onClick={() => !disabled && toggle(tVal._id)}
+            <div key={tVal._id || tVal.id} onClick={() => !disabled && toggle(tVal._id || tVal.id)}
               style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '10px', background: isSelected ? 'var(--primary-subtle)' : 'var(--bg)', border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, transition: 'all 0.15s' }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
                 {tVal.name?.charAt(0)}
@@ -81,7 +86,7 @@ function JuryModal({ group, users, onClose, onAssign }) {
               </div>
               {isSelected && (
                 <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
-                  <select value={selection.role} onChange={e => changeRole(e, tVal._id)}
+                  <select value={selection.role} onChange={e => changeRole(e, (tVal._id || tVal.id))}
                     style={{ padding: '6px 8px', borderRadius: '6px', fontSize: '12px', border: '1px solid var(--border)', background: '#fff', outline: 'none' }}>
                     <option value="president">{t('JuryRoles.president')}</option>
                     <option value="member">{t('JuryRoles.member')}</option>
@@ -93,13 +98,41 @@ function JuryModal({ group, users, onClose, onAssign }) {
         })}
         {otherTeachers.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>{t('NoGroupYet')}</p>}
       </div>
+
+      {/* Date, Time, Room */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+        <div>
+          <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Date</label>
+          <Input type="date" value={dateTime.date} onChange={e => setDateTime({...dateTime, date: e.target.value})} />
+        </div>
+        <div>
+          <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Heure</label>
+          <Input type="time" value={dateTime.time} onChange={e => setDateTime({...dateTime, time: e.target.value})} />
+        </div>
+        <div style={{ gridColumn: 'span 2' }}>
+          <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Lieu / Salle</label>
+          <Input placeholder="Ex: Salle A1" value={dateTime.room} onChange={e => setDateTime({...dateTime, room: e.target.value})} />
+        </div>
+      </div>
+
       <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: '13px', color: canSubmit ? 'var(--success)' : 'var(--text-muted)' }}>
-          {canSubmit ? '✅ Jury complet (4 membres)' : `${selected.length + 1}/4 membres`}
+          {canSubmit ? '✅ Jury complet (3 membres)' : `${selected.length + 1}/3 membres`}
         </span>
         <div style={{ display: 'flex', gap: '10px' }}>
           <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          <Button onClick={() => { onAssign(group._id, selected); onClose(); }} icon={<IoRibbonOutline size={16}/>} disabled={!canSubmit}>
+          <Button onClick={() => { 
+            const president = selected.find(x => x.role === 'president') || selected[0];
+            const examiner = selected.find(x => x !== president) || selected[1];
+            onAssign(group._id || group.PID, {
+              teacher1_id: president?.teacherId,
+              teacher2_id: examiner?.teacherId,
+              presentation_date: dateTime.date,
+              presentation_time: dateTime.time,
+              room: dateTime.room
+            }); 
+            onClose(); 
+          }} icon={<IoRibbonOutline size={16}/>} disabled={!canSubmit}>
             {t('AssignJury')}
           </Button>
         </div>
@@ -440,6 +473,21 @@ export default function AdminGroupes() {
                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{g.title}</p>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
+                        <button 
+                          onClick={() => toggleProjectVisibility(g._id || g.PID)}
+                          title={g.is_public ? "Rendre privé" : "Rendre public"}
+                          style={{ 
+                            width: 34, height: 34, borderRadius: '10px', 
+                            background: 'var(--bg)', 
+                            border: `1px solid var(--border)`, 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                            cursor: 'pointer', 
+                            color: g.is_public ? 'var(--primary)' : 'var(--text-muted)',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          {g.is_public ? <IoEyeOutline size={16}/> : <IoEyeOffOutline size={16}/>}
+                        </button>
                         <button 
                           disabled={!g.final_submission_approved}
                           onClick={() => setJuryGrp(g)} 

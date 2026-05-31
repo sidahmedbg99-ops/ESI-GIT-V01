@@ -10,8 +10,10 @@ export const usersApi = {
   },
 
   // GET /api/teachers/ — available to all authenticated users
-  getTeachers: async () => {
-    const { data } = await client.get(ENDPOINTS.auth.teachers);
+  getTeachers: async (availableOnly = false) => {
+    const { data } = await client.get(ENDPOINTS.auth.teachers, { 
+      params: availableOnly ? { available: 'true' } : {} 
+    });
     return data.map(t => ({
       ...t,
       _id:  t._id  ?? t.TID,   // UI uses t._id for selection

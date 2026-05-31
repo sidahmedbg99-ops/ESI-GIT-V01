@@ -37,9 +37,11 @@ class PlatformSettings(models.Model):
 
     students_can_see_archived_projects = models.BooleanField(default=False)
     students_can_see_jury_column = models.BooleanField(default=False)
+    hide_jury_from_jury = models.BooleanField(default=False)
     current_academic_year = models.CharField(max_length=20, default="2024-2025")
     project_types = models.TextField(default="PFE,Stage,Projet")
     contact_email = models.CharField(max_length=100, default="aced@esi.dz")
+    evaluation_criteria = models.TextField(default='{"president": [{"name": "Produit final", "weight": 25}, {"name": "Manuel d\'installation et d\'utilisation", "weight": 25}, {"name": "Soutenance", "weight": 25}, {"name": "Rapport", "weight": 25}], "supervisor": [{"name": "Travail continu", "weight": 50}, {"name": "Soutenance", "weight": 50}], "examiner": [{"name": "Soutenance", "weight": 100}]}')
 
     # Grading weights: individual component scores (must sum to 100)
     presentation_weight = models.IntegerField(default=20)

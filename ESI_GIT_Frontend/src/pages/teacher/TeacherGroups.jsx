@@ -376,13 +376,16 @@ export default function TeacherGroups() {
           <div>
             <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>{t('AssignTo')}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {(team.members || []).map(m => (
-                <label key={m.cid} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                  <input type="checkbox" checked={taskAssigneeIds.includes(m.cid)}
-                    onChange={e => setTaskAssigneeIds(prev => e.target.checked ? [...prev, m.cid] : prev.filter(id => id !== m.cid))}/>
+              {(team.members || []).map(m => {
+              const memberId = m.CID ?? m._id ?? m.cid ?? m.id;
+              return (
+                <label key={memberId} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input type="checkbox" checked={taskAssigneeIds.includes(memberId)}
+                    onChange={e => setTaskAssigneeIds(prev => e.target.checked ? [...prev, memberId] : prev.filter(id => id !== memberId))}/>
                   <span style={{ fontWeight: 500 }}>{m.name}</span>
                 </label>
-              ))}
+              );
+            })}
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>{t('IfNoneSelected')}</p>
           </div>

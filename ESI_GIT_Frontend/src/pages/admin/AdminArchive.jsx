@@ -172,7 +172,22 @@ export default function AdminArchive() {
                   )}
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
 
-                    <Button size="sm" variant="outline" onClick={() => setEditModal({ isOpen: true, project: p })} style={{ height: '24px', padding: '0 8px', fontSize: '10px' }}>{t('Edit')}</Button>
+                    <button 
+                      onClick={() => toggleProjectVisibility(p._id || p.PID)}
+                      title={p.is_public ? "Rendre privé" : "Rendre public"}
+                      style={{ 
+                        height: '24px', padding: '0 8px', borderRadius: '6px', 
+                        background: 'var(--bg)', 
+                        border: `1px solid var(--border)`, 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                        cursor: 'pointer', 
+                        color: p.is_public ? 'var(--primary)' : 'var(--text-muted)',
+                        fontSize: '10px', fontWeight: 600,
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      {p.is_public ? '🔓 Public' : '🔒 Privé'}
+                    </button>
                     <Button size="sm" variant="danger" onClick={() => setModal({ isOpen: true, projectId: p._id })} icon={<IoTrashOutline size={12}/>} style={{ height: '24px', padding: '0 8px', fontSize: '10px' }}>{t('Delete')}</Button>
                   </div>
                 </div>
@@ -215,83 +230,6 @@ export default function AdminArchive() {
         confirmText={t('Delete')}
         type="warning"
       />
-
-      <EditArchiveModal 
-        isOpen={editModal.isOpen} 
-        project={editModal.project} 
-        onClose={() => setEditModal({ isOpen: false, project: null })}
-        onSave={async (id, data) => {
-          await updateGroup(id, data);
-          setEditModal({ isOpen: false, project: null });
-        }}
-      />
     </DashboardLayout>
-  );
-}
-
-function EditArchiveModal({ isOpen, project, onClose, onSave }) {
-  const { t } = useLanguage();
-  const [desc, setDesc] = useState(project?.description || '');
-  const [tech, setTech] = useState(project?.tech_stack || '');
-  const [isPublic, setIsPublic] = useState(project?.is_public ?? true);
-
-  useEffect(() => {
-    if (project) {
-      setDesc(project.description || '');
-      setTech(project.tech_stack || '');
-      setIsPublic(project.is_public ?? true);
-    }
-  }, [project]);
-
-  if (!isOpen) return null;
-
-  return (
-    <Modal isOpen onClose={onClose} title={t('Edit')} size="md">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>DESCRIPTION</label>
-          <textarea 
-            value={desc} 
-            onChange={e => setDesc(e.target.value)} 
-            placeholder="Résumé du projet..."
-            style={{ width: '100%', minHeight: '100px', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '14px', outline: 'none', resize: 'vertical' }}
-          />
-        </div>
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>TECHNOLOGIES (séparées par des virgules)</label>
-          <Input 
-            value={tech} 
-            onChange={e => setTech(e.target.value)} 
-            placeholder="React, Django, PostgreSQL..."
-          />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>Visibilité du projet</label>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Rendre le projet visible (public) ou le masquer (privé).</p>
-          </div>
-          <button 
-            type="button"
-            onClick={() => setIsPublic(!isPublic)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '20px',
-              border: 'none',
-              background: isPublic ? '#10B981' : 'var(--text-muted)',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            {isPublic ? 'Public' : 'Privé'}
-          </button>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-          <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          <Button onClick={() => onSave(project._id || project.PID, { description: desc, tech_stack: tech, is_public: isPublic })}>{t('Save')}</Button>
-        </div>
-      </div>
-    </Modal>
   );
 }

@@ -136,7 +136,7 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
 
     def get_meetings(self, obj):
         from meetings.models import Meeting
-        meetings = Meeting.objects.filter(PID=obj).order_by("date", "time")
+        meetings = Meeting.objects.filter(PID=obj).order_by("-date", "-time")
         return [
             {
                 "id": m.id,
@@ -269,13 +269,25 @@ class TeacherJurySerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     is_evaluated = serializers.SerializerMethodField()
     attachments = serializers.SerializerMethodField()
+    jury_role = serializers.SerializerMethodField()
+    jury_members = serializers.SerializerMethodField()
 
     class Meta:
         model = ProjectJury
         fields = [
             "PID_id", "project_name", "group_code", "specialty",
             "schedule", "members", "is_evaluated", "attachments",
+            "jury_role", "jury_members",
         ]
+
+    def _hide_jury_info(self):
+        """Return True if the hide_jury_from_jury platform setting is active."""
+        from admin_panel.models import PlatformSettings
+        try:
+            settings = PlatformSettings.objects.first()
+            return settings.hide_jury_from_jury if settings else False
+        except Exception:
+            return False
 
     def get_schedule(self, obj):
         try:
@@ -295,24 +307,57 @@ class TeacherJurySerializer(serializers.ModelSerializer):
             for m in memberships
         ]
 
+    def get_jury_members(self, obj):
+        """
+        Returns the other jury members' info.
+        If hide_jury_from_jury is enabled, returns None so jury members
+        cannot see who else is on the jury panel.
+        """
+        if self._hide_jury_info():
+            return None
+        result = []
+        roles = [
+            ("president", obj.teacher1_id),
+            ("examiner", obj.teacher2_id),
+            ("supervisor", obj.supervisor_id),
+        ]
+        for role_label, teacher in roles:
+            if teacher:
+                result.append({
+                    "role": role_label,
+                    "name": teacher.full_name,
+                    "TID": teacher.TID,
+                })
+        return result
+
     def get_is_evaluated(self, obj):
         teacher = self.context.get("teacher")
         if not teacher:
             return False
-            
+
         try:
             grades = Grades.objects.get(PID=obj.PID)
             if obj.teacher1_id == teacher:
                 return grades.grade1 is not None
             elif obj.teacher2_id == teacher:
                 return grades.grade2 is not None
-            elif obj.teacher3_id == teacher:
-                return grades.grade3 is not None
             elif obj.supervisor_id == teacher:
                 return grades.grade4 is not None
         except Grades.DoesNotExist:
             return False
         return False
+
+    def get_jury_role(self, obj):
+        teacher = self.context.get("teacher")
+        if not teacher:
+            return None
+        if obj.teacher1_id == teacher:
+            return "president"
+        elif obj.supervisor_id == teacher:
+            return "supervisor"
+        elif obj.teacher2_id == teacher:
+            return "examiner"
+        return None
 
     def get_attachments(self, obj):
         from projects.models import ProjectAttachment
@@ -331,9 +376,18 @@ class TeacherJurySerializer(serializers.ModelSerializer):
 
 
 class TeacherEvaluationSerializer(serializers.Serializer):
-    presentation = serializers.FloatField(min_value=0, max_value=20)
-    document = serializers.FloatField(min_value=0, max_value=20)
-    demo = serializers.FloatField(min_value=0, max_value=20)
+    # President fields
+    produit_final = serializers.FloatField(min_value=0, max_value=20, required=False)
+    manuel_installation = serializers.FloatField(min_value=0, max_value=20, required=False)
+    rapport = serializers.FloatField(min_value=0, max_value=20, required=False)
+    # Supervisor fields
+    travail_continu = serializers.FloatField(min_value=0, max_value=20, required=False)
+    # Shared field (all roles)
+    soutenance = serializers.FloatField(min_value=0, max_value=20, required=False)
+    # Legacy fields kept for backwards compatibility
+    presentation = serializers.FloatField(min_value=0, max_value=20, required=False)
+    document = serializers.FloatField(min_value=0, max_value=20, required=False)
+    demo = serializers.FloatField(min_value=0, max_value=20, required=False)
     validate_cpi = serializers.BooleanField(required=False, default=False)
     comments = serializers.CharField(required=False, allow_blank=True, default="")
 

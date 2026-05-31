@@ -14,7 +14,7 @@ ALLOWED_FUNCTIONS = {
 }
 
 # Dummy grades used to validate formula before saving
-TEST_GRADES = {"g1": 15.0, "g2": 14.0, "g3": 16.0, "g4": 15.0}
+TEST_GRADES = {"g1": 15.0, "g2": 14.0, "g4": 15.0}
 
 
 # ─────────────────────────────────────────
@@ -64,7 +64,7 @@ def get_active_formula():
 # ─────────────────────────────────────────
 def calculate_final_grade(grades: dict):
     """
-    grades = {"g1": float, "g2": float, "g3": float, "g4": float|None}
+    grades = {"g1": float, "g2": float, "g4": float|None}
     g4 is the supervisor's grade (optional — included if present)
     """
 

@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { IoSunnyOutline, IoMoonOutline } from 'react-icons/io5';
 import client from '../../api/client';
 import { ENDPOINTS } from '../../api/config';
+import { useTeacher } from '../../context/TeacherContext';
 
 const navByRole = {
   student: [
@@ -49,7 +50,11 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const nav = (navByRole[user?.role] || navByRole.student);
+  // Conditionally hide jury for teachers with no assignments
+  let teacherCtx = null;
+  try { teacherCtx = useTeacher(); } catch(e) { /* not in teacher context */ }
+
+  let nav = (navByRole[user?.role] || navByRole.student);
 
   const [isVisible, setIsVisible] = useState(true);
   const [showScrollBtn, setShowScrollBtn] = useState(false);

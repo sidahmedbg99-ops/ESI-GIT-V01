@@ -40,7 +40,8 @@ export function AuthProvider({ children }) {
           name: data.user.name || data.user.full_name || `${data.user.first_name || ''} ${data.user.last_name || ''}`.trim(),
           role: normalizedRole, 
           first_login: data.first_login ?? data.user.IsFirstLogin,
-          _id: data.user.CID || data.user.TID || data.user.id || data.user._id 
+          _id: data.user.CID || data.user.TID || data.user.id || data.user._id,
+          available: data.user.available,
         };
         setUser(fullUser);
         localStorage.setItem('esi-user', JSON.stringify(fullUser));
@@ -59,6 +60,15 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('esi-user');
     localStorage.removeItem('esi-token');
     toast.success('Déconnecté');
+  };
+
+  const updateUser = (patch) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      localStorage.setItem('esi-user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const clearError = () => setError(null);
@@ -81,7 +91,8 @@ export function AuthProvider({ children }) {
               ...r, 
               name: r.name || r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
               _id: r.CID || r.TID || r.id,
-              role: newRole
+              role: newRole,
+              available: r.available,
             };
             setUser(normalized);
            localStorage.setItem('esi-user', JSON.stringify(normalized));
@@ -102,7 +113,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, error, isLoginLoading, clearError, switchRole }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, error, isLoginLoading, clearError, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

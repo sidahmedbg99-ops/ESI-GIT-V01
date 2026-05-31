@@ -8,6 +8,18 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTeacher } from '../../context/TeacherContext';
 import { getFileUrl } from '../../api/config';
 
+const ROLE_LABELS = {
+  president: 'Président du jury',
+  supervisor: 'Encadreur',
+  examiner: 'Examinateur',
+};
+
+const ROLE_COLORS = {
+  president: '#6366F1',
+  supervisor: '#2EC4B6',
+  examiner: '#F59E0B',
+};
+
 export default function TeacherJury() {
   const { t } = useLanguage();
   const { evaluations, evaluationsLoading, gradeEvaluation, platformSettings } = useTeacher();
@@ -18,45 +30,70 @@ export default function TeacherJury() {
   const [gradeModal, setGradeModal] = useState(null);
   const [feedbackInput, setFeedbackInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
-  // Structured evaluation specific state
-  const [evalMarks, setEvalMarks] = useState({
-    presentation: '',
-    document: '',
-    demo: ''
-  });
   const [is2CpiProject, setIs2CpiProject] = useState(false);
 
-  const calculateFinalGrade = () => {
-    const formulaConfig = { 
-      presentationWeight: (platformSettings?.presentation_weight || 20) / 100, 
-      documentWeight: (platformSettings?.document_weight || 30) / 100, 
-      demoWeight: (platformSettings?.demo_weight || 50) / 100 
-    };
-    const p = parseFloat(evalMarks.presentation) || 0;
-    const doc = parseFloat(evalMarks.document) || 0;
-    const d = parseFloat(evalMarks.demo) || 0;
+  // Dynamic marks state based on role
+  const [evalMarks, setEvalMarks] = useState({});
 
-    let final = (p * formulaConfig.presentationWeight) + (doc * formulaConfig.documentWeight) + (d * formulaConfig.demoWeight);
-    return final.toFixed(2);
+  const getCriteriaForRole = (role) => {
+    try {
+      const all = typeof platformSettings?.evaluation_criteria === 'string'
+        ? JSON.parse(platformSettings.evaluation_criteria)
+        : platformSettings?.evaluation_criteria;
+      return all?.[role] || [];
+    } catch(e) { return []; }
+  };
+
+  const calculateFinalGrade = () => {
+    const criteria = getCriteriaForRole(gradeModal?.jury_role);
+    if (criteria.length === 0) {
+      // fallback to average if no criteria
+      const vals = Object.values(evalMarks).map(v => parseFloat(v) || 0);
+      if (vals.length === 0) return '0.00';
+      return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2);
+    }
+    
+    let weightedSum = 0;
+    let totalWeight = 0;
+    criteria.forEach(c => {
+      const val = parseFloat(evalMarks[c.name]) || 0;
+      weightedSum += val * (c.weight / 100);
+      totalWeight += c.weight;
+    });
+    
+    if (totalWeight === 0) return '0.00';
+    return (weightedSum * (100 / totalWeight)).toFixed(2);
+  };
+
+  const allFieldsFilled = () => {
+    if (!gradeModal) return false;
+    const criteria = getCriteriaForRole(gradeModal.jury_role);
+    if (criteria.length === 0) return true;
+    return criteria.every(c => evalMarks[c.name] !== undefined && evalMarks[c.name] !== '');
+  };
+
+  const openGradeModal = (defense) => {
+    setGradeModal(defense);
+    const criteria = getCriteriaForRole(defense.jury_role);
+    const initial = {};
+    criteria.forEach(c => { initial[c.name] = ''; });
+    setEvalMarks(initial);
+    setFeedbackInput('');
+    setIs2CpiProject(false);
   };
 
   const submitJuryGrade = async (pid) => {
-    if (!evalMarks.presentation || !evalMarks.document || !evalMarks.demo) return;
+    if (!allFieldsFilled()) return;
     
     setSubmitting(true);
     try {
-      await gradeEvaluation(pid, {
-        presentation: parseFloat(evalMarks.presentation),
-        document: parseFloat(evalMarks.document),
-        demo: parseFloat(evalMarks.demo),
+      const payload = {
+        ...evalMarks,
         validate_cpi: is2CpiProject,
-        comments: feedbackInput
-      });
+        comments: feedbackInput,
+      };
+      await gradeEvaluation(pid, payload);
       setGradeModal(null);
-      setEvalMarks({ presentation: '', document: '', demo: '' });
-      setFeedbackInput('');
-      setIs2CpiProject(false);
     } finally {
       setSubmitting(false);
     }
@@ -96,6 +133,8 @@ export default function TeacherJury() {
           </Card>
         ) : defenses.map(j => {
           const graded = j.is_evaluated;
+          const roleLabel = ROLE_LABELS[j.jury_role] || 'Membre du jury';
+          const roleColor = ROLE_COLORS[j.jury_role] || 'var(--text-muted)';
           return (
             <Card key={j.PID_id} hover style={{ padding: '20px 24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
@@ -103,6 +142,9 @@ export default function TeacherJury() {
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                     <Badge variant="primary">{j.group_code}</Badge>
                     <Badge variant="gray">{j.specialty}</Badge>
+                    <span style={{ padding: '3px 10px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, background: `${roleColor}15`, color: roleColor, border: `1px solid ${roleColor}30` }}>
+                      {roleLabel}
+                    </span>
                     <Badge variant={j.schedule ? 'success' : 'warning'}>{j.schedule ? t('Scheduled') : t('InProgress')}</Badge>
                   </div>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>{j.project_name}</h3>
@@ -134,7 +176,7 @@ export default function TeacherJury() {
                       <Badge variant="success">{t('Evaluated')} ✓</Badge>
                     </div>
                   ) : (
-                    <button onClick={() => { setGradeModal(j); setEvalMarks({ presentation:'', document:'', demo:'' }); setFeedbackInput(''); setIs2CpiProject(false); }}
+                    <button onClick={() => openGradeModal(j)}
                       style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
                       🎓 {t('Evaluate')}
                     </button>
@@ -146,7 +188,9 @@ export default function TeacherJury() {
         })}
       </div>
 
-      <Modal isOpen={!!gradeModal} onClose={() => setGradeModal(null)} title={`${t('DefenseEvaluation')} — ${gradeModal?.group_code}`} size="md">
+      <Modal isOpen={!!gradeModal} onClose={() => setGradeModal(null)} title={`${t('DefenseEvaluation')} — ${gradeModal?.group_code}`} size="md"
+        description={`Vous évaluez en tant que ${ROLE_LABELS[gradeModal?.jury_role] || 'membre du jury'}. Remplissez les notes ci-dessous.`}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)' }}>
             <p style={{ fontSize: '14px', fontWeight: 600 }}>{gradeModal?.project_name}</p>
@@ -154,6 +198,19 @@ export default function TeacherJury() {
                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{gradeModal.schedule.date} à {gradeModal.schedule.time} — {gradeModal.schedule.room}</p>
             )}
             
+            {/* Role badge */}
+            <div style={{ marginTop: '10px' }}>
+              <span style={{ 
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '5px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 700,
+                background: `${ROLE_COLORS[gradeModal?.jury_role] || '#6B7280'}15`,
+                color: ROLE_COLORS[gradeModal?.jury_role] || '#6B7280',
+                border: `1px solid ${ROLE_COLORS[gradeModal?.jury_role] || '#6B7280'}30`,
+              }}>
+                {ROLE_LABELS[gradeModal?.jury_role] || 'Membre du jury'}
+              </span>
+            </div>
+
             {(gradeModal?.attachments || []).length > 0 && (
               <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Documents :</p>
@@ -174,22 +231,17 @@ export default function TeacherJury() {
             </label>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Présentation ({platformSettings?.presentation_weight || 20}%)</label>
-              <input type="number" min="0" max="20" step="0.5" value={evalMarks.presentation} onChange={e => setEvalMarks({...evalMarks, presentation: e.target.value})} placeholder="/20"
-                style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none' }}/>
-            </div>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Document ({platformSettings?.document_weight || 30}%)</label>
-              <input type="number" min="0" max="20" step="0.5" value={evalMarks.document} onChange={e => setEvalMarks({...evalMarks, document: e.target.value})} placeholder="/20"
-                style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none' }}/>
-            </div>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Démo ({platformSettings?.demo_weight || 50}%)</label>
-              <input type="number" min="0" max="20" step="0.5" value={evalMarks.demo} onChange={e => setEvalMarks({...evalMarks, demo: e.target.value})} placeholder="/20"
-                style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none' }}/>
-            </div>
+          {/* Dynamic grade fields based on role */}
+          <div style={{ display: 'grid', gridTemplateColumns: getCriteriaForRole(gradeModal?.jury_role).length === 1 ? '1fr' : '1fr 1fr', gap: '10px' }}>
+            {getCriteriaForRole(gradeModal?.jury_role).map((c, i) => (
+              <div key={i}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  {c.name} <span style={{ color: 'var(--primary)', fontSize: '10px' }}>({c.weight}%)</span>
+                </label>
+                <input type="number" min="0" max="20" step="0.5" value={evalMarks[c.name] || ''} onChange={e => setEvalMarks({...evalMarks, [c.name]: e.target.value})} placeholder="/20"
+                  style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none' }}/>
+              </div>
+            ))}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
@@ -204,7 +256,7 @@ export default function TeacherJury() {
           </div>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
             <button onClick={() => setGradeModal(null)} style={{ padding: '9px 20px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>{t('Cancel')}</button>
-            <button onClick={() => submitJuryGrade(gradeModal.PID_id)} disabled={!evalMarks.presentation || !evalMarks.document || !evalMarks.demo || submitting} style={{ padding: '9px 20px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: (submitting || !evalMarks.presentation || !evalMarks.document || !evalMarks.demo) ? 'not-allowed' : 'pointer', opacity: (submitting || !evalMarks.presentation || !evalMarks.document || !evalMarks.demo) ? 0.5 : 1 }}>
+            <button onClick={() => submitJuryGrade(gradeModal.PID_id)} disabled={!allFieldsFilled() || submitting} style={{ padding: '9px 20px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: (!allFieldsFilled() || submitting) ? 'not-allowed' : 'pointer', opacity: (!allFieldsFilled() || submitting) ? 0.5 : 1 }}>
               {submitting ? '...' : `✓ ${t('Confirm')}`}
             </button>
           </div>
