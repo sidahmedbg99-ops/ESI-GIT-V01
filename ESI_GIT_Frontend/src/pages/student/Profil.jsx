@@ -1,4 +1,4 @@
-import { IoPersonOutline, IoMailOutline, IoSchoolOutline, IoCalendarOutline, IoRibbonOutline } from 'react-icons/io5';
+import { IoPersonOutline, IoMailOutline, IoSchoolOutline, IoCalendarOutline, IoRibbonOutline, IoKeyOutline } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
 import { useAuth } from '../../context/AuthContext';

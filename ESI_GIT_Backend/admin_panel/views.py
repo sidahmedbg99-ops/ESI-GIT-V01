@@ -776,8 +776,8 @@ class DepartmentListAPI(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
-        departments = Department.objects.all().order_by("name")
-        serializer = DepartmentSerializer(departments, many=True)
+        departments = Department.objects.all()
+        serializer  = DepartmentSerializer(departments, many=True)
         return Response(serializer.data)
 
 
@@ -808,15 +808,15 @@ class SpecialtyListCreateAPI(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        name = request.data.get("name", "").strip()
-        if not name:
-            return Response({"error": "Name is required."}, status=status.HTTP_400_BAD_REQUEST)
-        dept = Department.objects.exclude(name__icontains="prep").first() or Department.objects.first()
-        if not dept:
-            return Response({"error": "No department found. Run seed first."}, status=status.HTTP_400_BAD_REQUEST)
-        specialty = Specialty.objects.create(name=name, department=dept)
-        return Response(SpecialtySerializer(specialty).data, status=status.HTTP_201_CREATED)
-
+        name      = request.data.get("name", "").strip()
+        full_name = request.data.get("full_name", "").strip()
+        if not name or not full_name:
+            return Response({"error": "name and full_name are required."}, status=400)
+        sup_dept = Department.objects.filter(cycle="SUP").first()
+        if not sup_dept:
+            return Response({"error": "SUP department not found. Run seed first."}, status=400)
+        specialty = Specialty.objects.create(name=name, full_name=full_name, department=sup_dept)
+        return Response(SpecialtySerializer(specialty).data, status=201)
 
 class SpecialtyDetailAPI(APIView):
     """

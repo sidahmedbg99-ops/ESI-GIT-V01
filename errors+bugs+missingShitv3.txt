@@ -1,0 +1,217 @@
+*ADMIN:
+    #Dashboard:
+        -tasks , either better equivalent or just keep
+        ?students at risk
+    #Users:
+        +fix more than 50 user not showing bug
+        #AddUser:
+            fix add user for teacher id the div is removed but its still needs to be filled
+            specialty dropdown menu not working
+        #EditUser:
+            specialty dropdown menu not working // in adduser
+        #ImportUsers:
+            check it seems not working
+    #Groups:
+        !students without group not showing correct stats + change the active stat to approved .
+        !admin creates students with out a group 
+            +should have a drop down menu for the level 2cpi 3cs etc
+            after selecting the level , the student list shows up with the filters that they are in no groups currently , archived isnt included since its already done 
+            -auto generate code , meaning it dosent show as input
+            +after creating the group , the leader should be notified that he needs to change the project title , since we will have it as default "temp" if the admin creates it and we just give a notice on the form that the title will be "temp"
+
+
+        
+        +schedule presentation date ui (my teammate did one)
+        !if the groups all are full , and there is < 3 students without a group
+    #Platform Analytics:
+        ?how does student activity work ?success rate what is it ?what is students at risk ?grading patterns ?usage trends ?grade trends
+        ?active
+        !characters not showing correctly when exporting data
+    #Archive:
+        -AvgGrade_Stat change the name
+        !grades not showing and group members not showing
+        "academic year" what does it get its data from
+
+        +add level filter
+        +add by specific supervisor (with pagination)
+        +add by student (with pagination)
+    #Settings:
+        +jury and archive toggle dosent work
+        +contact email not saving
+        +specialty fix :
+            when create a specialty you create the auto increment the id and add the department is always the cycle superier , make in mind that we will use french and english so prob we should store it as "SUP" for superior / superieur
+            the admin when he adds the specialty he adds the name of it and the abreviation , the abr will be stored in the specialty name which is in the model , and we add a new field for fullname with the fullname
+        +department fix: 
+            we always have 2 prep and sup cycle , students from 1 to 2nd year are in prep , from 3 to 5 are in sup , always default , specialties only are in the sup
+        +Type de project : 
+            this field from Platform settings is deleted since we decided not to use it , and instead we make this option in the forms (not in the database) show the actual types  of the project like web or app etc , and the options will be the usual ones and a other type , no free input just "others"
+
+
+        check the specialty adding system
+        +notification system not implemented , admin cant send notifications
+    #Profile:
+        !add a tag for teacher in case user is both admin+user
+
+*TEACHER:
+    #Dashboard:
+        my groups dosent show the project title , we remove the invite code from the list
+
+        remove the invite code from the jury defense
+        ?does supervised groups have archived ones
+        ?Completion Rate , same qst in admin
+        ?how is Average Progress calculated
+        ?Tasks by priority and Task state
+        !move pending meetings up instead of task state , more frequent use        
+    #MyGroups:
+        +groups arent showing their title
+        !remove supervision requests , its already in requests
+        request message is static
+
+        ?how is project progress calculated
+        
+        
+        #CLICKING ON A GROUP:
+            !github should be already there if the student uploaded their repo teacher cant modify it
+            -ID project
+            
+
+    #Meetings:
+        +sort the meetings by date
+
+        +"no pending supervision requests" if there is no meetings
+    #Requests:
+        !red pop up if there is new stuff (the new stuff should be on notifications too, so do we skip this and let him read from the notifications?)
+        #Supervision requests:
+            -Code:PRJ-1 no need for it displayed 
+            +should display the project title not team title which needs to be gone
+            +notification didnt pop up for the request but accepting it shows the noti for sutdent (just this or the whole system is bugged?)
+            -request message is static , change it with actual supervision request message
+    #Jury:
+        +who inputs the grades ask in meeting
+        +add the teachers role in each jury , if he is examinator / president 
+    #Archive:
+        +archive not showing at all
+    #Profile:
+
+*STUDENT:
+    #Dashboard:
+        +add supervisor tasks stats , from sidahmed repo
+        +My group card dosent show teacher name 
+    #Groups:
+        #Create a group:
+            !supervisors with the flag firstlogin true musnt be on the supervisors list
+            !choices need to be fixed (e.g. no frontend on robotics)
+        #MyGroup:
+            -the current group card have duplicates of team name
+            +Project validation should check if you have any documents uploaded , if so send the request with the "ProjectDocs" (supervisor should be able to see them always since he also is working along the students so if there is a request he just checks the projectdocs) else tell the user that he needs documents first
+            +the "trouver un encadreur" dosent show if you already sent a request and its not rejected
+
+            +private repo possibility
+            - 1/6 members , 6 members isnt the required but the max , however
+            !min is 3 which should be noted if <3 members on the group
+            ?invitation code cant be guessed for security measures
+
+    #Meetings:
+        +page should be inaccessible if no supervisor
+        +Any meeting after the end or before the academic year ending / starting should be invalid 
+        +encadreur avatar bubble and name isnt showing , just __
+    #Tasks:
+        +should be more specific in the error when creating a task and the required fields + dont let the pop window go if the creation is incorrect
+        +same logic for meeting dates
+        +edit the task responsability
+        +send notification , might need to check all the notification system
+    #Archive:
+        +not showing at all
+    #Profile:
+        not loading
+
+
+*General:
+    !tokens timeout too short , i have to disconnect each 5 min for the api to work
+    !the create group for student / admin should check if the level is 3cs , if so its a PFE project else its just a Project , with this its auto filled and no need to fill it by the user 
+    !for the actual project type we have the usual types and "others" in case its not included
+
+
+
+
+------------------------------------unrelated improvments-------------------------------------------------
+-have a notification page where you can browse all your notifications , if we must we can add a cleaning system after 2 years or so
+-there seems to be time issue with the tokens , after a certain time you have to disconnect to use your functions again , worth looking into
+----------------------------------------------------------------------------------------------------------
+
+
+
+
+-------------------------------------------FLAGS----------------------------------------------------------
+F1: Student specialty — how do they get it?
+F2: Staff department field may be useless
+F3: current_academic_year bump logic — "Close year & advance" button
+F4: jury_page_visible check in TeacherJuryListView
+F5: i18n translations — set up i18next then switch notifications to keys
+F6: GitHub private repo support via token in .env
+F7: Supervisor.jsx — show rejection status clearly (rejected = can't resend)
+F8: Login.jsx — save generated password in memory for first login flow
+F9: Groupe.jsx — project type dropdown + Other free text option
+F10: StudentGroupStatusView + PublicSettingsView — confirm with teammate
+F11: Admin schedule creation UI (Part 6 above)
+F12: simpleeval — swap eval() in grading engine for proper sandbox
+F13: Supervisor request rejected — make clear in UI student can't resend
+F14: /student/encadreur and /teacher/requests sidebar — decide if permanent or contextual
+F15: rading form hardcoded — needs to read GradingFormula.labels dynamically. 
+     Endpoint: PATCH /api/jury/teacher/grades/<pid>/
+F16:Email backend — swap console to Gmail SMTP when ready
+F17: github_url save broken — hits student-only endpoint. Needs teacher-side PATCH
+F18: Cancel has no reason prompt — cancellation_reason field exists on model but nothing sends it
+----------------------------------------------------------------------------------------------------------
+
+
+
+
+===========================================LEGEND=========================================================
+* --> roles
+# --> pages
+- --> delete
++ --> add / fix
+? --> why do we need it
+! --> ideas / improvments / what ifs
+==========================================================================================================
+
+
+
+
+Verification order from claude:
+
+    Auth flow
+
+        Login works (normal + first-login password change)
+        Role redirect works (student/teacher/admin go to right dashboard)
+
+    Admin
+
+        Users CRUD (create student, create staff, edit, no password change for others)
+        Groups list, sidebar panel (students without group)
+        Jury assignment gate (only shows for final_submission_approved groups)
+        Archive page, tech tags display correctly
+        Settings page, Analytics page
+
+    Teacher
+
+        Dashboard loads with stats
+        Groups page, supervisor requests tab
+        Meetings (accept/reject)
+        Jury page (grades — will be hardcoded for now, F15 is a flag)
+        Profile (availability toggle + password change)
+
+    Student
+
+        Group page (create/join flow, submission to supervisor)
+        Supervisor page (send request, see status)
+        Meetings (request, cancel)
+        Tasks
+        Archive
+
+    Things expected to NOT work yet (flags)
+
+        F15: Jury grading formula dynamic form
+        F17: Teacher saving github_url
+        F19: Meeting cancel reason prompt

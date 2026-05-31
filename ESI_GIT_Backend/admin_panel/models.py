@@ -11,23 +11,27 @@ class TimeStampedModel(models.Model):
 
 
 class Department(TimeStampedModel):
-    id   = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255, unique=True)
+    PREP = 'PREP'
+    SUP  = 'SUP'
+    CYCLE_CHOICES = [(PREP, 'Preparatory Cycle'), (SUP, 'Superior Cycle')]
+
+    id    = models.AutoField(primary_key=True)
+    cycle = models.CharField(max_length=10, choices=CYCLE_CHOICES, unique=True)
 
     def __str__(self):
-        return self.name
-
+        return self.cycle
 
 class Specialty(TimeStampedModel):
     id         = models.AutoField(primary_key=True)
-    name       = models.CharField(max_length=255)
+    name       = models.CharField(max_length=50, unique=True)   # abbreviation e.g. "ISI"
+    full_name  = models.CharField(max_length=255)                # e.g. "Computer Systems Engineering"
     department = models.ForeignKey(
         Department, on_delete=models.CASCADE, related_name="specialties"
     )
 
     def __str__(self):
-        return f"{self.name} - {self.department.name}"
-
+        return f"{self.name} - {self.full_name}"
+    
 
 class PlatformSettings(models.Model):
     """
@@ -43,10 +47,8 @@ class PlatformSettings(models.Model):
     # added: displayed across the platform e.g. "2024-2025"
     current_academic_year              = models.CharField(max_length=20, default="2024-2025")
 
-    # added: comma-separated allowed project types
-    # frontend reads this to populate the type dropdown when creating a project
-    # instead of hardcoding options in the frontend
-    project_types                      = models.TextField(default="PFE,Stage,Projet")
+    
+    
 
     # added: shown on public pages (Home, About) before login
     contact_email                      = models.CharField(max_length=100, default="contact@esi.dz")

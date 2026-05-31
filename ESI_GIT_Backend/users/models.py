@@ -56,10 +56,8 @@ class Student(AbstractBaseUser, PermissionsMixin):
     last_name     = models.CharField(max_length=100)
     academic_year = models.CharField(max_length=9, null=True, blank=True)
     level         = models.IntegerField(null=True, blank=True)
-    specialty     = models.CharField(max_length=100, null=True, blank=True)
-
-    # added: department for filtering and display
-    department    = models.CharField(max_length=100, null=True, blank=True)
+    specialty  = models.ForeignKey('admin_panel.Specialty', on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey('admin_panel.Department', on_delete=models.SET_NULL, null=True, blank=True)
 
     is_first_login = models.BooleanField(default=True)
     is_active      = models.BooleanField(default=True)
@@ -120,9 +118,8 @@ class Staff(AbstractBaseUser):
     is_teacher = models.BooleanField(default=True)
     available  = models.BooleanField(default=True)
 
-    # added: specialty and department for filtering and display
-    specialty  = models.CharField(max_length=100, null=True, blank=True)
-    department = models.CharField(max_length=100, null=True, blank=True)
+    specialty  = models.ForeignKey('admin_panel.Specialty', on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey('admin_panel.Department', on_delete=models.SET_NULL, null=True, blank=True)
 
     is_first_login = models.BooleanField(default=True)
     is_active      = models.BooleanField(default=True)
