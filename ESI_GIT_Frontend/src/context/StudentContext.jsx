@@ -43,6 +43,7 @@ export function StudentProvider({ children }) {
       title: myGroup.name,
       InviteCode: myGroup.invite_code,
       joinCode: myGroup.invite_code,
+      groupCode: myGroup.invite_code,
       members: (myGroup.members || []).map(m => ({
         ...m,
         _id: m.student_id || m.CID || m.id || m.student_email,
@@ -66,6 +67,7 @@ export function StudentProvider({ children }) {
     };
   }, [user]);
 
+  const _allTasks = Object.values(tasks).flat();
   useEffect(() => {
     if (!user?._id) return;
     
@@ -151,6 +153,7 @@ export function StudentProvider({ children }) {
     } catch (e) { 
       console.error(e); 
       toast.error('Erreur lors de la création');
+      throw e; // re-throw so callers (e.g. Taches.jsx) can display the error
     }
   }, [group, pushActivity]);
 
@@ -291,6 +294,7 @@ export function StudentProvider({ children }) {
     globalProgress:  allTasks.length > 0 ? Math.round((tasks.done.length / allTasks.length) * 100) : 0,
     meetingsCount:   meetings.filter(m => m.status !== 'rejected').length,
     livrablesCount:  livrables.length,
+    teacherTasksCompleted: allTasks.filter(t => t.assignedByTeacher && (t.progress === 100 || t.state === 'done')).length,
     teacherTasksCount: allTasks.filter(t => t.assignedByTeacher).length,
   };
 

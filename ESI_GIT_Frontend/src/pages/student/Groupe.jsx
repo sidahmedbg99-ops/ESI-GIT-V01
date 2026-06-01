@@ -27,6 +27,26 @@ import { toast } from 'react-hot-toast';
 
 const ROLE_MAP = Object.fromEntries(ROLE_OPTIONS.map(r => [r.value, r]));
 
+// Contextual roles based on specialty keywords
+const SPECIALTY_ROLE_MAP = {
+  robotics:  ['fullstack', 'backend'],   // no frontend/design for robotics/embedded
+  embedded:  ['fullstack', 'backend'],
+  network:   ['fullstack', 'backend'],
+  security:  ['fullstack', 'backend'],
+  cyber:     ['fullstack', 'backend'],
+  default:   ['frontend', 'backend', 'design', 'fullstack'],
+};
+
+function getRolesForSpecialty(specialty) {
+  if (!specialty) return ROLE_OPTIONS;
+  const lower = specialty.toLowerCase();
+  for (const [key, allowed] of Object.entries(SPECIALTY_ROLE_MAP)) {
+    if (key === 'default') continue;
+    if (lower.includes(key)) return ROLE_OPTIONS.filter(r => allowed.includes(r.value));
+  }
+  return ROLE_OPTIONS;
+}
+
 export default function Groupe() {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -69,9 +89,14 @@ export default function Groupe() {
   const [editTech, setEditTech] = useState('');
   const [editType, setEditType] = useState('');
   const [publicSettings, setPublicSettings] = useState(null);
-  const [projectType, setProjectType] = useState('PFE');
+  // Auto-detect project type: level 5 (M2 / 3CS final year) = PFE, else Web
+  const autoProjectType = Number(user?.level) >= 5 ? 'PFE' : 'Web';
+  const [projectType, setProjectType] = useState(autoProjectType);
   const [customProjectType, setCustomProjectType] = useState(''); // F9: free-text when "Autre" selected
   const [customEditType, setCustomEditType] = useState('');       // F9: free-text for edit modal
+
+  // Available roles depend on the student's specialty
+  const availableRoles = getRolesForSpecialty(user?.specialty);
 
   useEffect(() => {
     groupApi.getPublicSettings()
@@ -453,8 +478,8 @@ export default function Groupe() {
                 <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>{t('CurrentGroup')}</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                   <div>
-                    <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{team.Name || team.name}</h2>
-                    <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>{team.title}</p>
+                    <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{team.title || team.Name || team.name}</h2>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>{t('Group')}: {team.Name || team.name}</p>
                   </div>
                   {team.members?.find(m => m.isMe)?.isChef && (
                     <Button variant="outline" size="sm" onClick={() => setShowEditModal(true)} style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} icon={<IoRocketOutline size={14}/>}>
@@ -483,6 +508,17 @@ export default function Groupe() {
             </div>
           </Card>
           
+          {/* Min 3 members warning */}
+          {(team.members || []).length < 3 && (
+            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', border: '1.5px solid #F59E0B', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+              <div>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>Équipe incomplète</p>
+                <p style={{ fontSize: '12px', color: '#78350F' }}>Votre groupe a {(team.members || []).length} membre(s). Le minimum requis est <strong>3 membres</strong> pour soumettre un projet.</p>
+              </div>
+            </div>
+          )}
+
           {/* Supervisor Management Section */}
           {!team.supervisorApproved && team.members?.find(m => m.isMe)?.isChef && (
             <Card style={{ marginBottom: '24px', border: '1.5px dashed var(--primary)', background: 'var(--primary-subtle)' }}>
@@ -689,7 +725,7 @@ export default function Groupe() {
                       </p>
                     </div>
                     <a
-                      href={file.url.startsWith('http') ? file.url : `http://localhost:8000${file.url}`}
+                      href={file.url ? (file.url.startsWith('http') ? file.url : `http://localhost:8000${file.url}`) : '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ padding: '6px 12px', borderRadius: '6px', background: file.is_final ? '#10B981' : 'var(--primary)', color: '#fff', fontSize: '12px', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}
@@ -827,7 +863,7 @@ export default function Groupe() {
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{t('TeamMembers')}</h3>
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{team.members.length} membre{team.members.length > 1 ? 's' : ''}</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{(team.members || []).length} membre{(team.members || []).length > 1 ? 's' : ''}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {team.members?.map((m, i) => {
@@ -940,34 +976,27 @@ export default function Groupe() {
                     </div>
                     <div>
                       <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Type de projet</label>
-                      <select value={projectType} onChange={e => { setProjectType(e.target.value); if (e.target.value !== 'Autre') setCustomProjectType(''); }} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
-                        {publicSettings?.project_types?.split(',').map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        )) || (
-                          <>
-                            <option>PFE</option>
-                            <option>Stage</option>
-                            <option>Projet</option>
-                          </>
-                        )}
-                        <option value="Autre">Autre...</option>
-                      </select>
-                      {projectType === 'Autre' && (
-                        <input
-                          type="text"
-                          value={customProjectType}
-                          onChange={e => setCustomProjectType(e.target.value)}
-                          placeholder="Précisez le type de projet..."
-                          style={{ marginTop: '8px', width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--primary)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}
-                          autoFocus
-                        />
+                      {Number(user?.level) >= 5 ? (
+                        <div style={{ padding: '11px 14px', background: 'var(--primary-subtle)', border: '1.5px solid var(--primary)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          🎓 PFE — <span style={{ fontWeight: 400, fontSize: '12px', color: 'var(--text-secondary)' }}>Détecté automatiquement (niveau M2 / 3CS)</span>
+                        </div>
+                      ) : (
+                        <select value={projectType} onChange={e => setProjectType(e.target.value)} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
+                          <option value="Web">Web</option>
+                          <option value="Mobile App">Mobile App</option>
+                          <option value="Desktop App">Desktop App</option>
+                          <option value="AI / ML">AI / ML</option>
+                          <option value="IoT / Embedded">IoT / Embedded</option>
+                          <option value="Cybersecurity">Cybersecurity</option>
+                          <option value="Autre">Autre</option>
+                        </select>
                       )}
                     </div>
                     <div>
                       <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Role')}</label>
                       <select value={creatorRole} onChange={e => setCreatorRole(e.target.value)} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
-                        {ROLE_OPTIONS.map(r => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
+                        {availableRoles.map(r => (
+                          <option key={r.value} value={r.value}>{r.icon} {r.label}</option>
                         ))}
                       </select>
                     </div>
@@ -1129,7 +1158,7 @@ export default function Groupe() {
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>{t('Role')} souhaité</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      {ROLE_OPTIONS.map(r => (
+                      {availableRoles.map(r => (
                         <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', cursor: 'pointer', border: joinRole === r.value ? '2px solid var(--primary)' : '1px solid var(--border)', background: joinRole === r.value ? '#fff' : 'var(--bg)', boxShadow: joinRole === r.value ? '0 4px 12px rgba(79,70,229,0.1)' : 'none', transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}>
                           {joinRole === r.value && <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--primary)' }} />}
                           <input type="radio" name="joinRole" value={r.value} checked={joinRole === r.value} onChange={() => setJoinRole(r.value)} style={{ display: 'none' }} />
@@ -1192,28 +1221,15 @@ export default function Groupe() {
           <Input label="Technologies (ex: React, Django, PostgreSQL)" value={editTech} onChange={e => setEditTech(e.target.value)} />
           <div>
             <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Type de projet</label>
-            <select value={editType} onChange={e => { setEditType(e.target.value); if (e.target.value !== 'Autre') setCustomEditType(''); }} style={{ width: '100%', padding: '12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
-              {publicSettings?.project_types?.split(',').map(t => (
-                <option key={t} value={t}>{t}</option>
-              )) || (
-                <>
-                  <option>PFE</option>
-                  <option>Stage</option>
-                  <option>Projet</option>
-                </>
-              )}
-              <option value="Autre">Autre...</option>
+            <select value={editType} onChange={e => setEditType(e.target.value)} style={{ width: '100%', padding: '12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
+              <option value="Web">Web</option>
+              <option value="Mobile App">Mobile App</option>
+              <option value="Desktop App">Desktop App</option>
+              <option value="AI / ML">AI / ML</option>
+              <option value="IoT / Embedded">IoT / Embedded</option>
+              <option value="Cybersecurity">Cybersecurity</option>
+              <option value="Others">Others</option>
             </select>
-            {editType === 'Autre' && (
-              <input
-                type="text"
-                value={customEditType}
-                onChange={e => setCustomEditType(e.target.value)}
-                placeholder="Précisez le type de projet..."
-                style={{ marginTop: '8px', width: '100%', padding: '12px', background: 'var(--bg)', border: '1px solid var(--primary)', borderRadius: '10px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}
-                autoFocus
-              />
-            )}
           </div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
             <Button variant="outline" style={{ flex: 1 }} onClick={() => setShowEditModal(false)}>Annuler</Button>

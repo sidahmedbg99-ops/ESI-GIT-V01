@@ -186,13 +186,20 @@ export default function Taches() {
     }));
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     setFormError('');
 
-    // Validate required fields
-    if (!newTask.title.trim()) { setFormError('Veuillez saisir un titre pour la tâche.'); return; }
-    if (!newTask.deadline)    { setFormError('Veuillez choisir une date limite.'); return; }
+    // Validate required fields with specific messages
+    if (!newTask.title.trim()) { setFormError('Le titre de la tâche est obligatoire.'); return; }
+    if (!newTask.deadline)     { setFormError('La date limite est obligatoire.'); return; }
+    // Validate deadline is not in the past
+    const dlDate = new Date(newTask.deadline); dlDate.setHours(23, 59, 59);
+    if (dlDate < new Date()) { setFormError('La date limite ne peut pas être dans le passé.'); return; }
+    if (newTask.assignees.length === 0 && members.length > 0) {
+      setFormError('Veuillez assigner la tâche à au moins un membre.');
+      return;
+    }
 
     const col = newTask.column ?? 'todo';
     const taskData = {
@@ -203,10 +210,15 @@ export default function Taches() {
       tag: newTask.tag,
       assigneeIds: newTask.assignees,
     };
-    addTaskObject(taskData, col);
-    setModalOpen(false);
-    setNewTask(EMPTY_FORM);
-    setFormError('');
+    try {
+      await addTaskObject(taskData, col);
+      setModalOpen(false);
+      setNewTask(EMPTY_FORM);
+      setFormError('');
+    } catch (err) {
+      const msg = err?.response?.data?.detail || err?.response?.data?.error || 'Erreur lors de la création de la tâche.';
+      setFormError(msg);
+    }
   };
 
   if (!group) {

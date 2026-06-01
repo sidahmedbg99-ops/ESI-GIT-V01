@@ -40,13 +40,19 @@ class TaskListCreateView(APIView):
     def post(self, request):
         student = request.user
 
-        # any member of the project can create tasks (business rule)
         try:
             membership = SProjects.objects.get(CID=student, PID__year=student.academic_year, PID__archived=False)
         except SProjects.DoesNotExist:
             return Response(
                 {"error": "You are not in any project this year"},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # only leader can create tasks
+        if not membership.is_leader:
+            return Response(
+                {"error": "Only the project leader can create tasks"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         serializer = CreateTaskSerializer(data=request.data)

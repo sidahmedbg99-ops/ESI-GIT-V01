@@ -16,7 +16,7 @@ class Department(TimeStampedModel):
     CYCLE_CHOICES = [(PREP, 'Preparatory Cycle'), (SUP, 'Superior Cycle')]
 
     id    = models.AutoField(primary_key=True)
-    cycle = models.CharField(max_length=10, choices=CYCLE_CHOICES, unique=True)
+    cycle = models.CharField(max_length=10, choices=CYCLE_CHOICES, unique=True, default='PREP')
 
     def __str__(self):
         return self.cycle
@@ -24,7 +24,7 @@ class Department(TimeStampedModel):
 class Specialty(TimeStampedModel):
     id         = models.AutoField(primary_key=True)
     name       = models.CharField(max_length=50, unique=True)   # abbreviation e.g. "ISI"
-    full_name  = models.CharField(max_length=255)                # e.g. "Computer Systems Engineering"
+    full_name  = models.CharField(max_length=255, default='')                # e.g. "Computer Systems Engineering"
     department = models.ForeignKey(
         Department, on_delete=models.CASCADE, related_name="specialties"
     )

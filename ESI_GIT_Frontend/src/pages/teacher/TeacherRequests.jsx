@@ -81,8 +81,7 @@ export default function TeacherRequests() {
                 <Card key={req.id} style={{ border: '1px solid var(--border)', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div>
-                      <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '2px' }}>{req.projectTitle}</h4>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Code: {req.groupCode}</p>
+                      <h4 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '6px' }}>{req.projectTitle}</h4>
                     </div>
                     <Badge variant="warning">{t('InProgress')}</Badge>
                   </div>

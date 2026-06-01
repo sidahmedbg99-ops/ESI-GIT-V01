@@ -9,6 +9,11 @@ export default function TeacherMeetings() {
   const { meetings, acceptMeeting, rejectMeeting, cancelMeeting } = useTeacher();
   const { t } = useLanguage();
   const list = meetings || [];
+  const sortedList = [...list].sort((a, b) => {
+    const dateA = new Date(`${a.date}T${a.time || '00:00:00'}`);
+    const dateB = new Date(`${b.date}T${b.time || '00:00:00'}`);
+    return dateA - dateB;
+  });
 
   return (
     <DashboardLayout>
@@ -17,14 +22,14 @@ export default function TeacherMeetings() {
         <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('GroupsSupervision')}</p>
       </div>
 
-      {list.length === 0 ? (
+      {sortedList.length === 0 ? (
         <Card style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
           <IoCalendarOutline size={40} style={{ marginBottom: '12px', opacity: 0.3 }}/>
-          <p>{t('NoPendingRequests')}</p>
+          <p>{t('NoPendingRequests') || "Aucune réunion planifiée"}</p>
         </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {list.map(m => (
+          {sortedList.map(m => (
             <Card key={m.id} hover style={{ padding: '18px 22px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                 <div>

@@ -72,7 +72,7 @@ function UserForm({ initial, onSave, onCancel }) {
     form.firstName?.trim() && 
     form.lastName?.trim() && 
     form.email?.trim() && 
-    (isEdit || form.id) &&
+    (isEdit || form.role !== 'student' || form.id) &&
     (form.role !== 'student' || (form.promo && form.department))
   );
 
@@ -184,7 +184,11 @@ function UserForm({ initial, onSave, onCancel }) {
                   <Input value={form.promo || ''} onChange={e => set('promo', e.target.value)} placeholder="ex: 2024-2025" />
                 </Field>
                 <Field label={t('Year')}>
-                  <SelectBox value={form.year} onChange={v => set('year', v)} options={[
+                  <SelectBox value={form.year} onChange={v => {
+                    // Auto-set department based on year
+                    const cycle = (v === 'L1' || v === 'L2') ? 'PREP' : 'SUP';
+                    setForm(f => ({ ...f, year: v, department: cycle }));
+                  }} options={[
                     { value: 'L1', label: '1ère Année (1CPI)' },
                     { value: 'L2', label: '2ème Année (2CPI)' },
                     { value: 'L3', label: '3ème Année (1CS / 3CS)' },
@@ -197,9 +201,7 @@ function UserForm({ initial, onSave, onCancel }) {
                     <SelectBox 
                       value={form.specialite || ''} 
                       onChange={v => set('specialite', v)} 
-                      options={[
-                        specialties.map(s => ({ value: s.name, label: s.name }))
-                      ]}
+                      options={specialties.map(s => ({ value: s.name, label: s.full_name ? `${s.name} — ${s.full_name}` : s.name }))}
                     />
                   </Field>
                 )}
@@ -217,7 +219,11 @@ function UserForm({ initial, onSave, onCancel }) {
                   <SelectBox value={form.department || (departments[0]?.name || 'Informatique')} onChange={v => set('department', v)} options={departments.map(d => ({ value: d.name, label: d.name }))}/>
                 </Field>
                 <Field label={t('TeachingSpecialty')}>
-                  <Input value={form.specialty || ''} onChange={e => set('specialty', e.target.value)} placeholder="e.g. AI, Software Engineering"/>
+                  <SelectBox 
+                    value={form.specialty || ''} 
+                    onChange={v => set('specialty', v)} 
+                    options={[{ value: '', label: '— Aucune —' }, ...specialties.map(s => ({ value: s.name, label: s.full_name ? `${s.name} — ${s.full_name}` : s.name }))]}
+                  />
                 </Field>
                 <Field label={t('AvailableForSupervision')}>
                   <SelectBox value={String(form.available !== false)} onChange={v => set('available', v === 'true')} options={[{ value: 'true', label: `✅ ${t('Available')}` }, { value: 'false', label: `❌ ${t('Unavailable')}` }]}/>

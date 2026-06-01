@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { IoPersonOutline, IoMailOutline, IoSchoolOutline, IoCalendarOutline, IoRibbonOutline, IoKeyOutline } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { authApi } from '../../api/auth';
@@ -8,6 +10,10 @@ import { authApi } from '../../api/auth';
 export default function Profil() {
   const { user } = useAuth();
   const { t } = useLanguage();
+
+  const [passForm, setPassForm] = useState({ current: '', next: '', confirm: '' });
+  const [passMsg, setPassMsg] = useState('');
+  const [saved, setSaved] = useState(false);
 
   return (
     <DashboardLayout>
@@ -35,22 +41,28 @@ export default function Profil() {
           <Card>
             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '20px' }}>{t('PersonalInfo')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                { label: t('FullName'), value: user?.full_name || user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '—', icon: <IoPersonOutline size={16}/> },
-                { label: t('Email'),   value: user?.email || '—', icon: <IoMailOutline size={16}/> },
-                { label: t('Year'),    value: (['L1', 'L2', 'L3', 'M1', 'M2'][Number(user?.level) - 1]) || (user?.level ? `Niveau ${user.level}` : '—'), icon: <IoSchoolOutline size={16}/> },
-                { label: t('Specialty'), value: user?.specialty || '—', icon: <IoSchoolOutline size={16}/> },
-                { label: 'Département', value: user?.department || '—', icon: <IoSchoolOutline size={16}/> },
-                { label: t('Promotion'), value: user?.academic_year || '—', icon: <IoCalendarOutline size={16}/> },
-              ].map((field, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>{field.icon}</div>
-                  <div>
-                    <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px' }}>{field.label}</p>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{field.value}</p>
+              {
+                [
+                  { label: t('FullName'), value: user?.full_name || user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || '—', icon: <IoPersonOutline size={16}/> },
+                  { label: t('Email'),   value: user?.email || '—', icon: <IoMailOutline size={16}/> },
+                  { label: t('Year'),    value: (['1 CPI', '2 CPI', '1 CS', '2 CS', '3 CS'][Number(user?.level) - 1]) || (user?.level ? `Niveau ${user.level}` : '—'), icon: <IoSchoolOutline size={16}/> },
+                  user?.specialty ? { label: t('Specialty'), value: user.specialty, icon: <IoSchoolOutline size={16}/> } : null,
+                  { 
+                    label: 'Département', 
+                    value: user?.department === 'PREP' ? 'Cycle Préparatoire' : (user?.department === 'SUP' ? 'Cycle Supérieur' : (user?.department || '—')), 
+                    icon: <IoSchoolOutline size={16}/> 
+                  },
+                  { label: t('Promotion'), value: user?.academic_year || '—', icon: <IoCalendarOutline size={16}/> },
+                ].filter(Boolean).map((field, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>{field.icon}</div>
+                    <div>
+                      <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '3px' }}>{field.label}</p>
+                      <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{field.value}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              }
             </div>
             <div style={{ marginTop: '16px', padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px dashed var(--border)' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>

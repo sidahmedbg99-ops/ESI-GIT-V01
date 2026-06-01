@@ -362,14 +362,14 @@ class AdminAssignStudentView(APIView):
 # ─────────────────────────────────────────
 from users.permissions import IsStudent
 from .serializers import CreateProjectSerializer, ProjectSerializer
-import random
+import secrets
 import string
 
 
 def generate_invite_code():
-    chars = string.ascii_letters + string.digits
+    chars = string.ascii_uppercase + string.digits  # consistent with uppercase invite codes
     while True:
-        code = "".join(random.choices(chars, k=8))
+        code = "".join(secrets.choice(chars) for _ in range(8))
         if not Projects.objects.filter(invite_code=code).exists():
             return code
 
@@ -841,6 +841,7 @@ class AvailableSupervisorsView(APIView):
             available=True,
             is_blocked=False,
             is_teacher=True,
+            is_first_login=False,
         ).order_by("last_name", "first_name")
 
         data = [
@@ -852,8 +853,8 @@ class AvailableSupervisorsView(APIView):
                 "last_name": t.last_name,
                 "name": f"{t.first_name} {t.last_name}",
                 "full_name": f"{t.first_name} {t.last_name}",
-                "specialty": t.specialty or "",
-                "department": t.department or "",
+                "specialty": t.specialty.name if t.specialty else "",
+                "department": t.department.cycle if t.department else "",
                 "available": t.available,
             }
             for t in supervisors

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -29,24 +29,6 @@ export default function TeacherGroups() {
   const [ghError,    setGhError]    = useState('');
   const [repoCopied, setRepoCopied] = useState(false);
 
-  // Task modal state
-  const [taskModal,       setTaskModal]       = useState(false);
-  const [taskTitle,       setTaskTitle]       = useState('');
-  const [taskDesc,        setTaskDesc]        = useState('');
-  const [taskPriority,    setTaskPriority]    = useState('medium');
-  const [taskDeadline,    setTaskDeadline]    = useState('');
-  const [taskAssigneeIds, setTaskAssigneeIds] = useState([]);
-  const [taskSubmitting,  setTaskSubmitting]  = useState(false);
-
-  // Schedule meeting modal state
-  const [meetModal,      setMeetModal]      = useState(false);
-  const [meetTitle,      setMeetTitle]      = useState('');
-  const [meetDate,       setMeetDate]       = useState('');
-  const [meetTime,       setMeetTime]       = useState('');
-  const [meetType,       setMeetType]       = useState('Présentielle');
-  const [meetDesc,       setMeetDesc]       = useState('');
-  const [meetSubmitting, setMeetSubmitting] = useState(false);
-
   const loadGitHub = async (url) => {
     if (!url) return;
     const match = url.match(/github\.com\/([\w.-]+)\/([\w.-]+)/);
@@ -65,6 +47,38 @@ export default function TeacherGroups() {
     finally { setGhLoading(false); }
   };
 
+  useEffect(() => {
+    if (group) {
+      setRepoUrl(group.github_url || '');
+      if (group.github_url) {
+        loadGitHub(group.github_url);
+      } else {
+        setGhData(null);
+        setGhError('');
+      }
+    }
+  }, [selected, group]);
+
+  // Task modal state
+  const [taskModal,       setTaskModal]       = useState(false);
+  const [taskTitle,       setTaskTitle]       = useState('');
+  const [taskDesc,        setTaskDesc]        = useState('');
+  const [taskPriority,    setTaskPriority]    = useState('medium');
+  const [taskDeadline,    setTaskDeadline]    = useState('');
+  const [taskAssigneeIds, setTaskAssigneeIds] = useState([]);
+  const [taskSubmitting,  setTaskSubmitting]  = useState(false);
+
+  // Schedule meeting modal state
+  const [meetModal,      setMeetModal]      = useState(false);
+  const [meetTitle,      setMeetTitle]      = useState('');
+  const [meetDate,       setMeetDate]       = useState('');
+  const [meetTime,       setMeetTime]       = useState('');
+  const [meetType,       setMeetType]       = useState('Présentielle');
+  const [meetDesc,       setMeetDesc]       = useState('');
+  const [meetSubmitting, setMeetSubmitting] = useState(false);
+
+
+
   const handleAssignTask = async () => {
     if (!taskTitle.trim() || !group) return;
     setTaskSubmitting(true);
@@ -82,6 +96,7 @@ export default function TeacherGroups() {
 
   const handleScheduleMeeting = async () => {
     if (!meetTitle.trim() || !meetDate || !meetTime || !group) return;
+    if (!group.TID) { toast.error(t('Error')); return; }
     setMeetSubmitting(true);
     await scheduleMeeting(group._id, {
       title: meetTitle.trim(),
@@ -121,41 +136,6 @@ export default function TeacherGroups() {
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('ClickGroupDetails')}</p>
         </div>
 
-        {/* Categories 1: Requests */}
-        <div style={{ marginBottom: '40px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '14px', color: 'var(--text-primary)' }}>
-            {t('SupervisionRequests')} {pendingRequests.length > 0 && <span style={{ background: '#EF4444', color: '#fff', fontSize: '12px', padding: '2px 8px', borderRadius: '12px', marginLeft: '8px', verticalAlign: 'middle' }}>{pendingRequests.length}</span>}
-          </h2>
-          {pendingRequests.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-              {pendingRequests.map(req => (
-                <Card key={req.id} style={{ padding: '16px', background: 'var(--primary-subtle)', border: '1px solid var(--primary)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{req.projectTitle}</h3>
-                    <Badge variant="warning">{req.groupCode}</Badge>
-                  </div>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                    {(req.members || []).map((m, idx) => (
-                      <span key={idx} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'var(--bg)', border: '1px solid var(--border)', color: m.is_leader ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: m.is_leader ? 700 : 400 }}>
-                        {m.is_leader && '⭐ '}{m.name}
-                      </span>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px', fontStyle: 'italic' }}>
-                    {req.Message ? `"${req.Message}"` : t('NoMessage')}
-                  </p>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button onClick={() => respondToSupervisorRequest(req.id, 'rejected')} style={{ padding: '6px 12px', borderRadius: '8px', background: 'none', border: '1px solid #EF4444', color: '#EF4444', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>{t('Reject')}</button>
-                    <button onClick={() => respondToSupervisorRequest(req.id, 'approved')} style={{ padding: '6px 12px', borderRadius: '8px', background: '#10B981', border: 'none', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>✓ {t('Approve')}</button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', background: 'var(--bg-card)', padding: '16px', borderRadius: '12px', border: '1px dashed var(--border)' }}>{t('NoPendingRequests')}</p>
-          )}
-        </div>
-
         {/* Categories 2: Supervised Groups */}
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '14px', color: 'var(--text-primary)' }}>
@@ -170,7 +150,6 @@ export default function TeacherGroups() {
                       <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{g.title}</h3>
                       <Badge variant={g.status === 'active' ? 'success' : 'warning'}>{g.status === 'active' ? t('Done') : t('InProgress')}</Badge>
                     </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>{g.groupCode}</p>
                     <div style={{ marginBottom: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                         <span style={{ color: 'var(--text-muted)' }}>{t('ProjectProgress')}</span>
@@ -204,20 +183,12 @@ export default function TeacherGroups() {
       <div style={{ borderRadius: 'var(--radius-2xl)', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, #8B5CF6 100%)', padding: '28px 32px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -30, right: -30, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }}/>
         <button onClick={() => setSelected(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', marginBottom: '14px' }}>← {t('AllGroups')}</button>
-        <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '2px' }}>{team.title}</h2>
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '12px' }}>
-          {team.groupCode} · ID projet : <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: '4px' }}>{team._id}</code>
-        </p>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '14px' }}>{team.title}</h2>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <Badge style={{ background: team.supervisorApproved ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)', color: '#fff', border: 'none' }}>
             {team.final_submission_approved ? `✓ ${t('Approve')}` : team.submitted_to_supervisor ? `📋 ${t('ValidationRequest')}` : `⏳ ${t('InProgress')}`}
           </Badge>
           <Badge style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>{(team.members||[]).length} membre(s)</Badge>
-          {team.joinCode && (
-            <Badge style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-              🔑 {team.joinCode}
-            </Badge>
-          )}
         </div>
       </div>
 
@@ -262,11 +233,14 @@ export default function TeacherGroups() {
           </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
             <input value={repoUrl} onChange={e => setRepoUrl(e.target.value)} placeholder="https://github.com/org/repo"
-              style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}/>
-            <button onClick={() => loadGitHub(repoUrl)} disabled={ghLoading}
-              style={{ padding: '9px 16px', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', opacity: ghLoading ? 0.6 : 1 }}>
-              {ghLoading ? '...' : t('Load')}
-            </button>
+              disabled={!!group?.github_url}
+              style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', opacity: group?.github_url ? 0.75 : 1 }}/>
+            {!group?.github_url && (
+              <button onClick={() => loadGitHub(repoUrl)} disabled={ghLoading}
+                style={{ padding: '9px 16px', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', opacity: ghLoading ? 0.6 : 1 }}>
+                {ghLoading ? '...' : t('Load')}
+              </button>
+            )}
             {repoUrl && (
               <button onClick={() => { navigator.clipboard.writeText(repoUrl); setRepoCopied(true); setTimeout(() => setRepoCopied(false), 1500); }}
                 style={{ padding: '9px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer' }}>

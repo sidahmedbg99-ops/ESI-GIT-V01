@@ -139,9 +139,24 @@ class MeetingDetailView(APIView):
         return Response(MeetingSerializer(meeting).data)
 
     def delete(self, request, meeting_id):
-        # Meetings cannot be deleted by anyone once created.
-        # The frontend should show a warning instead of offering a delete button.
-        return Response(
-            {"error": "Meetings cannot be deleted once created."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
+        student = request.user
+        meeting, membership, err = self._get_meeting_and_membership(student, meeting_id)
+        if err:
+            return err
+
+        # only the leader can delete meetings
+        if not membership.is_leader:
+            return Response(
+                {"error": "Only the project leader can delete meetings"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # cannot delete an approved meeting
+        if meeting.status == "approved":
+            return Response(
+                {"error": "Cannot delete an approved meeting"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        meeting.delete()
+        return Response({"message": "Meeting deleted successfully."})

@@ -90,7 +90,8 @@ def list_juries(request):
     if not IsStaff().has_permission(request, None):
         return Response({"error": "Staff only"}, status=403)
 
-    juries = ProjectJury.objects.all()
+    # Only include juries for approved projects with final submission approved
+    juries = ProjectJury.objects.filter(PID__status="approved", PID__final_submission_approved=True)
     serializer = ProjectJurySerializer(juries, many=True)
     return Response(serializer.data)
 

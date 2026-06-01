@@ -21,8 +21,14 @@ client.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      const hadToken = !!localStorage.getItem('esi-token');
       localStorage.removeItem('esi-token');
       localStorage.removeItem('esi-user');
+      // Redirect to login if the user was previously authenticated
+      // (avoids redirect loops on the login page itself)
+      if (hadToken && !window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

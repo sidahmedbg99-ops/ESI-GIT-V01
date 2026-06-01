@@ -10,8 +10,8 @@ Both functions:
     environments where the Windows pandas binary is not available).
   - Validate each row through the appropriate serializer.
   - Email credentials for every successfully created account.
-  - Return ``(created_count, error_list)`` so the view can report
-    partial success to the admin.
+  - Return ``(created_count, error_list, user_list)`` so the view can
+    report partial success and display the password list to the admin.
 
 Expected CSV/XLSX columns
 --------------------------
@@ -21,6 +21,42 @@ Staff    : email, first_name, last_name, is_admin, is_teacher
 
 from admin_panel.serializers import CreateStudentSerializer, CreateStaffSerializer
 from admin_panel.services.email_service import send_account_email
+
+
+def _safe_int(value, fallback=None):
+    """Convert a pandas cell (may be float/NaN) to int or fallback."""
+    try:
+        import math
+        if value is None or (isinstance(value, float) and math.isnan(value)):
+            return fallback
+        return int(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _safe_str(value, fallback=None):
+    """Convert a pandas cell to str, stripping whitespace; return fallback for NaN."""
+    try:
+        import math
+        if value is None or (isinstance(value, float) and math.isnan(value)):
+            return fallback
+        s = str(value).strip()
+        return s if s and s.lower() != 'nan' else fallback
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _safe_bool(value, fallback=False):
+    """Convert a pandas cell (may be float 0/1 or bool) to Python bool."""
+    try:
+        import math
+        if value is None or (isinstance(value, float) and math.isnan(value)):
+            return fallback
+        if isinstance(value, bool):
+            return value
+        return bool(int(value))
+    except (TypeError, ValueError):
+        return fallback
 
 
 def import_Student_from_file(file) -> tuple:
@@ -34,7 +70,8 @@ def import_Student_from_file(file) -> tuple:
         file: Django UploadedFile (name must end in ``.xlsx`` or ``.csv``).
 
     Returns:
-        Tuple[int, list]: (number of students created, list of row errors)
+        Tuple[int, list, list]: (number of students created, list of row errors,
+                                  list of {name, email, password} dicts)
     """
     # Lazy import — pandas is only needed when this function is called,
     # not at Django startup (the binary may be platform-specific).
@@ -44,16 +81,17 @@ def import_Student_from_file(file) -> tuple:
 
     created = 0
     errors  = []
+    users   = []
 
     for _, row in df.iterrows():
         data = {
-            "CID":           row.get("CID"),
-            "email":         row.get("email"),
-            "first_name":    row.get("first_name"),
-            "last_name":     row.get("last_name"),
-            "specialty":     row.get("specialty"),
-            "academic_year": row.get("academic_year"),
-            "level":         row.get("level"),
+            "CID":           _safe_int(row.get("CID")),
+            "email":         _safe_str(row.get("email")),
+            "first_name":    _safe_str(row.get("first_name")),
+            "last_name":     _safe_str(row.get("last_name")),
+            "specialty":     _safe_str(row.get("specialty")),
+            "academic_year": _safe_str(row.get("academic_year")),
+            "level":         _safe_str(row.get("level")) or _safe_int(row.get("level")),
         }
 
         serializer = CreateStudentSerializer(data=data)
@@ -62,11 +100,16 @@ def import_Student_from_file(file) -> tuple:
             student, password = serializer.save()
             send_account_email(student.email, password, "student")
             created += 1
+            users.append({
+                "name":     student.full_name,
+                "email":    student.email,
+                "password": password,
+            })
         else:
             # Record which row failed and why
             errors.append({"row": data, "errors": serializer.errors})
 
-    return created, errors
+    return created, errors, users
 
 
 def import_staff_from_file(file) -> tuple:
@@ -77,7 +120,8 @@ def import_staff_from_file(file) -> tuple:
         file: Django UploadedFile (name must end in ``.xlsx`` or ``.csv``).
 
     Returns:
-        Tuple[int, list]: (number of staff created, list of row errors)
+        Tuple[int, list, list]: (number of staff created, list of row errors,
+                                  list of {name, email, password} dicts)
     """
     import pandas as pd
 
@@ -85,14 +129,15 @@ def import_staff_from_file(file) -> tuple:
 
     created = 0
     errors  = []
+    users   = []
 
     for _, row in df.iterrows():
         data = {
-            "email":      row.get("email"),
-            "first_name": row.get("first_name"),
-            "last_name":  row.get("last_name"),
-            "is_admin":   row.get("is_admin", False),
-            "is_teacher": row.get("is_teacher", True),
+            "email":      _safe_str(row.get("email")),
+            "first_name": _safe_str(row.get("first_name")),
+            "last_name":  _safe_str(row.get("last_name")),
+            "is_admin":   _safe_bool(row.get("is_admin"),   fallback=False),
+            "is_teacher": _safe_bool(row.get("is_teacher"), fallback=True),
         }
 
         serializer = CreateStaffSerializer(data=data)
@@ -101,7 +146,12 @@ def import_staff_from_file(file) -> tuple:
             staff, password = serializer.save()
             send_account_email(staff.email, password, "staff")
             created += 1
+            users.append({
+                "name":     staff.full_name,
+                "email":    staff.email,
+                "password": password,
+            })
         else:
             errors.append({"row": data, "errors": serializer.errors})
 
-    return created, errors
+    return created, errors, users

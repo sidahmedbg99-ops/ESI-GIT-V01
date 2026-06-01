@@ -56,7 +56,6 @@ export default function TeacherDashboard() {
 
   const columns = [
     { key: 'title',     label: 'Projet',   render: v => <span style={{ fontSize: '13px', fontWeight: 600 }}>{v}</span> },
-    { key: 'groupCode', label: 'Groupe' },
     { key: 'members',   label: t('Members').split(' ')[0], align: 'center', render: (_, row) => <span style={{ fontWeight: 600 }}>{row?.members?.length || row?.studentIds?.length || 0}</span> },
     { key: 'progress',  label: t('OverallProgress'), render: v => (
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -249,7 +248,6 @@ export default function TeacherDashboard() {
           <Table 
             columns={[
               { key: 'project_name', label: 'Projet', render: v => <span style={{ fontWeight: 600 }}>{v}</span> },
-              { key: 'group_code',   label: 'Groupe' },
               { key: 'specialty',    label: 'Spécialité' },
               { key: 'schedule',     label: 'Soutenance', render: s => s ? `${s.date} ${s.time}` : 'Non planifiée' },
               { key: 'is_evaluated', label: 'Statut', render: v => <Badge variant={v ? 'success' : 'warning'}>{v ? t('Evaluated') : t('ToEvaluate')}</Badge> },

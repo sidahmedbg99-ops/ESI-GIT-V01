@@ -67,6 +67,11 @@ class LoginView(APIView):
                         "email": user.email,
                         "first_name": user.first_name,
                         "last_name": user.last_name,
+                        "full_name": f"{user.first_name} {user.last_name}",
+                        "academic_year": user.academic_year,
+                        "level": user.level,
+                        "specialty": user.specialty.name if user.specialty else None,
+                        "department": user.department.cycle if user.department else ("PREP" if user.level and user.level <= 2 else ("SUP" if user.level and user.level > 2 else None)),
                     },
                     **tokens,
                 }
@@ -83,8 +88,11 @@ class LoginView(APIView):
                         "email": user.email,
                         "first_name": user.first_name,
                         "last_name": user.last_name,
+                        "full_name": f"{user.first_name} {user.last_name}",
                         "is_admin": user.is_admin,
                         "is_teacher": user.is_teacher,
+                        "department": user.department.cycle if user.department else None,
+                        "specialty": user.specialty.name if user.specialty else None,
                     },
                     **tokens,
                 }
@@ -147,8 +155,8 @@ class MeView(APIView):
                     "full_name": f"{user.first_name} {user.last_name}",
                     "academic_year": user.academic_year,
                     "level": user.level,
-                    "specialty": user.specialty,
-                    "department": user.department,
+                    "specialty": user.specialty.name if user.specialty else None,
+                    "department": user.department.cycle if user.department else ("PREP" if user.level and user.level <= 2 else ("SUP" if user.level and user.level > 2 else None)),
                     "is_first_login": user.is_first_login,
                 }
             )
@@ -164,8 +172,8 @@ class MeView(APIView):
                     "full_name": f"{user.first_name} {user.last_name}",
                     "is_admin": user.is_admin,
                     "is_teacher": user.is_teacher,
-                    "department": user.department,
-                    "specialty": user.specialty,
+                    "department": user.department.cycle if user.department else None,
+                    "specialty": user.specialty.name if user.specialty else None,
                     "is_first_login": user.is_first_login,
                 }
             )

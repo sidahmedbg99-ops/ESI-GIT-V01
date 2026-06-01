@@ -302,23 +302,6 @@ function PanelYears({ onBack }) {
         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{t('ActiveYear')}</label>
         <Input value={year} onChange={e => setYear(e.target.value)} placeholder="ex: 2024-2025" style={{ marginBottom: '16px' }} />
 
-        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Types de Projet</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-          {types.map(p => (
-            <div key={p} style={{ padding: '6px 14px', borderRadius: '20px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {p}
-              <button onClick={() => setTypes(pr => pr.filter(x => x !== p))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '16px', padding: 0, lineHeight: 1 }}>×</button>
-            </div>
-          ))}
-          <button onClick={() => {
-            window.showPrompt({
-              title: "Nouveau type",
-              message: "Entrez le nom du type (ex: Master)",
-              onConfirm: (v) => { if (v) setTypes(p => [...p, v.trim()]); }
-            });
-          }} style={{ padding: '6px 14px', borderRadius: '20px', border: '1.5px dashed var(--border)', background: 'none', fontSize: '13px', cursor: 'pointer', color: 'var(--text-muted)' }}>+ Ajouter</button>
-        </div>
-
         <Button onClick={save} loading={loading} icon={<IoSaveOutline size={16}/>}>
           {t('Save')}
         </Button>
@@ -356,9 +339,9 @@ function PanelCategories() {
 
   useEffect(() => { loadCats(); }, []);
 
-  const handleAdd = async (name) => {
+  const handleAdd = async (name, full_name) => {
     try {
-      await client.post(ENDPOINTS.admin.specialties, { name });
+      await client.post(ENDPOINTS.admin.specialties, { name, full_name: full_name || name });
       loadCats();
       toast.success("Spécialité ajoutée");
     } catch (e) { toast.error("Erreur lors de l'ajout"); }
@@ -381,14 +364,29 @@ function PanelCategories() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
           {cats.map((c) => (
             <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: '14px', fontWeight: 500 }}>{c.name}</span>
+              <div>
+                <span style={{ fontSize: '14px', fontWeight: 700 }}>{c.name}</span>
+                {c.full_name && <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>{c.full_name}</span>}
+              </div>
               <button onClick={() => handleDelete(c.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '18px', lineHeight: 1 }}>×</button>
             </div>
           ))}
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <Input id="catInput" placeholder={`${t('NewTask').split(' ')[1]}...`} style={{ flex: 1 }} />
-          <Button variant="ghost" onClick={() => { const el = document.getElementById('catInput'); if (el?.value.trim()) { handleAdd(el.value.trim()); el.value = ''; } }}>{t('AddUser').split(' ')[0]}</Button>
+          <Input id="catInputName" placeholder="Abréviation (ex: ISI)" style={{ flex: 1 }} />
+          <Input id="catInputFull" placeholder="Nom complet (ex: Ing. Systèmes Informatiques)" style={{ flex: 2 }} />
+          <Button variant="ghost" onClick={() => { 
+            const nameEl = document.getElementById('catInputName');
+            const fullEl = document.getElementById('catInputFull');
+            if (nameEl?.value.trim() && fullEl?.value.trim()) { 
+              handleAdd(nameEl.value.trim(), fullEl.value.trim()); 
+              nameEl.value = ''; 
+              fullEl.value = ''; 
+            } else if (nameEl?.value.trim()) {
+              handleAdd(nameEl.value.trim(), '');
+              nameEl.value = '';
+            }
+          }}>{t('AddUser').split(' ')[0]}</Button>
         </div>
       </div>
     </Card>
@@ -408,9 +406,8 @@ function PanelVisibility() {
 
   const toggle = (key) => {
     const newVal = !local[key];
-    const updated = { ...local, [key]: newVal };
-    setLocal(updated);
-    updatePlatformSettings(updated);
+    setLocal(prev => ({ ...prev, [key]: newVal }));
+    updatePlatformSettings({ [key]: newVal });
   };
 
   const toggleStyle = (active) => ({

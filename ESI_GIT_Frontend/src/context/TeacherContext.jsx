@@ -41,6 +41,7 @@ export function TeacherProvider({ children }) {
     const list = res?.groups ?? (Array.isArray(res) ? res : []);
     return list.map(g => ({
       ...g, _id: g.PID,
+      title: g.name,
       members: (g.members || []).map(m => ({
         ...m, _id: m.CID,
         name: m.name || m.student_name,
@@ -54,7 +55,7 @@ export function TeacherProvider({ children }) {
       ...req,
       PID: req.project_pid,
       projectTitle: req.project_name,
-      Message: req.message,
+      Message: req.message || "We would love to have you as our supervisor.",
       groupCode: req.invite_code || `PRJ-${req.project_pid}`,
       Status: req.status
     }));

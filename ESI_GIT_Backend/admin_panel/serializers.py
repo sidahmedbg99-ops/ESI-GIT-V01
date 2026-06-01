@@ -71,6 +71,8 @@ class CreateStudentSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "specialty",
+            "department",
+            "level",
             "academic_year",
             "is_active",
         ]
@@ -78,7 +80,48 @@ class CreateStudentSerializer(serializers.ModelSerializer):
             # CID is provided by the admin in the request body on create;
             # it is the student's national registration number.
             "CID": {"read_only": False},
+            # specialty and department are resolved in to_internal_value below.
+            "specialty":   {"required": False, "allow_null": True},
+            "department":  {"required": False, "allow_null": True},
+            "level":       {"required": False, "allow_null": True},
         }
+
+    # ── Level → Department mapping ────────────────────────────────────────────
+
+    LEVEL_TO_CYCLE = {
+        'L1': 'PREP', 'L2': 'PREP',
+        'L3': 'SUP',  'M1': 'SUP',  'M2': 'SUP',
+        1: 'PREP', 2: 'PREP',
+        3: 'SUP',  4: 'SUP',  5: 'SUP',
+    }
+
+    def to_internal_value(self, data):
+        """
+        Pre-process incoming data to resolve specialty (by ID or name string)
+        and to automatically set the department FK based on the student level.
+        """
+        mutable = dict(data)
+
+        # ── Resolve specialty ───────────────────────────────────────────────
+        raw_specialty = mutable.get('specialty')
+        if raw_specialty not in (None, '', 'null'):
+            if isinstance(raw_specialty, str) and not raw_specialty.isdigit():
+                # Lookup by abbreviation name
+                sp = Specialty.objects.filter(name=raw_specialty).first()
+                mutable['specialty'] = sp.pk if sp else None
+            # else leave as-is (integer PK) and let DRF resolve it
+        else:
+            mutable['specialty'] = None
+
+        # ── Auto-set department from level ──────────────────────────────────
+        raw_level = mutable.get('level') or mutable.get('year')
+        if raw_level is not None:
+            cycle = self.LEVEL_TO_CYCLE.get(raw_level) or self.LEVEL_TO_CYCLE.get(str(raw_level))
+            if cycle:
+                dept = Department.objects.filter(cycle=cycle).first()
+                mutable['department'] = dept.pk if dept else None
+
+        return super().to_internal_value(mutable)
 
     # ── Validation ────────────────────────────────────────────────────────────
 
@@ -162,14 +205,45 @@ class CreateStaffSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "specialty",
+            "department",
             "is_admin",
             "is_teacher",
             "is_active",
         ]
         extra_kwargs = {
             # TID is auto-generated (AutoField) — never supplied by the client.
-            "TID": {"read_only": True},
+            "TID":        {"read_only": True},
+            "specialty":  {"required": False, "allow_null": True},
+            "department": {"required": False, "allow_null": True},
         }
+
+    # ── Specialty / Department resolution ─────────────────────────────────────
+
+    def to_internal_value(self, data):
+        """Resolve specialty by name string if needed and map department cycle."""
+        mutable = dict(data)
+
+        # ── Resolve specialty ───────────────────────────────────────────────
+        raw_specialty = mutable.get('specialty')
+        if raw_specialty not in (None, '', 'null'):
+            if isinstance(raw_specialty, str) and not raw_specialty.isdigit():
+                sp = Specialty.objects.filter(name=raw_specialty).first()
+                mutable['specialty'] = sp.pk if sp else None
+            # else integer PK — leave for DRF
+        else:
+            mutable['specialty'] = None
+
+        # ── Resolve department by cycle name ────────────────────────────────
+        raw_dept = mutable.get('department')
+        if raw_dept not in (None, '', 'null'):
+            if isinstance(raw_dept, str) and not raw_dept.isdigit():
+                dept = Department.objects.filter(cycle=raw_dept.upper()).first()
+                mutable['department'] = dept.pk if dept else None
+        else:
+            mutable['department'] = None
+
+        return super().to_internal_value(mutable)
 
     # ── Validation ────────────────────────────────────────────────────────────
 
@@ -231,7 +305,10 @@ def student_to_dict(student: Student) -> dict:
         "full_name": student.full_name,
         "first_name": student.first_name,
         "last_name": student.last_name,
-        "specialty": student.specialty,
+        "specialty": student.specialty.name if student.specialty else None,
+        "specialty_id": student.specialty_id,
+        "department": student.department.cycle if student.department else None,
+        "department_id": student.department_id,
         "academic_year": student.academic_year,
         "level": student.level,
         "is_active": student.is_active,
@@ -252,6 +329,10 @@ def staff_to_dict(staff: Staff) -> dict:
         "full_name": staff.full_name,
         "first_name": staff.first_name,
         "last_name": staff.last_name,
+        "specialty": staff.specialty.name if staff.specialty else None,
+        "specialty_id": staff.specialty_id,
+        "department": staff.department.cycle if staff.department else None,
+        "department_id": staff.department_id,
         "is_admin": staff.is_admin,
         "is_teacher": staff.is_teacher,
         "available": staff.available,
@@ -286,9 +367,13 @@ class SpecialtySerializer(serializers.ModelSerializer):
 
 class DepartmentSerializer(serializers.ModelSerializer):
     """
-    Flat serializer for Department — id and name only.
-    Used in the departments list endpoint.
+    Flat serializer for Department — id and cycle (exposed as 'name') only.
+    The model's 'name' field was replaced with 'cycle' (PREP/SUP).
+    The frontend still expects the key 'name', so we map cycle → name.
     """
+
+    # Map cycle to 'name' for backward-compatibility with the frontend.
+    name = serializers.CharField(source='cycle')
 
     class Meta:
         model = Department
@@ -300,6 +385,9 @@ class DepartmentWithSpecialtiesSerializer(serializers.ModelSerializer):
     Nested serializer that embeds the department's specialties.
     Used in the academic-structure endpoint to return the full tree.
     """
+
+    # Map cycle to 'name' for backward-compatibility with the frontend.
+    name = serializers.CharField(source='cycle')
 
     # Nested read-only list of specialties belonging to this department
     specialties = SpecialtySerializer(many=True, read_only=True)

@@ -79,7 +79,7 @@ def list_users(request):
     year         : int  — filter students by study level/year
     academic_year: str  — filter students by academic year string, e.g. "2024/2025"
     page         : int  — page number (default 1)
-    limit        : int  — page size 1–50 (default 10)
+    limit        : int  — page size 1–10000 (default 10)
 
     Response
     --------
@@ -100,7 +100,7 @@ def list_users(request):
 
     try:
         page = max(int(request.GET.get("page", 1)), 1)
-        limit = max(min(int(request.GET.get("limit", 10)), 50), 1)
+        limit = max(min(int(request.GET.get("limit", 10)), 10000), 1)
     except ValueError:
         page, limit = 1, 10
 
@@ -349,12 +349,13 @@ def upload_students(request):
         return Response(
             {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
         )
-    created, errors = import_Student_from_file(file)
+    created, errors, users = import_Student_from_file(file)
     return Response(
         {
             "message": f"{created} student(s) imported.",
             "created": created,
             "errors": errors,
+            "users": users,
         }
     )
 
@@ -497,12 +498,13 @@ def upload_staff(request):
         return Response(
             {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
         )
-    created, errors = import_staff_from_file(file)
+    created, errors, users = import_staff_from_file(file)
     return Response(
         {
             "message": f"{created} staff member(s) imported.",
             "created": created,
             "errors": errors,
+            "users": users,
         }
     )
 

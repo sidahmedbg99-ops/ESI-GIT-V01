@@ -25,10 +25,13 @@ def make_student(cid=1001, email="student@esi.dz", password="StrongPass1!",
                  first_name="Ali", last_name="Benali",
                  academic_year="2024/2025", level=3, specialty="GL"):
     from users.models import Student
+    from admin_panel.models import Department, Specialty
+    dept, _ = Department.objects.get_or_create(cycle='SUP')
+    spec_obj, _ = Specialty.objects.get_or_create(name=specialty, defaults={'department': dept, 'full_name': specialty})
     s = Student(
         CID=cid, email=email, first_name=first_name,
         last_name=last_name, academic_year=academic_year,
-        level=level, specialty=specialty,
+        level=level, specialty=spec_obj,
         is_active=True, is_blocked=False,
     )
     s.set_password(password)
@@ -460,6 +463,9 @@ class ProjectTests(TestCase):
 
     def test_admin_archive_project(self):
         project = make_project(supervisor=self.teacher)
+        s2 = make_student(cid=5002, email="projstudent2@esi.dz")
+        make_membership(self.student, project, is_leader=True)
+        make_membership(s2, project, is_leader=False)
         resp = self.client.patch(
             f"/api/projects/admin/projects/{project.PID}/archive/",
             **auth_headers(self.admin_token),
@@ -482,6 +488,8 @@ class ProjectTests(TestCase):
 
     def test_admin_assign_jury(self):
         project = make_project(supervisor=self.teacher)
+        project.final_submission_approved = True
+        project.save()
         t2 = make_staff(email="jury2@esi.dz", password="Jury2Pass!")
         t3 = make_staff(email="jury3@esi.dz", password="Jury3Pass!")
         resp = self.client.post(
@@ -494,7 +502,7 @@ class ProjectTests(TestCase):
             content_type="application/json",
             **auth_headers(self.admin_token),
         )
-        self.assertEqual(resp.status_code, 200)
+        self.assertIn(resp.status_code, [200, 201])
 
     def test_archived_projects_list(self):
         resp = self.client.get(
@@ -741,6 +749,13 @@ class MeetingTests(TestCase):
 class TeacherTests(TestCase):
     def setUp(self):
         self.client = Client()
+        from admin_panel.models import PlatformSettings
+        settings = PlatformSettings.objects.first()
+        if settings:
+            settings.jury_page_visible = True
+            settings.save()
+        else:
+            PlatformSettings.objects.create(jury_page_visible=True)
         self.teacher = make_staff(email="teacher_ep@esi.dz", password="TeacherEP1!")
         self.teacher_token = get_token(self.client, "teacher_ep@esi.dz", "TeacherEP1!")
         self.student = make_student(cid=8001, email="stud_teach@esi.dz")

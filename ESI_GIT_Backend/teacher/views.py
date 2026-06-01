@@ -26,7 +26,8 @@ from users.models import Staff
 from projects.models import Projects, SProjects, SupervisorRequest, ProjectAttachment
 from meetings.models import Meeting
 from tasks.models import Task, TaskAssignment
-from jury.models import ProjectJury, Schedule, Grades
+from jury.models import ProjectJury, Schedule, Grades, GradingFormula
+from jury.services.grading_engine import calculate_final_grade, ALLOWED_FUNCTIONS
 
 from .serializers import (
     TeacherGroupListSerializer,
@@ -439,6 +440,7 @@ class TeacherSupervisorRequestActionView(APIView):
             )
 
         else:  # reject
+            project = req.project_id
             req.status = "rejected"
             req.save()
 
@@ -450,8 +452,8 @@ class TeacherSupervisorRequestActionView(APIView):
                 notify(
                     recipient_type="student",
                     recipient_id=m.CID.CID,
-                    title="Supervisor assigned",
-                    message=f"{teacher.full_name} is now supervising your project '{project.name}'.",
+                    title="Supervision request rejected",
+                    message=f"{teacher.full_name} has rejected your supervision request for '{project.name}'.",
                 )
 
             return Response({"message": "Request rejected."})
@@ -718,7 +720,7 @@ class TeacherJuryListView(APIView):
                 | ProjectJury.objects.filter(teacher3_id=teacher)
             )
             .distinct()
-            .select_related("PID")
+            .select_related("PID", "PID__TID", "teacher1_id", "teacher2_id", "teacher3_id")
         )
 
         graded_pids = set(Grades.objects.values_list("PID_id", flat=True))
@@ -727,14 +729,24 @@ class TeacherJuryListView(APIView):
         evaluated = juries.filter(PID__in=graded_pids).count()
         to_evaluate = assigned - evaluated
 
+        # Embed the active formula so the frontend builds the form dynamically
+        active_formula = GradingFormula.objects.filter(is_active=True).first()
+        formula_data = None
+        if active_formula:
+            formula_data = {
+                "id": active_formula.id,
+                "name": active_formula.name,
+                "expression": active_formula.expression,
+                "labels": active_formula.labels,   # {"g1": "Continuous work", ...}
+            }
+
         return Response(
             {
                 "assignees": assigned,
                 "a_evaluer": to_evaluate,
                 "evaluees": evaluated,
-                "defenses": TeacherJurySerializer(
-                    juries, many=True, context={"graded_pids": graded_pids}
-                ).data,
+                "active_formula": formula_data,
+                "defenses": TeacherJurySerializer(juries, many=True, context={"request": request}).data,
             }
         )
 
@@ -743,16 +755,13 @@ class TeacherJuryEvaluateView(APIView):
     """
     POST /api/teacher/jury/<pid>/evaluate/
     body: {
-        "presentation": <float 0-20>,
-        "document":     <float 0-20>,
-        "demo":         <float 0-20>,
-        "validate_cpi": <bool>,          (optional — "Valider pour 2 CPI")
-        "comments":     "..."            (optional)
+        "values": {"g1": <float 0-20>, "g2": <float 0-20>, ...},  ← keys match active formula labels
+        "validate_cpi": <bool>,   (optional)
+        "comments":     "..."     (optional)
     }
 
-    Final note = presentation*0.20 + document*0.30 + demo*0.50
-    Stored in the Grades model (grade1/grade2/grade3 are for the three jury members;
-    this endpoint stores for whichever slot belongs to the current teacher).
+    Final note is computed by the grading engine using the active GradingFormula expression.
+    Only the Jury President (teacher1) may submit grades.
     """
 
     permission_classes = [IsStaff]
@@ -766,15 +775,18 @@ class TeacherJuryEvaluateView(APIView):
         except ProjectJury.DoesNotExist:
             return Response({"error": "Jury not found for this project"}, status=404)
 
-        is_member = teacher in (
-            jury.teacher1_id,
-            jury.teacher2_id,
-            jury.teacher3_id,
-        )
-        if not is_member:
+        if jury.teacher1_id != teacher:
             return Response(
-                {"error": "You are not a jury member for this project"},
+                {"error": "Only the Jury President can input grades."},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Fetch active formula — required
+        formula = GradingFormula.objects.filter(is_active=True).first()
+        if not formula:
+            return Response(
+                {"error": "No active grading formula. Please ask an admin to activate one."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = TeacherEvaluationSerializer(data=request.data)
@@ -782,33 +794,49 @@ class TeacherJuryEvaluateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         d = cast(Dict[str, Any], serializer.validated_data)
-        final = round(
-            d["presentation"] * 0.20 + d["document"] * 0.30 + d["demo"] * 0.50,
-            2,
-        )
+        submitted_values: dict = d["values"]
 
-        # determine which grade slot belongs to this teacher
+        # Validate that all formula variables are present
+        required_keys = set(formula.labels.keys())
+        missing = required_keys - set(submitted_values.keys())
+        if missing:
+            return Response(
+                {"error": f"Missing grade fields: {sorted(missing)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Compute final grade via the grading engine
+        try:
+            final = eval(
+                formula.expression,
+                {"__builtins__": {}},
+                {**ALLOWED_FUNCTIONS, **{k: float(v) for k, v in submitted_values.items()}},
+            )
+            final = round(max(0.0, min(20.0, float(final))), 2)
+        except Exception as exc:
+            return Response(
+                {"error": f"Formula evaluation error: {exc}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         grades, _ = Grades.objects.get_or_create(PID_id=pid)
-
-        if jury.teacher1_id == teacher:
-            grades.grade1 = final
-        elif jury.teacher2_id == teacher:
-            grades.grade2 = final
-        else:
-            grades.grade3 = final
-
+        grades.formula = formula
+        grades.values = submitted_values
+        grades.final_grade = final
         grades.comments = d.get("comments", grades.comments or "")
-        grades.save()  # Grades.save() recalculates final_grade automatically
+        # Freeze snapshot on first submission
+        if not grades.formula_snapshot:
+            grades.formula_snapshot = {
+                "expression": formula.expression,
+                "labels": formula.labels,
+            }
+        grades.save()
 
         return Response(
             {
                 "message": "Evaluation submitted.",
-                "your_note": final,
-                "final_grade": grades.final_grade,
-                "components": {
-                    "presentation": d["presentation"],
-                    "document": d["document"],
-                    "demo": d["demo"],
-                },
+                "final_grade": final,
+                "formula_used": formula.name,
+                "values": submitted_values,
             }
         )

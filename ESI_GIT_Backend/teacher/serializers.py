@@ -72,6 +72,8 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
             "academic_level", "year", "status", "archived",
             "creation_date", "finish_date",
             "members", "progress", "tasks", "meetings", "attachments",
+            "github_url", "supervisor_feedback", "submitted_to_supervisor",
+            "final_submission_approved",
         ]
 
     def get_members(self, obj):
@@ -236,16 +238,24 @@ class TeacherJurySerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source="PID.name")
     group_code = serializers.CharField(source="PID.invite_code")
     specialty = serializers.CharField(source="PID.specialty")
+    supervisor_id = serializers.IntegerField(source="PID.TID_id", read_only=True)
     schedule = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
     is_evaluated = serializers.SerializerMethodField()
     document = serializers.SerializerMethodField()
+    president_name = serializers.CharField(source="teacher1_id.full_name", read_only=True)
+    examiner1_name = serializers.CharField(source="teacher2_id.full_name", read_only=True)
+    examiner2_name = serializers.CharField(source="teacher3_id.full_name", read_only=True)
+    my_role = serializers.SerializerMethodField()
 
     class Meta:
         model = ProjectJury
         fields = [
             "PID_id", "project_name", "group_code", "specialty",
             "schedule", "members", "is_evaluated", "document",
+            "teacher1_id", "teacher2_id", "teacher3_id", "supervisor_id",
+            "president_name", "examiner1_name", "examiner2_name",
+            "my_role",
         ]
 
     def get_schedule(self, obj):
@@ -276,12 +286,28 @@ class TeacherJurySerializer(serializers.ModelSerializer):
         if att:
             return {"filename": att.filename, "url": att.file.url if att.file else None}
         return None
+    
+    def get_my_role(self, obj):
+        request = self.context.get("request")
+        if not request:
+            return "member"
+        try:
+            from users.models import Staff
+            teacher = Staff.objects.get(TID=request.user.pk)
+            return "president" if obj.teacher1_id == teacher else "member"
+        except:
+            return "member"
 
 
 class TeacherEvaluationSerializer(serializers.Serializer):
-    presentation = serializers.FloatField(min_value=0, max_value=20)
-    document = serializers.FloatField(min_value=0, max_value=20)
-    demo = serializers.FloatField(min_value=0, max_value=20)
+    """
+    Dynamic evaluation — `values` keys must match the active GradingFormula labels
+    (e.g. {"g1": 15.0, "g2": 14.0, ...}).  The view validates against the formula.
+    """
+    values = serializers.DictField(
+        child=serializers.FloatField(min_value=0, max_value=20),
+        allow_empty=False,
+    )
     validate_cpi = serializers.BooleanField(required=False, default=False)
     comments = serializers.CharField(required=False, allow_blank=True, default="")
 

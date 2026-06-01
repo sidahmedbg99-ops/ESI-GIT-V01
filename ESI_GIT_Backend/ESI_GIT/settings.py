@@ -47,7 +47,9 @@ REST_FRAMEWORK = {
 from rest_framework_simplejwt.settings import api_settings
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=5),
+    "ACCESS_TOKEN_LIFETIME":  timedelta(hours=24),  # increased from 5h to 24h for dev comfort
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS":  False,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
@@ -175,4 +177,4 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # Frontend URL (used in emails)
-FRONTEND_URL = "http://localhost:3000"
+FRONTEND_URL = "http://localhost:5173"

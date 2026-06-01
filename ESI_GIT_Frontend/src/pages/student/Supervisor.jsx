@@ -20,7 +20,7 @@ import { toast } from 'react-hot-toast';
 export default function Supervisor() {
   const { t } = useLanguage();
   const { group: team, updateGroup } = useStudent();
-  const { data: teachersList, request: loadTeachers } = useApi(usersApi.getTeachers);
+  const { data: teachersList, request: loadTeachers } = useApi(usersApi.getAvailableSupervisors);
   
   const [supervisorRequests, setSupervisorRequests] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
@@ -67,7 +67,12 @@ export default function Supervisor() {
   };
 
   const hasApproved = (supervisorRequests || []).some(r => r.status === 'accepted' || r.status === 'approved');
-  const hasPending = (supervisorRequests || []).some(r => r.status === 'pending');
+  const hasPending  = (supervisorRequests || []).some(r => r.status === 'pending');
+  const hasRejected = (supervisorRequests || []).some(r => r.status === 'rejected');
+  // IDs of teachers we already sent a request to (pending or rejected — don't allow re-send)
+  const requestedTeacherIds = new Set(
+    (supervisorRequests || []).filter(r => r.status !== 'accepted').map(r => String(r.teacher_id || r.teacher_name))
+  );
 
   return (
     <DashboardLayout>

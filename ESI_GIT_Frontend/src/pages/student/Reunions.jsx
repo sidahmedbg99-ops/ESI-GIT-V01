@@ -114,6 +114,18 @@ export default function Reunions() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Date validation
+    if (!formData.date) { setError('Veuillez choisir une date.'); return; }
+    const selectedDate = new Date(formData.date);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) { setError('La date ne peut pas être dans le passé.'); return; }
+    // Limit meetings to within ~1 year ahead
+    const maxDate = new Date(); maxDate.setFullYear(maxDate.getFullYear() + 1);
+    if (selectedDate > maxDate) { setError('La date est trop éloignée. Veuillez choisir une date dans l\'année académique.'); return; }
+    if (!formData.time) { setError('Veuillez choisir une heure.'); return; }
+    if (!formData.title.trim()) { setError('Veuillez saisir un objet pour la réunion.'); return; }
+
     try {
       await meetingsApi.createMeeting({
         title:    formData.title,
@@ -151,6 +163,30 @@ export default function Reunions() {
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: '24px' }}>
             Vous devez rejoindre ou créer un groupe avant de pouvoir planifier des réunions.
           </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Block access if no supervisor assigned yet
+  if (!group.encadreur || group.encadreur === '—') {
+    return (
+      <DashboardLayout>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '20px' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)', border: '2px solid #F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+            <IoPersonOutline size={36} style={{ color: '#D97706' }} />
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '10px', color: 'var(--text-primary)' }}>Aucun encadreur assigné</h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '460px', marginBottom: '28px', lineHeight: 1.7 }}>
+            Vous ne pouvez pas planifier de réunions tant que votre groupe n'a pas d'encadreur approuvé.
+            Rendez-vous sur la page <strong>Groupe</strong> pour soumettre une demande d'encadrement.
+          </p>
+          <a
+            href="/student/groupe"
+            style={{ padding: '12px 28px', borderRadius: '12px', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: '14px', textDecoration: 'none', boxShadow: '0 4px 12px rgba(79,70,229,0.25)' }}
+          >
+            Aller sur la page Groupe
+          </a>
         </div>
       </DashboardLayout>
     );

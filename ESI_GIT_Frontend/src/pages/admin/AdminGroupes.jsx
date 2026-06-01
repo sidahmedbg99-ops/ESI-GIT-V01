@@ -221,12 +221,11 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
   const teachers = (users || []).filter(u => u.role === 'teacher' && u.available !== false);
   const types = platformSettings?.project_types ? platformSettings.project_types.split(',') : ['PFE', 'Stage', 'Projet'];
   
-  const [groupCode, setGroupCode] = useState('');
-  const [projectTitle, setProjectTitle] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedType, setSelectedType] = useState(types[0] || 'PFE');
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [leaderId, setLeaderId] = useState(null);
+  const [levelFilter, setLevelFilter] = useState('all');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -254,7 +253,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
     setSubmitting(true);
     try {
       await onSubmit({
-        name: projectTitle.trim() || `Projet ${new Date().getFullYear()}`,
+        name: 'temp',
         type: selectedType,
         specialty: selectedStudents[0]?.specialite || 'Informatique',
         year: platformSettings?.current_academic_year || new Date().getFullYear().toString(),
@@ -282,16 +281,12 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
             {error}
           </div>
         )}
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('ProjectTitle')} *</label>
-          <input value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Ex: E-learning platform"
-                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}/>
+
+        {/* Project title defaults to temp — notice only */}
+        <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>
+          📌 Le titre du projet sera automatiquement mis à <strong>"temp"</strong>. Le chef de groupe devra le modifier après création.
         </div>
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('GroupCode')} *</label>
-          <input value={groupCode} onChange={e => setGroupCode(e.target.value)} placeholder="Ex: ISI-24-01"
-                 style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}/>
-        </div>
+
         <div>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Type de Projet *</label>
           <select value={selectedType} onChange={e => setSelectedType(e.target.value)}
@@ -308,34 +303,55 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
           </select>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Laissez vide pour laisser le groupe choisir plus tard.</p>
         </div>
+
+        {/* Level filter + Students */}
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Students')} (max 6) * — {selectedStudents.length} {t('Assigned')}</label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('Students')} (max 6) * — {selectedStudents.length} {t('Assigned')}</label>
+            <select
+              value={levelFilter}
+              onChange={e => setLevelFilter(e.target.value)}
+              style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', outline: 'none' }}
+            >
+              <option value="all">{t('All')}</option>
+              <option value="L1">L1 (1CPI)</option>
+              <option value="L2">L2 (2CPI)</option>
+              <option value="L3">L3 (1CS)</option>
+              <option value="M1">M1 (2CS)</option>
+              <option value="M2">M2 (3CS)</option>
+            </select>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', padding: '10px', borderRadius: 'var(--radius-md)', background: 'var(--bg)' }}>
-            {withoutGroup.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '10px' }}>{t('AllStudentsHaveGroup')}</p>}
-            {withoutGroup.map(s => {
-              const sel = selectedStudents.find(x => x.cid === s._id);
-              return (
-                <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px', borderRadius: '8px', background: sel ? 'var(--primary-subtle)' : 'transparent', border: sel ? '1px solid var(--primary)' : '1px solid transparent' }}>
-                  <input type="checkbox" checked={!!sel} onChange={() => toggleStudent(s)} style={{ cursor: 'pointer' }}/>
-                  <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{s.name} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>— {s.specialite}</span></span>
-                  
-                  {sel && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label style={{ fontSize: '10px', fontWeight: 700, color: leaderId === s._id ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <input type="radio" name="leader" checked={leaderId === s._id} onChange={() => setLeaderId(s._id)} style={{ margin: 0 }}/>
-                        CHEF
-                      </label>
-                      <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '11px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)', background: '#fff' }}>
-                        <option value="fullstack">Fullstack</option>
-                        <option value="frontend">Frontend</option>
-                        <option value="backend">Backend</option>
-                        <option value="design">Design</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {(() => {
+              const levelMap = { L1: 1, L2: 2, L3: 3, M1: 4, M2: 5 };
+              const visible = levelFilter === 'all'
+                ? withoutGroup
+                : withoutGroup.filter(s => (s.level === levelMap[levelFilter]) || (s.year === levelFilter));
+              if (visible.length === 0) return <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '10px' }}>{t('AllStudentsHaveGroup')}</p>;
+              return visible.map(s => {
+                const sel = selectedStudents.find(x => x.cid === s._id);
+                return (
+                  <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px', borderRadius: '8px', background: sel ? 'var(--primary-subtle)' : 'transparent', border: sel ? '1px solid var(--primary)' : '1px solid transparent' }}>
+                    <input type="checkbox" checked={!!sel} onChange={() => toggleStudent(s)} style={{ cursor: 'pointer' }}/>
+                    <span style={{ fontSize: '13px', fontWeight: 600, flex: 1 }}>{s.name} <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>— {s.year || ''} {s.specialite || ''}</span></span>
+                    {sel && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ fontSize: '10px', fontWeight: 700, color: leaderId === s._id ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <input type="radio" name="leader" checked={leaderId === s._id} onChange={() => setLeaderId(s._id)} style={{ margin: 0 }}/>
+                          CHEF
+                        </label>
+                        <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '11px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)', background: '#fff' }}>
+                          <option value="fullstack">Fullstack</option>
+                          <option value="frontend">Frontend</option>
+                          <option value="backend">Backend</option>
+                          <option value="design">Design</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>

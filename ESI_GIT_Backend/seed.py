@@ -68,10 +68,11 @@ def wipe():
 def invite_code():
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-def make_staff(email, first_name, last_name, is_admin=False, is_teacher=True):
+def make_staff(email, first_name, last_name, specialty=None, department=None, is_admin=False, is_teacher=True):
     """Uses CreateStaffSerializer exactly as the admin UI does."""
     ser = CreateStaffSerializer(data={
         "email": email, "first_name": first_name, "last_name": last_name,
+        "specialty": specialty, "department": department,
         "is_admin": is_admin, "is_teacher": is_teacher, "is_active": True,
     })
     assert ser.is_valid(), f"Staff error {email}: {ser.errors}"
@@ -83,12 +84,10 @@ def make_student(cid, email, first_name, last_name, specialty, level):
     ser = CreateStudentSerializer(data={
         "CID": cid, "email": email, "first_name": first_name,
         "last_name": last_name, "specialty": specialty,
-        "academic_year": YEAR, "is_active": True,
+        "level": level, "academic_year": YEAR, "is_active": True,
     })
     assert ser.is_valid(), f"Student error {email}: {ser.errors}"
     student, password = ser.save()
-    student.level = level
-    student.save()
     return student, password
 
 def complete_first_login(user, new_password="a"):
@@ -112,26 +111,26 @@ def seed():
         students_can_see_archived_projects=True,
         jury_page_visible=True,
         current_academic_year=YEAR,
-        project_types="PFE,Stage,Projet,Master",
         contact_email="admin@esi.dz",
     )
 
     # ── Departments & specialties ─────────────────────────────
     print("Departments & specialties...")
-    dept_cs  = Department.objects.create(name="Computer Science")
-    dept_net = Department.objects.create(name="Networks & Telecom")
-    Specialty.objects.create(name="ISI",  department=dept_cs)
-    Specialty.objects.create(name="SIW",  department=dept_cs)
-    Specialty.objects.create(name="IASD", department=dept_cs)
-    Specialty.objects.create(name="RSD",  department=dept_net)
-    Specialty.objects.create(name="SIL",  department=dept_cs)
+    dept_prep = Department.objects.create(cycle="PREP")
+    dept_sup  = Department.objects.create(cycle="SUP")
+    Specialty.objects.create(name="ISI",  full_name="Ingénierie des Systèmes d'Information", department=dept_sup)
+    Specialty.objects.create(name="SIW",  full_name="Systèmes d'Information et Web", department=dept_sup)
+    Specialty.objects.create(name="IASD", full_name="Intelligence Artificielle et Science des Données", department=dept_sup)
+    Specialty.objects.create(name="RSD",  full_name="Réseaux et Systèmes Distribués", department=dept_sup)
+    Specialty.objects.create(name="SIL",  full_name="Systèmes Informatiques et Logiciels", department=dept_sup)
 
     # ── Admin ─────────────────────────────────────────────────
     print("Admin...")
     admin = Staff(
         email="admin@esi.dz", first_name="Ali", last_name="Bensalem",
         is_admin=True, is_teacher=True, available=True,
-        specialty="ISI", department="Computer Science",
+        specialty=Specialty.objects.get(name="ISI"),
+        department=Department.objects.get(cycle="SUP"),
         is_first_login=False, is_active=True, is_blocked=False,
     )
     admin.set_password("a")
@@ -141,31 +140,26 @@ def seed():
     # ── Teachers ──────────────────────────────────────────────
     print("Teachers...")
 
-    t1, p = make_staff("benali@esi.dz",      "Mohamed", "Benali")
-    t1.specialty = "ISI";  t1.department = "Computer Science"; t1.save()
+    t1, p = make_staff("benali@esi.dz",      "Mohamed", "Benali", specialty="ISI", department="SUP")
     creds["benali@esi.dz"]      = complete_first_login(t1)
 
-    t2, p = make_staff("cherif@esi.dz",      "Fatima",  "Cherif")
-    t2.specialty = "SIW";  t2.department = "Computer Science"; t2.save()
+    t2, p = make_staff("cherif@esi.dz",      "Fatima",  "Cherif", specialty="SIW", department="SUP")
     creds["cherif@esi.dz"]      = complete_first_login(t2)
 
-    t3, p = make_staff("meziane@esi.dz",     "Karim",   "Meziane")
-    t3.specialty = "IASD"; t3.department = "Computer Science"; t3.save()
+    t3, p = make_staff("meziane@esi.dz",     "Karim",   "Meziane", specialty="IASD", department="SUP")
     creds["meziane@esi.dz"]     = complete_first_login(t3)
 
-    t4, p = make_staff("hadj@esi.dz",        "Samira",  "Hadj")
-    t4.specialty = "RSD";  t4.department = "Networks & Telecom"; t4.save()
+    t4, p = make_staff("hadj@esi.dz",        "Samira",  "Hadj", specialty="RSD", department="SUP")
     creds["hadj@esi.dz"]        = complete_first_login(t4)
 
     # Unavailable — won't appear in supervisor list
-    t5, p = make_staff("bouali@esi.dz",      "Omar",    "Bouali")
-    t5.specialty = "ISI"; t5.department = "Computer Science"
-    t5.available = False; t5.save()
+    t5, p = make_staff("bouali@esi.dz",      "Omar",    "Bouali", specialty="ISI", department="SUP")
+    t5.available = False
+    t5.save()
     creds["bouali@esi.dz"]      = complete_first_login(t5) + "  (unavailable)"
 
     # Still on first login — won't appear in supervisor list
-    t6, p = make_staff("newteacher@esi.dz",  "Nadia",   "Kaci")
-    t6.specialty = "SIW"; t6.department = "Computer Science"; t6.save()
+    t6, p = make_staff("newteacher@esi.dz",  "Nadia",   "Kaci", specialty="SIW", department="SUP")
     creds["newteacher@esi.dz"]  = p + "  (first_login=True)"
 
     # ── Students ──────────────────────────────────────────────
@@ -247,33 +241,45 @@ def seed():
         presentation_time=time(10, 0), room="Amphi A", duration_minutes=30,
     )
 
-    # P2 — supervisor assigned, submitted awaiting approval
+    # P2 — supervisor assigned, submitted AND APPROVED (to test jury formula)
     p2 = Projects.objects.create(
         name="E-Learning Platform", type="PFE",
         specialty="SIW", year=YEAR, academic_level=3,
         TID=t2, tech_stack="Vue.js,Node.js,MongoDB",
         description="E-learning platform for university courses.",
         status="approved", invite_code=invite_code(),
-        submitted_to_supervisor=True, final_submission_approved=False,
+        submitted_to_supervisor=True, final_submission_approved=True,
+        final_submission_date=timezone.now() - timedelta(days=3),
         is_public=True,
     )
     SProjects.objects.create(CID=s4, PID=p2, role="fullstack", is_leader=True)
     SProjects.objects.create(CID=s5, PID=p2, role="frontend",  is_leader=False)
     SProjects.objects.create(CID=s6, PID=p2, role="backend",   is_leader=False)
+    ProjectJury.objects.create(PID=p2, teacher1_id=t1, teacher2_id=t3, teacher3_id=t2)
+    Schedule.objects.create(
+        PID=p2, presentation_date=today + timedelta(days=15),
+        presentation_time=time(14, 0), room="Salle B", duration_minutes=30,
+    )
 
-    # P3 — supervisor assigned, not submitted yet
+    # P3 — supervisor assigned, submitted AND APPROVED (to test jury formula + schedule)
     p3 = Projects.objects.create(
         name="AI Grading Assistant", type="PFE",
         specialty="IASD", year=YEAR, academic_level=3,
         TID=t3, tech_stack="Python,FastAPI,TensorFlow",
         description="AI-powered assistant for automated code grading.",
         status="approved", invite_code=invite_code(),
-        submitted_to_supervisor=False, final_submission_approved=False,
+        submitted_to_supervisor=True, final_submission_approved=True,
+        final_submission_date=timezone.now() - timedelta(days=1),
         is_public=True,
     )
     SProjects.objects.create(CID=s7, PID=p3, role="backend",   is_leader=True)
     SProjects.objects.create(CID=s8, PID=p3, role="backend",   is_leader=False)
     SProjects.objects.create(CID=s9, PID=p3, role="fullstack", is_leader=False)
+    ProjectJury.objects.create(PID=p3, teacher1_id=t4, teacher2_id=t1, teacher3_id=t3)
+    Schedule.objects.create(
+        PID=p3, presentation_date=today + timedelta(days=14),
+        presentation_time=time(11, 0), room="Amphi A", duration_minutes=30,
+    )
 
     # P4 — NO supervisor, pending request
     p4 = Projects.objects.create(
@@ -355,13 +361,11 @@ def seed():
     def archived_student(cid, email, first, last, spec):
         ser = CreateStudentSerializer(data={
             "CID": cid, "email": email, "first_name": first, "last_name": last,
-            "specialty": spec, "academic_year": PREV, "is_active": True,
+            "specialty": spec, "level": 3, "academic_year": PREV, "is_active": True,
         })
         assert ser.is_valid(), f"Archived student error {email}: {ser.errors}"
         s, _ = ser.save()
-        s.level = 3
         complete_first_login(s)
-        s.save()
         return s
 
     as1 = archived_student(20200001, "archived.s1@esi.dz", "Karim",   "Ait",       "ISI")
@@ -464,11 +468,11 @@ def seed():
         print(f"  {email:<42} {pw}")
     print()
     print("ACTIVE PROJECTS:")
-    print(f"  p1 Smart Campus    — supervisor=benali, jury assigned, submission APPROVED → test jury page as meziane (president)")
-    print(f"  p2 E-Learning      — supervisor=cherif, submitted, awaiting approval       → test teacher approve flow")
-    print(f"  p3 AI Grading      — supervisor=meziane, not submitted yet                 → test normal in-progress state")
-    print(f"  p4 Portal Redesign — NO supervisor, pending request to benali              → test requests page")
-    print(f"  p5 Blockchain      — supervisor=benali, submission REJECTED with feedback  → test rejection flow")
+    print(f"  p1 Smart Campus    - supervisor=benali, jury assigned, submission APPROVED -> test jury page as meziane (president)")
+    print(f"  p2 E-Learning      - supervisor=cherif, submitted, awaiting approval       -> test teacher approve flow")
+    print(f"  p3 AI Grading      - supervisor=meziane, not submitted yet                 -> test normal in-progress state")
+    print(f"  p4 Portal Redesign - NO supervisor, pending request to benali              -> test requests page")
+    print(f"  p5 Blockchain      - supervisor=benali, submission REJECTED with feedback  -> test rejection flow")
     print()
     print("NOTE: academic_year uses dashes everywhere: '2024-2025'")
     print("="*65)

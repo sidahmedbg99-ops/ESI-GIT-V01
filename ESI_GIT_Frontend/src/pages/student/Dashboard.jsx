@@ -76,12 +76,12 @@ export default function StudentDashboard() {
       icon: <IoTrendingUpOutline size={22}/>,
       color: '#10B981',
     },
-    ...(stats.teacherTasksCount > 0 ? [{
-      label: t('TeacherTasks'),
-      value: stats.teacherTasksCount,
+    {
+      label: t('TeacherTasks') || 'Tâches Encadreur',
+      value: stats.teacherTasksCount > 0 ? `${stats.teacherTasksCompleted}/${stats.teacherTasksCount}` : '0/0',
       icon: <IoAddCircleOutline size={22}/>,
       color: '#8B5CF6',
-    }] : []),
+    },
   ];
 
   return (
@@ -204,8 +204,17 @@ export default function StudentDashboard() {
               <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', background: 'var(--primary-subtle)', border: '1px solid rgba(79,70,229,0.2)', marginBottom: '14px' }}>
                 <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px' }}>{group.title ?? 'Projet non défini'}</p>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                  {group.groupCode}{group.encadreur ? ` · ${group.encadreur}` : ''}
+                  Code d'invitation : {group.groupCode || group.joinCode || group.InviteCode || '—'}
                 </p>
+                {group.encadreur && group.encadreur !== '—' ? (
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Encadrant : {group.encadreur}
+                  </p>
+                ) : (
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Sans encadrant
+                  </p>
+                )}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {(group.members ?? []).map((m, i) => (
