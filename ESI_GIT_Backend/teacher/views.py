@@ -312,10 +312,12 @@ class TeacherGroupDetailView(APIView):
             # approve — mark as approved and record the date
             project.final_submission_approved = True
             project.final_submission_date = timezone.now()
+            project.finish_date = timezone.now().date()
             project.submitted_to_supervisor = True
             project.save(update_fields=[
                 "final_submission_approved",
                 "final_submission_date",
+                "finish_date",
                 "submitted_to_supervisor"
             ])
 

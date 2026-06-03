@@ -2,6 +2,20 @@ from django.db import models
 from users.models import Staff
 
 
+def _current_academic_year():
+    """
+    Returns the current academic year as a string e.g. "2025-2026".
+    Academic year starts in September — so from September onwards we're
+    in year X to X+1, and from January to August we're still in (X-1) to X.
+    """
+    from datetime import date
+    today = date.today()
+    if today.month >= 9:
+        return f"{today.year}-{today.year + 1}"
+    else:
+        return f"{today.year - 1}-{today.year}"
+
+
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -45,13 +59,13 @@ class PlatformSettings(models.Model):
     jury_page_visible                  = models.BooleanField(default=False)
 
     # added: displayed across the platform e.g. "2024-2025"
-    current_academic_year              = models.CharField(max_length=20, default="2024-2025")
+    current_academic_year              = models.CharField(max_length=20, default=_current_academic_year)
 
     
     
 
     # added: shown on public pages (Home, About) before login
-    contact_email                      = models.CharField(max_length=100, default="contact@esi.dz")
+    contact_email                      = models.CharField(max_length=100, default="egit@esi-sba.dz")
 
     updated_by = models.ForeignKey(
         Staff, on_delete=models.SET_NULL, null=True, blank=True
@@ -63,3 +77,9 @@ class PlatformSettings(models.Model):
 
     def __str__(self):
         return "Platform Settings"
+
+    @classmethod
+    def get_settings(cls):
+        """Always returns the singleton settings row, creating it if missing."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

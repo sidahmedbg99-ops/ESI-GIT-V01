@@ -1,481 +1,177 @@
 """
-ESI GIT — Full Database Seed
-=============================
-Place in ESI_GIT_Backend/ (next to manage.py) and run:
+Dev seed script for ESI GIT.
+Run from the backend root folder (same level as manage.py):
+
     python seed.py
 
-Wipes all data, then creates:
-  - Platform settings
-  - Departments + specialties
-  - Admin (known password)
-  - Teachers (random passwords, first_login then completed)
-  - Students (random passwords, first_login then completed)
-  - Grading formula (active)
-  - Active projects (some with supervisor, some without)
-  - Archived projects (supervisor + 3+ members + jury + grades)
-  - Tasks, meetings, notifications
+Safe to re-run — uses get_or_create so nothing is duplicated.
+
+What it creates
+---------------
+Departments  : PREP, SUP
+Specialties  : SIW, ISI, IASD, CYS  (all under SUP — default ESI specialties)
+Students     : 6 students across levels 2, 3, 4, 5
+               level 2 → PREP, no specialty
+               level 3 → SUP, no specialty
+               level 4 → SUP, with specialty
+               level 5 → SUP, with specialty
+Staff        : 4 regular teachers + 1 who is also admin
+PlatformSettings: created with current academic year if missing
 """
 
-import os, sys, django
+import os
+import sys
+import django
+
+# ── Bootstrap Django ───────────────────────────────────────────────────────────
+# Find the settings module (the folder that contains settings.py)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
+
+# The settings module is ESI_GIT/settings.py → module path is ESI_GIT.settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ESI_GIT.settings")
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
-from datetime import date, time, timedelta
-from django.utils import timezone
-from django.db import transaction
-from django.contrib.auth.hashers import make_password
-
-from users.models import Student, Staff
-from projects.models import Projects, SProjects, SupervisorRequest
+# ── Imports (after django.setup()) ────────────────────────────────────────────
 from admin_panel.models import Department, Specialty, PlatformSettings
-from admin_panel.serializers import CreateStudentSerializer, CreateStaffSerializer
-from jury.models import GradingFormula, ProjectJury, Schedule, Grades
-from meetings.models import Meeting
-from tasks.models import Task, TaskAssignment
-from notifications.models import Notification
+from users.models import Student, Staff
 
-import random, string
+# ── Config ────────────────────────────────────────────────────────────────────
 
-YEAR = "2024-2025"   # ONE format used everywhere — dashes
+SEED_PASSWORD = "ESIdev2025!"
 
-# ─────────────────────────────────────────────────────────────
-# WIPE
-# ─────────────────────────────────────────────────────────────
-def wipe():
-    print("Wiping all data...")
-    Notification.objects.all().delete()
-    Grades.objects.all().delete()
-    Schedule.objects.all().delete()
-    ProjectJury.objects.all().delete()
-    GradingFormula.objects.all().delete()
-    TaskAssignment.objects.all().delete()
-    Task.objects.all().delete()
-    Meeting.objects.all().delete()
-    SupervisorRequest.objects.all().delete()
-    SProjects.objects.all().delete()
-    Projects.objects.all().delete()
-    Specialty.objects.all().delete()
-    Department.objects.all().delete()
-    PlatformSettings.objects.all().delete()
-    Student.objects.all().delete()
-    Staff.objects.all().delete()
-    print("  Done.\n")
+# Specialties — abbreviation : full French name
+SPECIALTIES = {
+    "SIW":  "Systèmes d'Information et Web",
+    "ISI":  "Ingénierie des Systèmes Informatiques",
+    "IASD": "Intelligence Artificielle et Science des Données",
+    "CYS":  "Cybersécurité",
+}
 
-# ─────────────────────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────────────────────
-def invite_code():
-    return "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+# level → (department cycle, specialty name or None)
+# level 2  → PREP, no specialty
+# level 3  → SUP,  no specialty  (specialty acquired in 4th year)
+# level 4+ → SUP,  with specialty
+STUDENTS = [
+    # level 2 — PREP, no specialty
+    {"CID": 221101, "first_name": "Amine",   "last_name": "Bensalem",  "level": 2, "specialty": None},
+    # level 3 — SUP, no specialty yet
+    {"CID": 221102, "first_name": "Sara",    "last_name": "Meziane",   "level": 3, "specialty": None},
+    {"CID": 221103, "first_name": "Youcef",  "last_name": "Ouali",     "level": 3, "specialty": None},
+    # level 4 — SUP, with specialty
+    {"CID": 221104, "first_name": "Lina",    "last_name": "Hadj",      "level": 4, "specialty": "ISI"},
+    {"CID": 221105, "first_name": "Rayan",   "last_name": "Cherif",    "level": 4, "specialty": "SIW"},
+    # level 5 — SUP, with specialty
+    {"CID": 221106, "first_name": "Imene",   "last_name": "Boudiaf",   "level": 5, "specialty": "IASD"},
+]
 
-def make_staff(email, first_name, last_name, specialty=None, department=None, is_admin=False, is_teacher=True):
-    """Uses CreateStaffSerializer exactly as the admin UI does."""
-    ser = CreateStaffSerializer(data={
-        "email": email, "first_name": first_name, "last_name": last_name,
-        "specialty": specialty, "department": department,
-        "is_admin": is_admin, "is_teacher": is_teacher, "is_active": True,
-    })
-    assert ser.is_valid(), f"Staff error {email}: {ser.errors}"
-    staff, password = ser.save()
-    return staff, password
+STAFF = [
+    {"first_name": "Kamel",  "last_name": "Boukhalfa", "is_admin": False, "specialty": "ISI"},
+    {"first_name": "Nadia",  "last_name": "Sellami",   "is_admin": False, "specialty": "SIW"},
+    {"first_name": "Bilal",  "last_name": "Hamidi",    "is_admin": False, "specialty": "IASD"},
+    {"first_name": "Asma",   "last_name": "Redjimi",   "is_admin": False, "specialty": "CYS"},
+    {"first_name": "Tarek",  "last_name": "Mansouri",  "is_admin": True,  "specialty": "ISI"},  # admin
+]
 
-def make_student(cid, email, first_name, last_name, specialty, level):
-    """Uses CreateStudentSerializer exactly as the admin UI does."""
-    ser = CreateStudentSerializer(data={
-        "CID": cid, "email": email, "first_name": first_name,
-        "last_name": last_name, "specialty": specialty,
-        "level": level, "academic_year": YEAR, "is_active": True,
-    })
-    assert ser.is_valid(), f"Student error {email}: {ser.errors}"
-    student, password = ser.save()
-    return student, password
+CURRENT_ACADEMIC_YEAR = "2025-2026"
 
-def complete_first_login(user, new_password="a"):
-    """Simulates user completing the first-login password change."""
-    user.set_password(new_password)
-    user.is_first_login = False
-    user.save()
-    return new_password
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-# ─────────────────────────────────────────────────────────────
-# SEED
-# ─────────────────────────────────────────────────────────────
-@transaction.atomic
+def ok(msg):   print(f"  \033[92m✓\033[0m {msg}")
+def skip(msg): print(f"  \033[90m–\033[0m {msg}  (already exists)")
+def head(msg): print(f"\n\033[1m{msg}\033[0m")
+
+# ── Seed ──────────────────────────────────────────────────────────────────────
+
 def seed():
-    wipe()
-    creds = {}
+    print("\n\033[1m── ESI GIT dev seed ─────────────────────────────\033[0m")
 
-    # ── Platform settings ─────────────────────────────────────
-    print("Platform settings...")
-    PlatformSettings.objects.create(
-        students_can_see_archived_projects=True,
-        jury_page_visible=True,
-        current_academic_year=YEAR,
-        contact_email="admin@esi.dz",
-    )
+    # 1. Departments
+    head("Departments")
+    prep, created = Department.objects.get_or_create(cycle="PREP")
+    ok("PREP — Cycle Préparatoire") if created else skip("PREP")
 
-    # ── Departments & specialties ─────────────────────────────
-    print("Departments & specialties...")
-    dept_prep = Department.objects.create(cycle="PREP")
-    dept_sup  = Department.objects.create(cycle="SUP")
-    Specialty.objects.create(name="ISI",  full_name="Ingénierie des Systèmes d'Information", department=dept_sup)
-    Specialty.objects.create(name="SIW",  full_name="Systèmes d'Information et Web", department=dept_sup)
-    Specialty.objects.create(name="IASD", full_name="Intelligence Artificielle et Science des Données", department=dept_sup)
-    Specialty.objects.create(name="RSD",  full_name="Réseaux et Systèmes Distribués", department=dept_sup)
-    Specialty.objects.create(name="SIL",  full_name="Systèmes Informatiques et Logiciels", department=dept_sup)
+    sup, created = Department.objects.get_or_create(cycle="SUP")
+    ok("SUP  — Cycle Supérieur") if created else skip("SUP")
 
-    # ── Admin ─────────────────────────────────────────────────
-    print("Admin...")
-    admin = Staff(
-        email="admin@esi.dz", first_name="Ali", last_name="Bensalem",
-        is_admin=True, is_teacher=True, available=True,
-        specialty=Specialty.objects.get(name="ISI"),
-        department=Department.objects.get(cycle="SUP"),
-        is_first_login=False, is_active=True, is_blocked=False,
-    )
-    admin.set_password("a")
-    admin.save()
-    creds["admin@esi.dz"] = "a  (admin+teacher)"
-
-    # ── Teachers ──────────────────────────────────────────────
-    print("Teachers...")
-
-    t1, p = make_staff("benali@esi.dz",      "Mohamed", "Benali", specialty="ISI", department="SUP")
-    creds["benali@esi.dz"]      = complete_first_login(t1)
-
-    t2, p = make_staff("cherif@esi.dz",      "Fatima",  "Cherif", specialty="SIW", department="SUP")
-    creds["cherif@esi.dz"]      = complete_first_login(t2)
-
-    t3, p = make_staff("meziane@esi.dz",     "Karim",   "Meziane", specialty="IASD", department="SUP")
-    creds["meziane@esi.dz"]     = complete_first_login(t3)
-
-    t4, p = make_staff("hadj@esi.dz",        "Samira",  "Hadj", specialty="RSD", department="SUP")
-    creds["hadj@esi.dz"]        = complete_first_login(t4)
-
-    # Unavailable — won't appear in supervisor list
-    t5, p = make_staff("bouali@esi.dz",      "Omar",    "Bouali", specialty="ISI", department="SUP")
-    t5.available = False
-    t5.save()
-    creds["bouali@esi.dz"]      = complete_first_login(t5) + "  (unavailable)"
-
-    # Still on first login — won't appear in supervisor list
-    t6, p = make_staff("newteacher@esi.dz",  "Nadia",   "Kaci", specialty="SIW", department="SUP")
-    creds["newteacher@esi.dz"]  = p + "  (first_login=True)"
-
-    # ── Students ──────────────────────────────────────────────
-    print("Students...")
-
-    s1,  p = make_student(20210001, "amira.brahimi@esi.dz",    "Amira",   "Brahimi",   "ISI",  3)
-    creds["amira.brahimi@esi.dz"]    = complete_first_login(s1)
-
-    s2,  p = make_student(20210002, "yacine.djebbar@esi.dz",   "Yacine",  "Djebbar",   "ISI",  3)
-    creds["yacine.djebbar@esi.dz"]   = complete_first_login(s2)
-
-    s3,  p = make_student(20210003, "lina.mansouri@esi.dz",    "Lina",    "Mansouri",  "ISI",  3)
-    creds["lina.mansouri@esi.dz"]    = complete_first_login(s3)
-
-    s4,  p = make_student(20210004, "rayan.benkhaled@esi.dz",  "Rayan",   "Benkhaled", "SIW",  3)
-    creds["rayan.benkhaled@esi.dz"]  = complete_first_login(s4)
-
-    s5,  p = make_student(20210005, "sara.aouad@esi.dz",       "Sara",    "Aouad",     "SIW",  3)
-    creds["sara.aouad@esi.dz"]       = complete_first_login(s5)
-
-    s6,  p = make_student(20210006, "ilyes.mekki@esi.dz",      "Ilyes",   "Mekki",     "SIW",  3)
-    creds["ilyes.mekki@esi.dz"]      = complete_first_login(s6)
-
-    s7,  p = make_student(20210007, "nour.boudaa@esi.dz",      "Nour",    "Boudaa",    "IASD", 3)
-    creds["nour.boudaa@esi.dz"]      = complete_first_login(s7)
-
-    s8,  p = make_student(20210008, "amine.rahmani@esi.dz",    "Amine",   "Rahmani",   "IASD", 3)
-    creds["amine.rahmani@esi.dz"]    = complete_first_login(s8)
-
-    s9,  p = make_student(20210009, "yasmine.hadjali@esi.dz",  "Yasmine", "Hadjali",   "IASD", 3)
-    creds["yasmine.hadjali@esi.dz"]  = complete_first_login(s9)
-
-    # No group
-    s10, p = make_student(20210010, "hamza.khelil@esi.dz",     "Hamza",   "Khelil",    "ISI",  3)
-    creds["hamza.khelil@esi.dz"]     = complete_first_login(s10) + "  (no group)"
-
-    # Still on first login
-    s11, p = make_student(20210011, "new.student@esi.dz",      "Meriem",  "Zidane",    "ISI",  1)
-    creds["new.student@esi.dz"]      = p + "  (first_login=True)"
-
-    # ── Grading formula (create BEFORE grades) ────────────────
-    print("Grading formula...")
-    formula = GradingFormula.objects.create(
-        name="PFE 2024-2025",
-        expression="(g1*4 + g2*3 + g3*2 + g4*1) / 10",
-        labels={
-            "g1": "Continuous work",
-            "g2": "Final product",
-            "g3": "Oral defense",
-            "g4": "Report",
-        },
-        description="Standard PFE grading formula for 2024-2025",
-        is_active=True,
-        created_by=admin,
-    )
-
-    # ── Active projects ───────────────────────────────────────
-    print("Active projects...")
-    today = date.today()
-
-    # P1 — supervisor assigned, jury assigned, submission approved
-    p1 = Projects.objects.create(
-        name="Smart Campus Platform", type="PFE",
-        specialty="ISI", year=YEAR, academic_level=3,
-        TID=t1, github_url="https://github.com/esi/smart-campus",
-        tech_stack="React,Django,PostgreSQL",
-        description="Smart campus management with IoT integration.",
-        status="approved", invite_code=invite_code(),
-        submitted_to_supervisor=True, final_submission_approved=True,
-        final_submission_date=timezone.now() - timedelta(days=5),
-        is_public=True,
-    )
-    SProjects.objects.create(CID=s1, PID=p1, role="fullstack", is_leader=True)
-    SProjects.objects.create(CID=s2, PID=p1, role="backend",   is_leader=False)
-    SProjects.objects.create(CID=s3, PID=p1, role="frontend",  is_leader=False)
-    ProjectJury.objects.create(PID=p1, teacher1_id=t3, teacher2_id=t4, teacher3_id=t1)
-    Schedule.objects.create(
-        PID=p1, presentation_date=today + timedelta(days=14),
-        presentation_time=time(10, 0), room="Amphi A", duration_minutes=30,
-    )
-
-    # P2 — supervisor assigned, submitted AND APPROVED (to test jury formula)
-    p2 = Projects.objects.create(
-        name="E-Learning Platform", type="PFE",
-        specialty="SIW", year=YEAR, academic_level=3,
-        TID=t2, tech_stack="Vue.js,Node.js,MongoDB",
-        description="E-learning platform for university courses.",
-        status="approved", invite_code=invite_code(),
-        submitted_to_supervisor=True, final_submission_approved=True,
-        final_submission_date=timezone.now() - timedelta(days=3),
-        is_public=True,
-    )
-    SProjects.objects.create(CID=s4, PID=p2, role="fullstack", is_leader=True)
-    SProjects.objects.create(CID=s5, PID=p2, role="frontend",  is_leader=False)
-    SProjects.objects.create(CID=s6, PID=p2, role="backend",   is_leader=False)
-    ProjectJury.objects.create(PID=p2, teacher1_id=t1, teacher2_id=t3, teacher3_id=t2)
-    Schedule.objects.create(
-        PID=p2, presentation_date=today + timedelta(days=15),
-        presentation_time=time(14, 0), room="Salle B", duration_minutes=30,
-    )
-
-    # P3 — supervisor assigned, submitted AND APPROVED (to test jury formula + schedule)
-    p3 = Projects.objects.create(
-        name="AI Grading Assistant", type="PFE",
-        specialty="IASD", year=YEAR, academic_level=3,
-        TID=t3, tech_stack="Python,FastAPI,TensorFlow",
-        description="AI-powered assistant for automated code grading.",
-        status="approved", invite_code=invite_code(),
-        submitted_to_supervisor=True, final_submission_approved=True,
-        final_submission_date=timezone.now() - timedelta(days=1),
-        is_public=True,
-    )
-    SProjects.objects.create(CID=s7, PID=p3, role="backend",   is_leader=True)
-    SProjects.objects.create(CID=s8, PID=p3, role="backend",   is_leader=False)
-    SProjects.objects.create(CID=s9, PID=p3, role="fullstack", is_leader=False)
-    ProjectJury.objects.create(PID=p3, teacher1_id=t4, teacher2_id=t1, teacher3_id=t3)
-    Schedule.objects.create(
-        PID=p3, presentation_date=today + timedelta(days=14),
-        presentation_time=time(11, 0), room="Amphi A", duration_minutes=30,
-    )
-
-    # P4 — NO supervisor, pending request
-    p4 = Projects.objects.create(
-        name="Student Portal Redesign", type="Stage",
-        specialty="ISI", year=YEAR, academic_level=3,
-        TID=None, tech_stack="React,TailwindCSS",
-        description="Redesigning the student portal with modern UX.",
-        status="pending", invite_code=invite_code(), is_public=True,
-    )
-    SProjects.objects.create(CID=s10, PID=p4, role="frontend", is_leader=True)
-    SupervisorRequest.objects.create(
-        project_id=p4, teacher_id=t1, status="pending",
-        message="We would love to have you as our supervisor.",
-    )
-
-    # P5 — supervisor assigned, submission rejected with feedback
-    p5 = Projects.objects.create(
-        name="Blockchain Voting System", type="PFE",
-        specialty="ISI", year=YEAR, academic_level=3,
-        TID=t1, tech_stack="Solidity,React,Web3.js",
-        description="Decentralized voting system using blockchain.",
-        status="approved", invite_code=invite_code(),
-        submitted_to_supervisor=False, final_submission_approved=False,
-        supervisor_feedback="Documentation is incomplete. Add the technical architecture section.",
-        is_public=True,
-    )
-    # Note: s2 and s3 are in p5 as well — intentional edge case
-    SProjects.objects.create(CID=s2, PID=p5, role="backend",   is_leader=True)
-    SProjects.objects.create(CID=s3, PID=p5, role="frontend",  is_leader=False)
-    SProjects.objects.create(CID=s1, PID=p5, role="fullstack", is_leader=False)
-
-    # ── Tasks ─────────────────────────────────────────────────
-    print("Tasks...")
-
-    def task(proj, title, desc, ptype, priority, state, days, creator):
-        return Task.objects.create(
-            PID=proj, title=title, description=desc, type=ptype,
-            priority=priority, state=state,
-            deadline=today + timedelta(days=days), created_by=creator,
+    # 2. Specialties (always SUP)
+    head("Specialties")
+    specialty_objects = {}
+    for abbr, full in SPECIALTIES.items():
+        spec, created = Specialty.objects.get_or_create(
+            name=abbr,
+            defaults={"full_name": full, "department": sup},
         )
+        specialty_objects[abbr] = spec
+        ok(f"{abbr:6} — {full}") if created else skip(abbr)
 
-    ta1 = task(p1, "Setup CI/CD",       "Configure GitHub Actions.",     "devops",   3, "done",        -10, s1)
-    ta2 = task(p1, "Database schema",   "Create ERD and PostgreSQL.",    "backend",  3, "done",        -5,  s2)
-    ta3 = task(p1, "Auth module",       "JWT authentication.",           "backend",  2, "in_progress",  5,  s1)
-    ta4 = task(p1, "Dashboard UI",      "React dashboard with charts.",  "frontend", 2, "todo",         10, s3)
-    ta5 = task(p1, "Final report",      "Complete all report sections.", "docs",     1, "todo",         20, s1)
-    TaskAssignment.objects.create(task_id=ta1, CID=s2)
-    TaskAssignment.objects.create(task_id=ta2, CID=s2)
-    TaskAssignment.objects.create(task_id=ta3, CID=s2)
-    TaskAssignment.objects.create(task_id=ta3, CID=s3)
-    TaskAssignment.objects.create(task_id=ta4, CID=s3)
-    TaskAssignment.objects.create(task_id=ta5, CID=s1)
+    # 3. Students
+    head("Students")
+    for s in STUDENTS:
+        dept       = prep if s["level"] == 2 else sup
+        specialty  = specialty_objects[s["specialty"]] if s["specialty"] else None
+        email      = f"{s['first_name'][0].lower()}.{s['last_name'].lower()}@esi.dz"
 
-    tb1 = task(p2, "API docs",          "Write OpenAPI docs.",           "docs",     2, "in_progress",  7,  s4)
-    tb2 = task(p2, "Video player",      "Integrate HLS player.",         "frontend", 3, "todo",         14, s5)
-    TaskAssignment.objects.create(task_id=tb1, CID=s4)
-    TaskAssignment.objects.create(task_id=tb2, CID=s5)
-
-    tc1 = task(p3, "Train model",       "Fine-tune transformer model.",  "ml",       3, "in_progress",  3,  s7)
-    TaskAssignment.objects.create(task_id=tc1, CID=s8)
-
-    # ── Meetings ──────────────────────────────────────────────
-    print("Meetings...")
-
-    Meeting.objects.create(PID=p1, title="Sprint Review #3",      date=today+timedelta(days=3),  time=time(10,0),  location="Room A101",      created_by_staff=t1,   status="approved")
-    Meeting.objects.create(PID=p1, title="Final submission prep",  date=today+timedelta(days=10), time=time(14,0),  location="Online - Teams", created_by_staff=t1,   status="approved")
-    Meeting.objects.create(PID=p2, title="Progress check",        date=today+timedelta(days=5),  time=time(11,0),  location="Room B203",      created_by_staff=t2,   status="approved")
-    Meeting.objects.create(PID=p3, title="Model evaluation",      date=today+timedelta(days=4),  time=time(9,0),   location="Lab 3",          created_by_staff=t3,   status="approved")
-    Meeting.objects.create(PID=p1, title="Architecture Q&A",      date=today+timedelta(days=7),  time=time(15,30), location="Library",        created_by_student=s1, status="pending")
-    Meeting.objects.create(PID=p3, title="Progress discussion",   date=today+timedelta(days=6),  time=time(10,0),  location="Room C102",      created_by_student=s7, status="pending")
-    Meeting.objects.create(PID=p1, title="Kick-off",              date=today-timedelta(days=30), time=time(10,0),  location="Room A101",      created_by_staff=t1,   status="approved")
-    Meeting.objects.create(PID=p2, title="Initial briefing",      date=today-timedelta(days=25), time=time(14,0),  location="Room B203",      created_by_staff=t2,   status="approved")
-    Meeting.objects.create(PID=p1, title="Mid-term review",       date=today-timedelta(days=10), time=time(11,0),  location="Room A101",      created_by_staff=t1,   status="cancelled", cancellation_reason="Teacher unavailable — conference.")
-
-    # ── Archived projects ─────────────────────────────────────
-    print("Archived projects...")
-    PREV = "2023-2024"
-
-    def archived_student(cid, email, first, last, spec):
-        ser = CreateStudentSerializer(data={
-            "CID": cid, "email": email, "first_name": first, "last_name": last,
-            "specialty": spec, "level": 3, "academic_year": PREV, "is_active": True,
-        })
-        assert ser.is_valid(), f"Archived student error {email}: {ser.errors}"
-        s, _ = ser.save()
-        complete_first_login(s)
-        return s
-
-    as1 = archived_student(20200001, "archived.s1@esi.dz", "Karim",   "Ait",       "ISI")
-    as2 = archived_student(20200002, "archived.s2@esi.dz", "Sabrina", "Bouzid",    "ISI")
-    as3 = archived_student(20200003, "archived.s3@esi.dz", "Walid",   "Ferhat",    "ISI")
-    as4 = archived_student(20200004, "archived.s4@esi.dz", "Imane",   "Djaballah", "SIW")
-    as5 = archived_student(20200005, "archived.s5@esi.dz", "Sofiane", "Larbaoui",  "SIW")
-    as6 = archived_student(20200006, "archived.s6@esi.dz", "Meriem",  "Ouali",     "SIW")
-    as7 = archived_student(20200007, "archived.s7@esi.dz", "Tarek",   "Hamidi",    "IASD")
-    as8 = archived_student(20200008, "archived.s8@esi.dz", "Rania",   "Zerrouki",  "IASD")
-    as9 = archived_student(20200009, "archived.s9@esi.dz", "Nassim",  "Benkara",   "IASD")
-
-    def make_archived(name, ptype, spec, supervisor, members, tech, desc, grade_vals, room, pdate, ptime, year=PREV):
-        p = Projects.objects.create(
-            name=name, type=ptype, specialty=spec, year=year, academic_level=3,
-            TID=supervisor, tech_stack=tech, description=desc,
-            status="approved", invite_code=invite_code(),
-            submitted_to_supervisor=True, final_submission_approved=True,
-            final_submission_date=timezone.now() - timedelta(days=200),
-            archived=True, is_public=True, finish_date=date(2024, 6, 15),
+        student, created = Student.objects.get_or_create(
+            CID=s["CID"],
+            defaults={
+                "email":          email,
+                "first_name":     s["first_name"],
+                "last_name":      s["last_name"],
+                "academic_year":  CURRENT_ACADEMIC_YEAR,
+                "level":          s["level"],
+                "specialty":      specialty,
+                "department":     dept,
+                "is_first_login": True,
+                "is_active":      True,
+                "is_blocked":     False,
+            },
         )
-        for student, role, leader in members:
-            SProjects.objects.create(CID=student, PID=p, role=role, is_leader=leader)
+        if created:
+            student.set_password(SEED_PASSWORD)
+            student.save()
+            spec_label = s["specialty"] or "—"
+            ok(f"{student.full_name:<22}  L{s['level']}  {spec_label:<6}  {email}  pwd: {SEED_PASSWORD}")
+        else:
+            skip(student.full_name)
 
-        ProjectJury.objects.create(
-            PID=p,
-            teacher1_id=supervisor,
-            teacher2_id=t3 if supervisor != t3 else t4,
-            teacher3_id=t4 if supervisor != t4 else t1,
+    # 4. Staff
+    head("Staff")
+    for t in STAFF:
+        email     = f"{t['first_name'][0].lower()}.{t['last_name'].lower()}@esi.dz"
+        specialty = specialty_objects[t["specialty"]]
+
+        staff, created = Staff.objects.get_or_create(
+            email=email,
+            defaults={
+                "first_name":     t["first_name"],
+                "last_name":      t["last_name"],
+                "is_admin":       t["is_admin"],
+                "is_teacher":     True,
+                "available":      True,
+                "specialty":      specialty,
+                "department":     sup,
+                "is_first_login": True,
+                "is_active":      True,
+                "is_blocked":     False,
+            },
         )
-        Schedule.objects.create(
-            PID=p, presentation_date=pdate, presentation_time=ptime,
-            room=room, duration_minutes=30,
-        )
-        # Create grades — formula must be active for calculate_final_grade to work
-        g = Grades(PID=p, formula=formula, values=grade_vals, comments="Good project overall.")
-        g.save()
-        return p
+        if created:
+            staff.set_password(SEED_PASSWORD)
+            staff.save()
+            role = "ADMIN + teacher" if t["is_admin"] else "teacher"
+            ok(f"{staff.full_name:<22}  {email:<35}  [{role}]  pwd: {SEED_PASSWORD}")
+        else:
+            skip(staff.full_name)
 
-    make_archived(
-        "Healthcare Management System", "PFE", "ISI", t1,
-        [(as1,"fullstack",True),(as2,"backend",False),(as3,"frontend",False)],
-        "React,Django,PostgreSQL",
-        "Full-stack healthcare management system for clinic operations.",
-        {"g1":16.0,"g2":15.0,"g3":14.0,"g4":13.0},
-        "Amphi A", date(2024,6,10), time(9,0),
-    )
-    make_archived(
-        "IoT Home Automation", "PFE", "SIW", t2,
-        [(as4,"backend",True),(as5,"frontend",False),(as6,"fullstack",False)],
-        "Python,MQTT,React",
-        "Home automation using IoT devices and MQTT protocol.",
-        {"g1":14.0,"g2":13.0,"g3":15.0,"g4":12.0},
-        "Amphi B", date(2024,6,10), time(10,0),
-    )
-    make_archived(
-        "NLP Arabic Text Classifier", "PFE", "IASD", t3,
-        [(as7,"backend",True),(as8,"backend",False),(as9,"fullstack",False)],
-        "Python,PyTorch,FastAPI",
-        "Arabic text classification using transformer models.",
-        {"g1":18.0,"g2":17.0,"g3":16.0,"g4":15.0},
-        "Salle C", date(2024,6,11), time(9,0),
-    )
-    make_archived(
-        "University ERP System", "PFE", "SIW", t2,
-        [(as4,"fullstack",True),(as5,"backend",False),(as6,"frontend",False)],
-        "Angular,Spring Boot,MySQL",
-        "Enterprise resource planning for university management.",
-        {"g1":12.0,"g2":11.0,"g3":13.0,"g4":10.0},
-        "Amphi A", date(2024,6,12), time(14,0),
-        year="2022-2023",
-    )
+    # 5. PlatformSettings
+    head("PlatformSettings")
+    settings = PlatformSettings.get_settings()
+    print(f"  current_academic_year = {settings.current_academic_year}")
+    print(f"  contact_email         = {settings.contact_email}")
 
-    # ── Notifications ─────────────────────────────────────────
-    print("Notifications...")
-    Notification.objects.bulk_create([
-        Notification(title="Supervisor accepted",  message="Your supervisor request was accepted.",            recipient_type="student", recipient_id=s1.CID,  is_read=False),
-        Notification(title="New meeting",          message="Sprint Review #3 scheduled.",                     recipient_type="student", recipient_id=s1.CID,  is_read=False),
-        Notification(title="Submission rejected",  message="Your supervisor sent feedback on your submission.",recipient_type="student", recipient_id=s4.CID,  is_read=False),
-        Notification(title="Supervisor request",   message="Smart Campus Platform requests your supervision.", recipient_type="staff",   recipient_id=t1.TID,  is_read=False),
-        Notification(title="Submission to review", message="E-Learning Platform submitted for approval.",      recipient_type="staff",   recipient_id=t2.TID,  is_read=False),
-        Notification(title="Meeting request",      message="Student requested a meeting for project p3.",      recipient_type="staff",   recipient_id=t3.TID,  is_read=False),
-    ])
-
-    # ── Print credentials ─────────────────────────────────────
-    print("\n" + "="*65)
-    print("SEED COMPLETE")
-    print("="*65)
-    print(f"  Staff:     {Staff.objects.count()} (1 admin, {Staff.objects.filter(is_teacher=True, is_admin=False).count()} teachers)")
-    print(f"  Students:  {Student.objects.count()}")
-    print(f"  Projects:  {Projects.objects.filter(archived=False).count()} active, {Projects.objects.filter(archived=True).count()} archived")
-    print(f"  Tasks:     {Task.objects.count()}")
-    print(f"  Meetings:  {Meeting.objects.count()}")
-    print(f"  Juries:    {ProjectJury.objects.count()}")
-    print(f"  Grades:    {Grades.objects.count()} (check final_grade is not null)")
-    print()
-    print("CREDENTIALS:")
-    print("-"*65)
-    for email, pw in sorted(creds.items()):
-        print(f"  {email:<42} {pw}")
-    print()
-    print("ACTIVE PROJECTS:")
-    print(f"  p1 Smart Campus    - supervisor=benali, jury assigned, submission APPROVED -> test jury page as meziane (president)")
-    print(f"  p2 E-Learning      - supervisor=cherif, submitted, awaiting approval       -> test teacher approve flow")
-    print(f"  p3 AI Grading      - supervisor=meziane, not submitted yet                 -> test normal in-progress state")
-    print(f"  p4 Portal Redesign - NO supervisor, pending request to benali              -> test requests page")
-    print(f"  p5 Blockchain      - supervisor=benali, submission REJECTED with feedback  -> test rejection flow")
-    print()
-    print("NOTE: academic_year uses dashes everywhere: '2024-2025'")
-    print("="*65)
+    print("\n\033[92m── Done ─────────────────────────────────────────\033[0m\n")
 
 
-seed()
+if __name__ == "__main__":
+    seed()

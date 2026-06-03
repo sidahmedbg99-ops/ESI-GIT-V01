@@ -27,13 +27,12 @@ export function AuthProvider({ children }) {
     setError(null);
     try {
       const data = await loginRequest(email, password);
-      // Align with Django backend: data contains { user, access, refresh, role, first_login }
+      // Backend returns { user, access, refresh, role, first_login }
       if (data && data.user) {
-        // Align with both Django backend and Mock data structures
         const responseRole = data.role || data.user.role;
-        
-        // Normalize 'staff' role for frontend ProtectedRoutes
-        const normalizedRole = responseRole === 'staff' ? (data.user.is_admin ? 'admin' : 'teacher') : responseRole;
+        const normalizedRole = responseRole === 'staff'
+          ? (data.user.is_admin ? 'admin' : 'teacher')
+          : responseRole;
 
         const fullUser = { 
           ...data.user, 
@@ -42,14 +41,16 @@ export function AuthProvider({ children }) {
           first_login: data.first_login ?? data.user.IsFirstLogin,
           _id: data.user.CID || data.user.TID || data.user.id || data.user._id 
         };
+
         setUser(fullUser);
         localStorage.setItem('esi-user', JSON.stringify(fullUser));
-        if (data.access) localStorage.setItem('esi-token', data.access);
+        if (data.access)  localStorage.setItem('esi-token',   data.access);
+        if (data.refresh) localStorage.setItem('esi-refresh', data.refresh);  // store refresh token
+
         return true;
       }
       return false;
     } catch (err) {
-      // loginError will be caught above via the useApi hook
       return false;
     }
   };
@@ -58,37 +59,40 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem('esi-user');
     localStorage.removeItem('esi-token');
+    localStorage.removeItem('esi-refresh');
     toast.success('Déconnecté');
   };
 
   const clearError = () => setError(null);
 
-  // Sync token check on load
+  // On app load: if we have a stored token but no user in state, re-validate
+  // against /me. The axios interceptor will silently refresh the access token
+  // if it has expired, so this just needs to call getMe().
   useEffect(() => {
     if (localStorage.getItem('esi-token') && !user) {
-       authApi.getMe().then(r => {
-         // Backend returns flat object { role, CID/TID, email, ... }
-         if (r && r.email) {
-            // If user is admin, allow them to stay in their current role (admin or teacher)
-            const currentRole = user?.role;
-            const newRole = r.role === 'staff' 
-              ? (r.is_admin 
-                  ? (currentRole === 'teacher' ? 'teacher' : 'admin') 
-                  : 'teacher') 
-              : r.role;
+      authApi.getMe().then(r => {
+        if (r && r.email) {
+          const currentRole = user?.role;
+          const newRole = r.role === 'staff' 
+            ? (r.is_admin 
+                ? (currentRole === 'teacher' ? 'teacher' : 'admin') 
+                : 'teacher') 
+            : r.role;
 
-            const normalized = { 
-              ...r, 
-              name: r.name || r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-              _id: r.CID || r.TID || r.id,
-              role: newRole
-            };
-            setUser(normalized);
-           localStorage.setItem('esi-user', JSON.stringify(normalized));
-         }
-       }).catch(() => {
-         logout();
-       });
+          const normalized = { 
+            ...r, 
+            name: r.name || r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+            _id: r.CID || r.TID || r.id,
+            role: newRole
+          };
+          setUser(normalized);
+          localStorage.setItem('esi-user', JSON.stringify(normalized));
+        }
+      }).catch(() => {
+        // refresh also failed inside the interceptor → interceptor already
+        // cleared storage and redirected, nothing left to do here
+        logout();
+      });
     }
   }, []);
 

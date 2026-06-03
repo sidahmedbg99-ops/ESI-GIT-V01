@@ -18,7 +18,7 @@ from notifications.utils import notify
 class TaskListCreateView(APIView):
     """
     GET  /api/tasks/  → list all tasks for student's current project
-    POST /api/tasks/  → create a new task (ANY project member)
+    POST /api/tasks/  → create a new task (ANY project member, unless finalized)
     """
 
     permission_classes = [IsStudent]
@@ -40,6 +40,7 @@ class TaskListCreateView(APIView):
     def post(self, request):
         student = request.user
 
+        # any member of the project can create tasks (business rule)
         try:
             membership = SProjects.objects.get(CID=student, PID__year=student.academic_year, PID__archived=False)
         except SProjects.DoesNotExist:
@@ -48,11 +49,11 @@ class TaskListCreateView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # only leader can create tasks
-        if not membership.is_leader:
+        # Bug A fix: block task creation once the project is finalized
+        if membership.PID.final_submission_approved:
             return Response(
-                {"error": "Only the project leader can create tasks"},
-                status=status.HTTP_403_FORBIDDEN,
+                {"error": "Your project has been finalized. No new tasks can be created."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = CreateTaskSerializer(data=request.data)
@@ -76,8 +77,8 @@ class TaskListCreateView(APIView):
 
 class TaskDetailView(APIView):
     """
-    PATCH  /api/tasks/<task_id>/state/  → update task state (any member)
-    DELETE /api/tasks/<task_id>/        → delete task (leader only)
+    PATCH  /api/tasks/<task_id>/state/  → update task state (any member, unless finalized)
+    DELETE /api/tasks/<task_id>/        → delete task (leader only, unless finalized)
     """
 
     permission_classes = [IsStudent]
@@ -95,6 +96,13 @@ class TaskDetailView(APIView):
             return Response(
                 {"error": "You are not a member of this project"},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Bug A fix: block state changes once the project is finalized
+        if task.PID.final_submission_approved:
+            return Response(
+                {"error": "Your project has been finalized. Tasks cannot be modified."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = UpdateTaskStateSerializer(data=request.data)
@@ -124,6 +132,13 @@ class TaskDetailView(APIView):
             return Response(
                 {"error": "Only the leader can delete tasks"},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Bug A fix: block deletion once the project is finalized
+        if task.PID.final_submission_approved:
+            return Response(
+                {"error": "Your project has been finalized. Tasks cannot be deleted."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         task.delete()

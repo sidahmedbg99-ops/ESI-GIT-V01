@@ -47,9 +47,10 @@ REST_FRAMEWORK = {
 from rest_framework_simplejwt.settings import api_settings
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME":  timedelta(hours=24),  # increased from 5h to 24h for dev comfort
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
-    "ROTATE_REFRESH_TOKENS":  False,
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=8),
+    "ROTATE_REFRESH_TOKENS": True,   # each refresh call issues a new refresh token
+    "BLACKLIST_AFTER_ROTATION": False,  # set True if you add simplejwt.token_blacklist to INSTALLED_APPS
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 

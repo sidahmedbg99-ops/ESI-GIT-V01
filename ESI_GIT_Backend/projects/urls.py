@@ -65,6 +65,6 @@ urlpatterns = [
     ),
     path("attachments/", AttachmentView.as_view(), name="attachments"),
     path("projects/group-status/", StudentGroupStatusView.as_view()),
-    path("projects/public-settings/", PublicSettingsView.as_view()),
+    path("public-settings/", PublicSettingsView.as_view()),
 ]
 

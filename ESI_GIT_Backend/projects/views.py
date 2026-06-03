@@ -162,7 +162,7 @@ def archived_projects(request):
 
     # Student → check platform settings
     if is_student:
-        settings = PlatformSettings.objects.first()
+        settings = PlatformSettings.get_settings()
 
         # if settings table is empty -> hide archived by default
         if not settings or not settings.students_can_see_archived_projects:
@@ -271,7 +271,7 @@ def archived_projects_visibility(request):
     PATCH -> admin updates visibility
     """
 
-    settings = PlatformSettings.objects.first()
+    settings = PlatformSettings.get_settings()
 
     # If settings row doesn't exist, create it automatically
     if not settings:
@@ -624,6 +624,8 @@ class LeaderActionsView(APIView):
             type = request.data.get("type")
             github_url = request.data.get("github_url")
             submitted = request.data.get("submitted_to_supervisor")
+            description = request.data.get("description")
+            tech_stack = request.data.get("tech_stack")
 
             if name:
                 project.name = name
@@ -631,6 +633,10 @@ class LeaderActionsView(APIView):
                 project.type = type
             if github_url is not None:
                 project.github_url = github_url
+            if description is not None:
+                project.description = description
+            if tech_stack is not None:
+                project.tech_stack = tech_stack
 
             # final submission to supervisor
             if submitted is not None:
@@ -921,6 +927,8 @@ class StudentGroupStatusView(APIView):
         students = Student.objects.filter(
             academic_year=student.academic_year,
             specialty=student.specialty,
+            is_active=True,
+            is_blocked=False,
         ).exclude(CID=student.CID)
 
         data = []
@@ -942,11 +950,8 @@ class PublicSettingsView(APIView):
 
     def get(self, request):
         from admin_panel.models import PlatformSettings
-        settings = PlatformSettings.objects.first()
-        if not settings:
-            settings = PlatformSettings.objects.create()
+        settings = PlatformSettings.get_settings()
         return Response({
-            "project_types": settings.project_types,
             "current_academic_year": settings.current_academic_year,
             "contact_email": settings.contact_email,
         })

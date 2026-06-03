@@ -1012,12 +1012,12 @@ class PlatformSettingsAPI(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
-        settings_obj = PlatformSettings.objects.first()
+        settings_obj = PlatformSettings.get_settings()
         serializer = PlatformSettingsSerializer(settings_obj)
         return Response(serializer.data)
 
     def patch(self, request):
-        settings_obj = PlatformSettings.objects.first()
+        settings_obj = PlatformSettings.get_settings()
         serializer = PlatformSettingsSerializer(
             settings_obj, data=request.data, partial=True
         )
@@ -1042,7 +1042,7 @@ class AdvanceAcademicYearAPI(APIView):
     def post(self, request):
         from projects.models import Projects
 
-        settings = PlatformSettings.objects.first()
+        settings = PlatformSettings.get_settings()
         if not settings:
             return Response({"error": "Platform settings not found."}, status=400)
 
