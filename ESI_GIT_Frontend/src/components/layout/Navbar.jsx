@@ -63,10 +63,13 @@ export default function Navbar() {
   useEffect(() => {
     if (!user) return;
     const fetchNotifs = () => {
-      client.get(ENDPOINTS.notifications.list)
-        .then(res => setNotifications(Array.isArray(res.data) ? res.data : []))
-        .catch(() => setNotifications([]));
-    };
+    const endpoint = user.role === 'student'
+      ? ENDPOINTS.notifications.list
+      : ENDPOINTS.notifications.staffList;
+    client.get(endpoint)
+      .then(res => setNotifications(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setNotifications([]));
+  };
 
     fetchNotifs();
     const interval = setInterval(fetchNotifs, 30000); // 30s polling
@@ -89,7 +92,10 @@ export default function Navbar() {
     if (unread.length === 0) return;
 
     try {
-      await Promise.all(unread.map(n => client.patch(ENDPOINTS.notifications.markRead(n.id || n.NID))));
+      const markReadEndpoint = user?.role === 'student'
+        ? (id) => ENDPOINTS.notifications.markRead(id)
+        : (id) => ENDPOINTS.notifications.staffMarkRead(id);
+      await Promise.all(unread.map(n => client.patch(markReadEndpoint(n.id || n.NID))));
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true, IsRead: true })));
     } catch (err) {
       console.error('Failed to mark as read', err);

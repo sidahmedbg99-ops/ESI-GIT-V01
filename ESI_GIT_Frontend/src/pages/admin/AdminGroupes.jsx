@@ -27,8 +27,8 @@ function JuryModal({ group, users, onClose, onAssign }) {
     setSelected(prev => {
       const exists = prev.find(x => x.teacherId === id);
       if (exists) return prev.filter(x => x.teacherId !== id);
-      if (prev.length < 3) return [...prev, { teacherId: id, role: 'member' }];
-      return prev; // max 3 additional (+ supervisor = 4 total)
+      if (prev.length < 2) return [...prev, { teacherId: id, role: 'member' }];
+      return prev;
     });
   };
 
@@ -38,7 +38,7 @@ function JuryModal({ group, users, onClose, onAssign }) {
     setSelected(prev => prev.map(x => x.teacherId === id ? { ...x, role } : x));
   };
 
-  const canSubmit = selected.length === 3;
+  const canSubmit = selected.length === 2 && selected.some(x => x.role === 'president');
 
   return (
     <Modal isOpen onClose={onClose} title={`${t('AssignJury')} — ${group?.title || group?.groupCode}`} size="md">
@@ -62,7 +62,7 @@ function JuryModal({ group, users, onClose, onAssign }) {
 
       {/* 3 selectable jury teachers */}
       <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.06em' }}>
-        Membres du jury — {selected.length}/3 sélectionnés
+        Membres du jury — {selected.length}/2 sélectionnés
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', maxHeight: '280px', overflowY: 'auto' }}>
         {otherTeachers.map(tVal => {
@@ -368,7 +368,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
 // ── Main page ──────────────────────────────────────────────────────
 export default function AdminGroupes() {
   const { t } = useLanguage();
-  const { groups, users, updateGroup, addGroup, assignJury, restoreGroup } = useAdmin();
+  const { groups, users, updateGroup, addGroup, assignJury, restoreGroup, reloadGroups } = useAdmin();
   const safeGroups = groups || [];
   const safeUsers  = users  || [];
 
@@ -377,13 +377,16 @@ export default function AdminGroupes() {
   const [detailGrp,  setDetailGrp]  = useState(null);
   const [juryGrp,    setJuryGrp]    = useState(null);
   const [createGrp,  setCreateGrp]  = useState(false);
+  useEffect(() => {
+    reloadGroups();
+  }, []);
 
   const realGroups = safeGroups.filter(g => (g.Student_count > 0));
   
   const filtered = realGroups.filter(g => {
     const q = search.toLowerCase();
     const matchSearch = (g.groupCode?.toLowerCase().includes(q) ?? false) || (g.title?.toLowerCase().includes(q) ?? false);
-    const matchFilter = filter === 'all' || (filter === 'active' && (g.status === 'active' || g.status === 'approved')) || (filter === 'pending' && !g.supervisorApproved);
+    const matchFilter = filter === 'all' || (filter === 'approved' && g.final_submission_approved) || (filter === 'pending' && !g.supervisorApproved);
     return matchSearch && matchFilter;
   });
 
@@ -406,7 +409,7 @@ export default function AdminGroupes() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {[
           { label: t('TotalGroups_Stat'),    value: realGroups.length,                                    icon: <IoPeopleOutline size={22}/>, color: 'var(--primary)' },
-          { label: t('Active_Stat'),           value: realGroups.filter(g=>g.status==='active' || g.status==='approved').length,      icon: <IoCheckmarkCircleOutline size={22}/>, color: '#10B981' },
+          { label: t('Approved_Stat') || 'Approuvés', value: realGroups.filter(g => g.final_submission_approved).length,      icon: <IoCheckmarkCircleOutline size={22}/>, color: '#10B981' },
           { label: t('NonApproved_Stat'),    value: realGroups.filter(g=>!g.supervisorApproved).length,    icon: <IoTimeOutline size={22}/>, color: '#F59E0B' },
           { label: t('StudentsWithoutGroup'), value: withoutGroup.length,                             icon: <IoSchoolOutline size={22}/>, color: '#EF4444' },
         ].map((s, i) => (
@@ -430,11 +433,11 @@ export default function AdminGroupes() {
               <div style={{ flex: 1, minWidth: '180px' }}>
                 <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('Search')} icon={<IoSearchOutline size={14}/>}/>
               </div>
-              {['all','active','pending'].map(f => (
+              {['all','approved','pending'].map(f => (
                 <button key={f} onClick={() => setFilter(f)} style={{ padding: '8px 14px', borderRadius: '20px', border: filter === f ? 'none' : '1px solid var(--border)', background: filter === f ? 'var(--primary)' : 'var(--bg)', color: filter === f ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                  {f === 'all' ? t('All') : f === 'active' ? t('Active_Stat') : t('NonApproved_Stat')}
+                  {f === 'all' ? t('All') : f === 'approved' ? (t('Approved_Stat') || 'Approuvés') : t('NonApproved_Stat')}
                 </button>
-              ))}
+              ))}                
               <Button onClick={() => setCreateGrp(true)} icon={<IoAddOutline size={16}/>} style={{ marginLeft: 'auto' }}>{t('CreateGroup')}</Button>
             </div>
 

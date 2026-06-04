@@ -10,7 +10,7 @@ from .views import (
 )
 
 urlpatterns = [
-    path("admin/jury/assign/", assign_jury),
+    path("admin/jury/assign/<int:pk>/", assign_jury),
     path("admin/jury/", list_juries),
     path("admin/schedule/create/", create_schedule),
     path("admin/schedule/", list_schedules),

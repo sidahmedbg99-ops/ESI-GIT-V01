@@ -32,7 +32,7 @@ export const ENDPOINTS = {
     all: 'projects/admin/groups/',                                 // GET
     byId: (id) => `projects/admin/groups/${id}/`,                 // GET
     adminProject: (id) => `projects/admin/projects/${id}/`,       // GET/PUT/DELETE
-    assignJury: (id) => `projects/admin/groups/${id}/assign-jury/`, // POST
+    assignJury: (id) => `jury/admin/jury/assign/${id}/`,          // POST
     archive: (id) => `projects/admin/projects/${id}/archive/`,    // PATCH
     restore: (id) => `projects/admin/projects/${id}/restore/`,    // PATCH
     archived: 'projects/projects/archived/',                      // GET (role-based)

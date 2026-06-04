@@ -300,14 +300,8 @@ function PanelYears({ onBack }) {
       </div>
       <div style={{ maxWidth: 420 }}>
         <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>{t('ActiveYear')}</label>
-        <Input value={year} onChange={e => setYear(e.target.value)} placeholder="ex: 2024-2025" style={{ marginBottom: '16px' }} />
-
-        <Button onClick={save} loading={loading} icon={<IoSaveOutline size={16}/>}>
-          {t('Save')}
-        </Button>
-
-        <div style={{ marginTop: '16px', padding: '12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', fontSize: '12px', color: '#92400E' }}>
-          {t('ChangeYearWarning')}
+        <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>
+          {platformSettings?.current_academic_year || '—'}
         </div>
 
         <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
@@ -334,7 +328,7 @@ function PanelCategories() {
     try {
       const { data } = await client.get(ENDPOINTS.admin.specialties);
       setCats(Array.isArray(data) ? data : []);
-    } catch (e) { toast.error("Erreur chargement spécialités"); }
+    } catch (e) { console.error('loadCats failed', e); }
   };
 
   useEffect(() => { loadCats(); }, []);
@@ -342,17 +336,25 @@ function PanelCategories() {
   const handleAdd = async (name, full_name) => {
     try {
       await client.post(ENDPOINTS.admin.specialties, { name, full_name: full_name || name });
-      loadCats();
+      await loadCats();
+      reloadSpecialties();
       toast.success("Spécialité ajoutée");
-    } catch (e) { toast.error("Erreur lors de l'ajout"); }
+    } catch (e) {
+    console.error('FULL ERROR:', e?.response?.status, e?.response?.data);
+    toast.error(e?.response?.data?.error || "Erreur lors de l'ajout");
+  }
   };
 
   const handleDelete = async (id) => {
     try {
       await client.delete(ENDPOINTS.admin.specialtyDetail(id));
-      loadCats();
+      await loadCats();
+      reloadSpecialties();
       toast.success("Supprimée");
-    } catch (e) { toast.error("Erreur lors de la suppression"); }
+    } catch (e) {
+    console.error('FULL ERROR:', e?.response?.status, e?.response?.data);
+    toast.error(e?.response?.data?.error || "Erreur lors de l'ajout");
+  }
   };
 
   return (
@@ -399,7 +401,7 @@ function PanelCategories() {
 
 function PanelVisibility() {
   const { t } = useLanguage();
-  const { platformSettings, updatePlatformSettings } = useAdmin();
+  const { platformSettings, updatePlatformSettings, reloadSpecialties } = useAdmin();
   const [local, setLocal] = useState(platformSettings || {});
 
   useEffect(() => { setLocal(platformSettings || {}); }, [platformSettings]);

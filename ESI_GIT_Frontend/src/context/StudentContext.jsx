@@ -269,7 +269,8 @@ export function StudentProvider({ children }) {
   const updateGroup = useCallback(async (groupData) => {
     try {
       if (!groupData) { setGroup(null); return; }
-      if (!groupData._id) {
+      // The server always returns PID, never _id. Treat PID as the existence check.
+      if (!groupData._id && !groupData.PID) {
         const serverGroup = await groupApi.createGroup({
           Name:       groupData.Name ?? groupData.title ?? groupData.project ?? 'Projet PFE',
           TID:        groupData.TID ?? groupData.teacherId ?? null,

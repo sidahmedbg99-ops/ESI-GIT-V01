@@ -51,11 +51,32 @@ export function AdminProvider({ children }) {
     demoWeight: 50
   });
 
+  const reloadSpecialties = useCallback(() => {
+    client.get(ENDPOINTS.admin.specialties).then(res => {
+      setSpecialties(Array.isArray(res.data) ? res.data : []);
+    }).catch(() => {});
+  }, []);
+
+
   // ── API hooks ────────────────────────────────────────────────────
   const { request: loadUsers,    loading: usersLoading    } = useApi(usersApi.getAll);
   const { request: loadGroups,   loading: groupsLoading   } = useApi(groupApi.getAll);
   const { request: loadArchive,  loading: archiveLoading  } = useApi(groupApi.getArchived);
 
+  const reloadGroups = useCallback(() => {
+    loadGroups().then(res => {
+      const all = (Array.isArray(res) ? res : []).map(g => ({
+        ...g,
+        _id: g.PID,
+        title: g.name,
+        teacherId: g.TID,
+        groupCode: g.invite_code,
+        supervisorApproved: g.final_submission_approved === true,
+      }));
+      setGroups(all.filter(g => !g.archived));
+    }).catch(() => {});
+  }, [loadGroups]);
+  
   // ── Bootstrap on login ───────────────────────────────────────────
   useEffect(() => {
     if (!user?._id || user.role !== 'admin') return;
@@ -173,7 +194,7 @@ export function AdminProvider({ children }) {
       };
       setUsers(prev => [...(prev ?? []), normalized]);
       pushActivity({ type: 'user_created', action: 'Utilisateur ajouté', desc: normalized.name, color: 'var(--primary)' });
-      toast.success(`Utilisateur créé ! Password: ${normalized.password}`);
+      toast.success('Utilisateur créé avec succès !');
       return normalized;
     } catch (e) {
       console.error(e);
@@ -302,21 +323,19 @@ export function AdminProvider({ children }) {
   const assignJury = useCallback(async (groupId, selection) => {
     try {
       // selection = [{teacherId, role}, ...] — 3 teachers, supervisor auto-added by backend
-      const president = selection.find(x => x.role === 'president')?.teacherId
-        || selection[0]?.teacherId;
-      const members = selection.filter(x => x.teacherId !== president);
-      const examiner1 = members[0]?.teacherId;
-      const examiner2 = members[1]?.teacherId;
+      const president = selection.find(x => x.role === 'president')?.teacherId;
+      const examiner = selection.find(x => x.role !== 'president')?.teacherId;
+      const supervisorId = groups?.find(g => g._id === groupId)?.teacherId;
 
-      if (!president || !examiner1 || !examiner2) {
-        toast.error("Veuillez sélectionner exactement 3 membres de jury");
+      if (!president || !examiner || !supervisorId) {
+        toast.error("Sélectionnez 2 membres dont 1 président");
         return false;
       }
 
       await groupApi.assignJury(groupId, {
         teacher1_id: parseInt(president),
-        teacher2_id: parseInt(examiner1),
-        teacher3_id: parseInt(examiner2),
+        teacher2_id: parseInt(examiner),
+        teacher3_id: parseInt(supervisorId),
       });
 
       setGroups(prev => prev?.map(g => {
@@ -338,7 +357,7 @@ export function AdminProvider({ children }) {
       }));
 
       pushActivity({ type: 'jury_assigned', action: 'Jury assigné', desc: groupId, color: '#8B5CF6' });
-      toast.success('Jury assigné (4 membres)');
+      toast.success('Jury assigné avec succès');
       return true;
     } catch (e) {
       console.error(e);
@@ -554,6 +573,8 @@ export function AdminProvider({ children }) {
     setActiveContact, pushActivity,
     setUsers, setGroups, setMeetings, setArchive, setMessages, setRecentActivity,
     evaluationFormula, setEvaluationFormula,
+    reloadSpecialties,
+    reloadGroups,
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

@@ -568,7 +568,8 @@ class LeaderActionsView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if not membership.is_leader:
+        # update_role is the only action a non-leader can call (for their own role)
+        if not membership.is_leader and action != "update_role":
             return Response(
                 {"error": "Only the leader can perform this action"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -654,9 +655,47 @@ class LeaderActionsView(APIView):
             project.save()
             return Response(ProjectSerializer(project).data)
 
+        # UPDATE ROLE of a member (leader can change anyone's role, member can change their own)
+        elif action == "update_role":
+            target_cid = request.data.get("target_cid")
+            new_role    = request.data.get("role")
+
+            if not target_cid or not new_role:
+                return Response(
+                    {"error": "target_cid and role are required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            valid_roles = [r.value for r in SProjects.RoleChoices]
+            if new_role not in valid_roles:
+                return Response(
+                    {"error": f"Invalid role. Choose from: {', '.join(valid_roles)}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                target = SProjects.objects.get(CID__CID=target_cid, PID=project)
+            except SProjects.DoesNotExist:
+                return Response(
+                    {"error": "Student not found in this project"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # leader can update anyone's role; a member can only update their own
+            is_own_role = str(target_cid) == str(student.CID)
+            if not membership.is_leader and not is_own_role:
+                return Response(
+                    {"error": "You can only change your own role"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            target.role = new_role
+            target.save()
+            return Response({"message": "Role updated successfully"})
+
         else:
             return Response(
-                {"error": "Invalid action. Use kick, promote, or edit"},
+                {"error": "Invalid action. Use kick, promote, edit, or update_role"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -918,7 +957,28 @@ class AttachmentView(APIView):
             is_final=request.data.get("is_final", False),
         )
         return Response({"id": attachment.id, "filename": attachment.filename}, status=201)
-    
+
+    def delete(self, request):
+        try:
+            membership = SProjects.objects.get(
+                CID=request.user, PID__year=request.user.academic_year, PID__archived=False
+            )
+        except SProjects.DoesNotExist:
+            return Response({"error": "You are not in a project"}, status=404)
+
+        attachment_id = request.data.get("attachment_id")
+        if not attachment_id:
+            return Response({"error": "attachment_id is required"}, status=400)
+
+        try:
+            attachment = ProjectAttachment.objects.get(id=attachment_id, PID=membership.PID)
+        except ProjectAttachment.DoesNotExist:
+            return Response({"error": "Attachment not found"}, status=404)
+
+        attachment.file.delete(save=False)  # delete from disk too
+        attachment.delete()
+        return Response({"message": "Attachment deleted"})
+
 class StudentGroupStatusView(APIView):
     permission_classes = [IsStudent]
 

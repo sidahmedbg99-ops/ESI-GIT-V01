@@ -1,24 +1,15 @@
-----------------------------------------------------------------------------------
-    PUBLIC
+PUBLIC
 -add password min 8 chars when creating it.
 -login page if you input wrong ones it refreshes
 -Not Found: /apitoken/refresh/
 [03/Jun/2026 15:27:07] "POST /apitoken/refresh/ HTTP/1.1" 404 3813
     STUDENT
--make it so that the uploaded docs the only thing you need for the final submssion , no need for that "deposser le rapport final" button that dosent even work
--cant change role when your in a group
 -tried creating a user and joining a group , the group members can see someone joined , but the joined member is stuck on the create project page even if he joined and i tried creating a project in this state and it worked , i was in 2 groups at the same time 
--cant delete uploaded files
     TEACHER
 -uploaded docs cant be seen from the supervisor side
--notifications dosent seem to be working for staff
 -schedule meeting for a group , when you fill the from and try to create it it cant be pressed
--creating a task and trying to select one student will select all other students
+-creating a task and trying to select one student will select all other students    
     ADMIN
--make the active year read only - DONE
--admin create user gives the password as a pop up , its wrong and shouldnt even be poping up - DONE
--no need to choose the department , make it read only and changes with the level of the student , if its a teacher give the option to change , the edit can have it in both user types since its the admin editing - DONE 
--there is no specialty for 3rd year students so it shouldnt be showing up when creating a user , same system for 2nd year if you choose it specialty isnt even there - DONE
 -if you add a specialty and try to add a new user it isnt in the drop down menu - NEEDS REFRESHING THE PAGE
 -when adding / deleting the specialty , it works but the error pop up for no reason
 -assign jury needs checking

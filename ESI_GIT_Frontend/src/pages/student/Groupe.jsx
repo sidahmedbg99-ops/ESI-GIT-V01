@@ -287,10 +287,8 @@ export default function Groupe() {
       console.log('Joining with code:', code);
       await groupApi.joinProject(code, joinRole);
       setError('');
-      const fullProject = await groupApi.getStudentGroup();
-      updateGroup(fullProject);
       toast.success(t('GroupJoined') || 'Groupe rejoint !');
-      setTimeout(() => window.location.href = '/student/groupe', 1500);
+      setTimeout(() => window.location.reload(), 800);
     } catch (err) {
       console.error('Join error:', err.response?.data);
       const msg = err.response?.data?.error || err.response?.data?.detail || t('InvalidInviteCode');
@@ -431,7 +429,7 @@ export default function Groupe() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const isFinalUploaded = documentFiles.some(f => f.is_final || f.attachment_type === 'report');
+  const isFinalUploaded = documentFiles.length > 0;
 
   // ── Unified Render ────────────────────────────────────────────────────────
   return (
@@ -687,14 +685,7 @@ export default function Groupe() {
               <p style={{ fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <IoDocumentTextOutline size={16} /> {t('ProjectDocs')}
               </p>
-              {team.members?.find(m => m.isMe)?.isChef && !isFinalUploaded && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input type="file" id="finalDocUpload" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, true)} />
-                  <label htmlFor="finalDocUpload" style={{ padding: '8px 14px', borderRadius: '8px', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 10px rgba(139, 92, 246, 0.2)' }}>
-                    <IoShieldCheckmarkOutline size={16} /> Déposer Rapport Final
-                  </label>
-                </div>
-              )}
+              
             </div>
 
             <div style={{ marginBottom: '12px' }}>
@@ -762,7 +753,7 @@ export default function Groupe() {
                   </p>
                   {!isFinalUploaded && !team.submitted_to_supervisor && !team.final_submission_approved && (
                     <p style={{ fontSize: '11px', color: '#EF4444', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <IoAlertCircleOutline size={14} /> Vous devez déposer votre Rapport Final avant de soumettre.
+                      <IoAlertCircleOutline size={14} /> Vous devez déposer au moins un document avant de soumettre.
                     </p>
                   )}
                   {/* Supervisor rejection feedback — always visible when present and not approved */}
@@ -924,7 +915,7 @@ export default function Groupe() {
         <>
           <div style={{ marginBottom: '40px', textAlign: 'center' }}>
             <h1 style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: '8px', background: 'linear-gradient(135deg, var(--text-primary) 0%, var(--primary) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Espace Projet</h1>
-            <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto' }}>Créez une nouvelle équipe ou rejoignez un groupe existant pour commencer votre PFE.</p>
+            <p style={{ fontSize: '15px', color: 'var(--text-secondary)', maxWidth: '400px', margin: '0 auto' }}>Créez une nouvelle équipe ou rejoignez un groupe existant pour commencer votre Projet.</p>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '40px', background: 'var(--bg-card)', padding: '6px', borderRadius: '16px', border: '1px solid var(--border)', width: 'fit-content', margin: '0 auto 40px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
@@ -965,11 +956,11 @@ export default function Groupe() {
                     </div>
                     <div>
                       <h2 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em' }}>Informations du groupe</h2>
-                      <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Définissez le nom et le sujet de votre PFE.</p>
+                      <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Définissez le nom et le sujet de votre Projet.</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <Input label={t('ProjectTitle') || 'Titre du projet'} value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Titre de votre PFE" icon={<IoDocumentTextOutline size={18} />} />
+                    <Input label={t('ProjectTitle') || 'Titre du projet'} value={projectTitle} onChange={e => setProjectTitle(e.target.value)} placeholder="Titre de votre Projet" icon={<IoDocumentTextOutline size={18} />} />
                     <div>
                       <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Description') || 'Description du projet'}</label>
                       <textarea value={projectDescription} onChange={e => setProjectDescription(e.target.value)} placeholder="Décrivez brièvement votre projet..." rows={3} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical' }}></textarea>

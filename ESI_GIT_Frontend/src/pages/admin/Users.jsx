@@ -174,12 +174,10 @@ function UserForm({ initial, onSave, onCancel }) {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <Field label={t('Department')}>
-                  <SelectBox 
-                    value={form.department || 'Cycle Supérieur'} 
-                    onChange={v => set('department', v)} 
-                    options={STUDENT_DEPT.map(d => ({ value: d, label: t(d.includes('Préparatoire') ? 'CyclePrepa' : 'CycleSuperieur') }))}
-                  />
-                </Field>
+                <div style={{ padding: '9px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  {(form.year === 'L1' || form.year === 'L2') ? 'PREP' : 'SUP'}
+                </div>
+              </Field>
                 <Field label={t('Promotion')}>
                   <Input value={form.promo || ''} onChange={e => set('promo', e.target.value)} placeholder="ex: 2024-2025" />
                 </Field>
@@ -196,7 +194,7 @@ function UserForm({ initial, onSave, onCancel }) {
                     { value: 'M2', label: '5ème Année (3CS / 5CS)' },
                   ]}/>
                 </Field>
-                {!(form.year === 'L1' || form.year === 'L2') && (
+                {(form.year === 'M1' || form.year === 'M2') && (
                   <Field label={t('Specialty')}>
                     <SelectBox 
                       value={form.specialite || ''} 

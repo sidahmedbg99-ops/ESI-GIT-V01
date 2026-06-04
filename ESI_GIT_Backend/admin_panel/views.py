@@ -34,6 +34,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from admin_panel import models
 from admin_panel.models import Department, PlatformSettings, Specialty
 from admin_panel.serializers import (
     CreateStaffSerializer,
@@ -667,15 +668,14 @@ class AdvancedAnalyticsAPI(APIView):
         # We look at the actual grades given in each slot (g1, g2, g3)
         teacher_patterns = []
         teachers = Staff.objects.filter(is_teacher=True)
+        # to:
         for t in teachers:
-            # Grades given as President (grade1)
-            g1_list = list(Grades.objects.filter(PID__projectjury__teacher1_id=t, grade1__isnull=False).values_list('grade1', flat=True))
-            # Grades given as Examiner 1 (grade2)
-            g2_list = list(Grades.objects.filter(PID__projectjury__teacher2_id=t, grade2__isnull=False).values_list('grade2', flat=True))
-            # Grades given as Examiner 2 (grade3)
-            g3_list = list(Grades.objects.filter(PID__projectjury__teacher3_id=t, grade3__isnull=False).values_list('grade3', flat=True))
-            
-            all_teacher_grades = g1_list + g2_list + g3_list
+            # All grades for projects where this teacher was on the jury
+            jury_pids = ProjectJury.objects.filter(
+                models.Q(teacher1_id=t) | models.Q(teacher2_id=t) | models.Q(teacher3_id=t)
+            ).values_list('PID_id', flat=True)
+            grades_qs = Grades.objects.filter(PID__in=jury_pids, final_grade__isnull=False)
+            all_teacher_grades = [g.final_grade for g in grades_qs if g.final_grade is not None]
             if all_teacher_grades:
                 avg = sum(all_teacher_grades) / len(all_teacher_grades)
                 teacher_patterns.append({
