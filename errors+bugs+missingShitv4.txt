@@ -4,7 +4,7 @@ PUBLIC
 -Not Found: /apitoken/refresh/
 [03/Jun/2026 15:27:07] "POST /apitoken/refresh/ HTTP/1.1" 404 3813
     STUDENT
--tried creating a user and joining a group , the group members can see someone joined , but the joined member is stuck on the create project page even if he joined and i tried creating a project in this state and it worked , i was in 2 groups at the same time 
+ITS OVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
     TEACHER
 -uploaded docs cant be seen from the supervisor side
 -schedule meeting for a group , when you fill the from and try to create it it cant be pressed
@@ -13,9 +13,27 @@ PUBLIC
 -if you add a specialty and try to add a new user it isnt in the drop down menu - NEEDS REFRESHING THE PAGE
 -when adding / deleting the specialty , it works but the error pop up for no reason
 -assign jury needs checking
+    ADDITIONS
+-quit group check so students dosent leave a group in the middle of the year
+-admin have the abbility fully to edit the group edit the members / supervisor in case of problems
+-schedule presentation 
+-year rollover (we can split the student import in 4 , and if the user exist on the past year then add level +1 , if not then add him as a new student)
     IMPROVMENTS
 -add color depth for light mode , in it everything is white which makes the form kinda disappear
 -"titre de pfe" placeholder when creating a project need to be changed
 -dark mode , join a project , choosing a role makes it very white 
 -add each students role next to their name when a supervisor creats a task for a group
+-lock deleting documents after final submssion Approved
 ----------------------------------------------------------------------------------
+
+
+Item                                Status
+Specialty reload without refresh    ✅ Done (pending context value fix)
+Notifications 403                   ✅ Done
+Analytics 500 (grade1)              ❌ Backend fix still needed
+Assign jury URL + count fix         ❌ Changes above needed
+"In Progress" vs "Approved" display ❌ Needs reloadGroups in context value
+
+
+Schedule UI                         ❌ Not built yet
+Password min 8 chars                ❌ Minor, 3 files
