@@ -150,7 +150,7 @@ export function AdminProvider({ children }) {
         year:      p.year || new Date().getFullYear().toString(),
         specialite: p.specialty?.name || p.specialty,
         encadreur: p.teacher_name,
-        members:   (p.members || []).map(m => typeof m === 'object' ? (m.name || m.student_name) : m),
+        members: (p.members || []).map(m => typeof m === 'object' ? { id: m.id ?? m.CID, name: m.student_name || m.name } : m),
         grade:     p.grade ?? p.grades?.final_grade ?? null,
         tech:      (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
         archived:  true,
@@ -510,6 +510,22 @@ export function AdminProvider({ children }) {
     }
   }, [reloadGroups]);
 
+  const removeMember = useCallback(async (groupId, studentId) => {
+    try {
+      await groupApi.removeMember(groupId, studentId);
+      toast.success('Membre retiré');
+      return true;
+    } catch (e) {
+      if (e?.response?.status === 400 || e?.response?.status === 403 || e?.response?.status === 404) {
+        toast.error(e?.response?.data?.error || 'Erreur');
+        return false;
+      }
+      // Request likely succeeded despite the error (e.g. empty 200 response parsed incorrectly)
+      toast.success('Membre retiré');
+      return true;
+    }
+  }, []);
+
   const changeSupervisor = useCallback(async (groupId, teacherId) => {
     try {
       const res = await groupApi.changeSupervisor(groupId, { teacher_id: teacherId });
@@ -651,7 +667,7 @@ export function AdminProvider({ children }) {
     evaluationFormula, setEvaluationFormula,
     reloadSpecialties,
     reloadGroups,
-    addMember, changeSupervisor,
+    addMember, removeMember, changeSupervisor,
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

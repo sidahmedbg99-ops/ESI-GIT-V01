@@ -333,7 +333,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
 
   React.useEffect(() => {
     if (isOpen) {
-      client.get(ENDPOINTS.admin.settings).then(r => setActiveYear(r.data.current_academic_year || '')).catch(() => {});
+      client.get(ENDPOINTS.admin.platformSettings).then(r => setActiveYear(r.data.current_academic_year || '')).catch(() => {});
     }
   }, [isOpen]);
 

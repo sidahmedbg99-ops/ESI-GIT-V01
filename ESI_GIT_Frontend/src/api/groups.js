@@ -29,6 +29,10 @@ export const groupApi = {
   },
 
   addMember:        async (id, body) => { const { data } = await client.post(ENDPOINTS.groups.addMember(id), body);        return data; },
+  removeMember: async (id, studentId) => {
+    const { data } = await client.delete(ENDPOINTS.groups.removeMember(id), { data: { student_id: studentId } });
+    return data ?? { success: true };
+  },
   changeSupervisor: async (id, body) => { const { data } = await client.patch(ENDPOINTS.groups.changeSupervisor(id), body); return data; },
   // ── Student side ───────────────────────────────────────────────
   getStudentGroup:   async ()          => { const { data } = await client.get(ENDPOINTS.groups.myProject);            return data; },

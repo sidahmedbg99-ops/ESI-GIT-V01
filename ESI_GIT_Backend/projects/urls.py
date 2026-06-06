@@ -14,6 +14,7 @@ from .views import (
     restore_project,
     archived_projects_visibility,
     AdminAssignStudentView,
+    AdminRemoveStudentView,
     AdminChangeSupervisorView,
 )
 from .views import (
@@ -39,6 +40,7 @@ urlpatterns = [
     # ================= ADMIN GROUP MANAGEMENT =================
     path("admin/students-without-group/", Students_without_group),
     path("admin/groups/<int:pk>/assign-student/", AdminAssignStudentView.as_view()),
+    path("admin/groups/<int:pk>/remove-student/", AdminRemoveStudentView.as_view()),
     path("admin/groups/<int:pk>/change-supervisor/", AdminChangeSupervisorView.as_view()),
     path("admin/groups/", admin_groups_list),
     path("admin/groups/<int:pk>/", admin_group_details),

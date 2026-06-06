@@ -340,6 +340,13 @@ class AdminAssignStudentView(APIView):
         ).exists():
             return Response({"error": "Student is already in an active group this year"}, status=400)
 
+        if SProjects.objects.filter(
+            CID=student,
+            PID__academic_level=student.level,
+            PID__archived=True,
+        ).exists():
+            return Response({"error": "Student already participated in a project this year"}, status=400)
+
         
 
         # If making this student leader, remove existing leader first
@@ -354,6 +361,29 @@ class AdminAssignStudentView(APIView):
         )
 
         return Response({"success": True}, status=201)
+    
+class AdminRemoveStudentView(APIView):
+    def delete(self, request, pk):
+        if not IsAdmin().has_permission(request, None):
+            return Response({"error": "Admin only"}, status=403)
+        
+        student_id = request.data.get("student_id")
+        if not student_id:
+            return Response({"error": "student_id is required"}, status=400)
+        try:
+            project = Projects.objects.get(pk=pk)
+        except Projects.DoesNotExist:
+            return Response({"error": "Group not found"}, status=404)
+        
+        membership = SProjects.objects.filter(PID=project, CID__CID=student_id).first()
+        if not membership:
+            return Response({"error": "Student not in this group"}, status=404)
+
+        if membership.is_leader:
+            return Response({"error": "Cannot remove the group leader"}, status=400)
+
+        membership.delete()
+    
     
 class AdminChangeSupervisorView(APIView):
     def patch(self, request, pk):

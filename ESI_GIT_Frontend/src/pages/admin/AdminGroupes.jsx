@@ -3,7 +3,7 @@ import {
   IoPeopleOutline, IoSearchOutline, IoAddOutline, IoEyeOutline,
   IoTrashOutline, IoCheckmarkCircleOutline, IoCloseCircleOutline,
   IoPersonOutline, IoRibbonOutline, IoSchoolOutline, IoTimeOutline,
-  IoArrowBackOutline,IoArchiveOutline 
+  IoArrowBackOutline,IoArchiveOutline,IoCreateOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -493,6 +493,154 @@ function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchi
   );
 }
 
+function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRemoveMember, onChangeSupervisor, onDone }) {
+  const { t } = useLanguage();
+  if (!g) return null;
+
+  const groupLevel = g.academic_level ?? null; // integer 1-5
+  const levelMapInv = { 1: 'L1', 2: 'L2', 3: 'L3', 4: 'M1', 5: 'M2' };
+
+  const [members, setMembers] = useState(
+    (g.members || [])
+      .map(m => typeof m === 'object'
+        ? { id: m.id ?? m._id ?? m.cid, name: m.name ?? m.student_name, is_leader: m.is_leader ?? false }
+        : { id: null, name: m, is_leader: false }
+      )
+      .sort((a, b) => (b.is_leader ? 1 : 0) - (a.is_leader ? 1 : 0))
+  );
+  const [newMemberCid, setNewMemberCid] = useState('');
+  const [newSupId, setNewSupId]       = useState('');
+  const [saving, setSaving]           = useState(false);
+
+  const currentSupervisor = (allUsers || []).find(u => u._id === g.teacherId);
+  const groupStudentIds = new Set(members.map(m => String(m.id)));
+  const availableStudents = (withoutGroup || []).filter(u =>
+    (groupLevel === null || u.level === groupLevel) &&
+    !groupStudentIds.has(String(u._id))
+  );
+  const teachers = (allUsers || []).filter(u => u.role === 'teacher' || u.role === 'admin');
+
+  const handleRemove = async (memberId) => {
+    setSaving(true);
+    const ok = await onRemoveMember(g._id ?? g.PID, memberId);
+    if (ok) {
+      setMembers(prev => prev.filter(m => m.id !== memberId));
+      onDone();
+    }
+    setSaving(false);
+  };
+  const handleAdd = async () => {
+    if (!newMemberCid) return;
+    setSaving(true);
+    const ok = await onAddMember(g._id ?? g.PID, newMemberCid);
+    if (ok) {
+      const student = (allUsers || []).find(u => String(u._id) === String(newMemberCid));
+      if (student) setMembers(prev => [...prev, { id: student._id, name: student.name, is_leader: false }]);
+      setNewMemberCid('');
+    }
+    setSaving(false);
+  };
+
+  const handleChangeSup = async () => {
+    if (!newSupId) return;
+    setSaving(true);
+    await onChangeSupervisor(g._id ?? g.PID, newSupId);
+    setSaving(false);
+    onDone();
+    onClose();
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title={`Modifier — ${g.groupCode ?? g.title}`} size="md">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+        {/* Members section */}
+        <div>
+          <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.06em' }}>
+            Membres ({members.length})
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+            {members.map((m, i) => {
+              const id = m.id ?? m._id ?? m.cid;
+              const name = m.name ?? String(m);
+              const isLeader = m.is_leader ?? false;
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: isLeader ? 'var(--primary)' : 'var(--accent-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: isLeader ? '#fff' : 'var(--accent)', flexShrink: 0 }}>
+                    {name?.charAt(0)}
+                  </div>
+                  <span style={{ flex: 1, fontSize: '13px', fontWeight: 600 }}>{name}</span>
+                  {isLeader && <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: 'var(--primary-subtle)', color: 'var(--primary)' }}>Chef</span>}
+                  {!isLeader && (
+                    <button
+                      onClick={() => handleRemove(id)}
+                      disabled={saving}
+                      style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Retirer
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add member */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <select value={newMemberCid} onChange={e => setNewMemberCid(e.target.value)}
+              style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
+              <option value="">— Ajouter un étudiant {groupLevel ? `(${levelMapInv[groupLevel]})` : ''} —</option>
+              {availableStudents.map(u => (
+                <option key={u._id} value={u._id}>{u.name} — {u.specialite || ''}</option>
+              ))}
+            </select>
+            <Button onClick={handleAdd} disabled={!newMemberCid || saving}>Ajouter</Button>
+          </div>
+          {availableStudents.length === 0 && (
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+              Aucun étudiant sans groupe disponible pour ce niveau.
+            </p>
+          )}
+        </div>
+
+        {/* Supervisor section */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.06em' }}>
+            Encadreur
+          </p>
+          {currentSupervisor && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '10px', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', marginBottom: '10px' }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: '#fff' }}>
+                {currentSupervisor.name?.charAt(0)}
+              </div>
+              <span style={{ flex: 1, fontSize: '13px', fontWeight: 600 }}>{currentSupervisor.name}</span>
+              <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: currentSupervisor.available !== false ? '#D1FAE5' : '#FEE2E2', color: currentSupervisor.available !== false ? '#065F46' : '#991B1B' }}>
+                {currentSupervisor.available !== false ? 'Disponible' : 'Indisponible'}
+              </span>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <select value={newSupId} onChange={e => setNewSupId(e.target.value)}
+              style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
+              <option value="">— Changer l'encadreur —</option>
+              {teachers.map(u => (
+                <option key={u._id} value={u._id}>
+                  {u.name} {u.available === false ? '(Indisponible)' : ''}
+                </option>
+              ))}
+            </select>
+            <Button onClick={handleChangeSup} disabled={!newSupId || saving}>Confirmer</Button>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Create group modal ─────────────────────────────────────────────
 function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
   const { t } = useLanguage();
@@ -647,13 +795,15 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
 // ── Main page ──────────────────────────────────────────────────────
 export default function AdminGroupes() {
   const { t } = useLanguage();
-  const { groups, users, departments, updateGroup, addGroup, assignJury, editJury, scheduleDefense, reloadGroups, archiveGroup, addMember, changeSupervisor } = useAdmin();
+  const { groups, users, archive, departments, updateGroup, addGroup, assignJury, editJury, scheduleDefense, reloadGroups, archiveGroup, addMember, removeMember, changeSupervisor } = useAdmin();
+
   const safeGroups = groups || [];
   const safeUsers  = users  || [];
 
   const [search,       setSearch]       = useState('');
   const [filter,       setFilter]       = useState('all');
   const [detailGrp,    setDetailGrp]    = useState(null);
+  const [editGrp,      setEditGrp]      = useState(null);
   const [juryGrp,      setJuryGrp]      = useState(null);
   const [scheduleGrp,  setScheduleGrp]  = useState(null);
   const [createGrp,    setCreateGrp]    = useState(false);
@@ -683,9 +833,16 @@ export default function AdminGroupes() {
   };
 
   const students = safeUsers.filter(u => u.role === 'student');
-  const studentIds = new Set(realGroups.flatMap(g => g.student_ids || []));
+  const safeArchive = archive || [];
+  const archivedStudentIds = new Set(
+    safeArchive.flatMap(g => g.members || []).map(m => String(typeof m === 'object' ? m.id : m))
+  );
+  const activeStudentIds = new Set(
+    realGroups.flatMap(g => (g.members || []).map(m => String(m.id ?? m)))
+  );
+  const studentIds = new Set([...activeStudentIds, ...archivedStudentIds]);
   const withGroup    = students.filter(s => studentIds.has(s._id));
-  const withoutGroup = students.filter(s => !studentIds.has(s._id));
+  const withoutGroup = students.filter(s => !studentIds.has(String(s._id)) && s.status !== 'blocked');
 
   return (
     <DashboardLayout>
@@ -748,21 +905,13 @@ export default function AdminGroupes() {
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
                         <button 
-                          disabled={!g.final_submission_approved}
-                          onClick={() => setJuryGrp(g)} 
-                          title={!g.final_submission_approved ? t('WaitSupervisorValidation') : t('AssignJury')}
-                          style={{ 
-                            width: 34, height: 34, borderRadius: '10px', 
-                            background: !g.final_submission_approved ? 'var(--bg)' : (hasJury ? 'var(--primary-subtle)' : 'var(--bg)'), 
-                            border: `1px solid ${!g.final_submission_approved ? 'var(--border)' : (hasJury ? 'var(--primary)' : 'var(--border)')}`, 
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                            cursor: !g.final_submission_approved ? 'not-allowed' : 'pointer', 
-                            color: !g.final_submission_approved ? 'var(--text-muted)' : (hasJury ? 'var(--primary)' : 'var(--text-muted)'),
-                            transition: 'all 0.15s'
-                          }}
+                          onClick={() => setEditGrp(g)} 
+                          title="Modifier le groupe"
+                          style={{ width: 34, height: 34, borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
                         >
-                          <IoRibbonOutline size={16}/>
+                          <IoCreateOutline size={16}/>
                         </button>
+
                         <button onClick={() => setDetailGrp(g)} style={{ width: 34, height: 34, borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}>
                           <IoEyeOutline size={16}/>
                         </button>
@@ -801,6 +950,7 @@ export default function AdminGroupes() {
       </div>
 
       {detailGrp && <GroupDetailModal g={detailGrp} users={safeUsers} onClose={() => setDetailGrp(null)} onAssignJury={g => { setDetailGrp(null); setJuryGrp(g); }} onSchedule={g => { setDetailGrp(null); setScheduleGrp(g); }} onArchive={archiveGroup} onAddMember={addMember} onChangeSupervisor={changeSupervisor}/>}
+      {editGrp && <EditGroupModal g={editGrp} withoutGroup={withoutGroup} allUsers={safeUsers} onClose={() => setEditGrp(null)} onAddMember={addMember} onRemoveMember={removeMember} onChangeSupervisor={changeSupervisor} onDone={reloadGroups}/>}
       {juryGrp && <JuryModal group={juryGrp} users={safeUsers} onClose={() => setJuryGrp(null)} onAssign={handleAssignJury} isEdit={!!(juryGrp.jury?.teacher1_id)}/>}
       {scheduleGrp && <ScheduleModal group={scheduleGrp} onClose={() => setScheduleGrp(null)} onSchedule={handleSchedule}/>}
       {createGrp && <CreateGroupModal withoutGroup={withoutGroup} onClose={() => setCreateGrp(false)} onSubmit={addGroup}/>}

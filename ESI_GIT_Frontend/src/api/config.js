@@ -42,6 +42,7 @@ export const ENDPOINTS = {
     studentsWithoutGroup: 'projects/admin/students-without-group/', // GET
     attachments: (pid) => `projects/attachments/${pid}/`,          // GET (admin/jury)
     addMember:        (id) => `projects/admin/groups/${id}/assign-student/`,  // POST
+    removeMember:     (id) => `projects/admin/groups/${id}/remove-student/`,  // DELETE
     changeSupervisor: (id) => `projects/admin/groups/${id}/change-supervisor/`, // PATCH
     
     // Student

@@ -135,6 +135,7 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
     schedule = serializers.SerializerMethodField()
     grades = serializers.SerializerMethodField()
     attachments = serializers.SerializerMethodField()
+    members = serializers.SerializerMethodField()
 
     class Meta:
         model = Projects
@@ -153,6 +154,8 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
             "final_submission_approved",
             "submitted_to_supervisor",
             "attachments",
+            "academic_level",
+            "members",
         ]
 
     def get_teacher_name(self, obj):
@@ -160,6 +163,12 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
 
     def get_Student_count(self, obj):
         return SProjects.objects.filter(PID=obj).count()
+    
+    def get_members(self, obj):
+        return [
+            {"id": rel.CID.CID, "name": rel.CID.full_name, "is_leader": rel.is_leader}
+            for rel in SProjects.objects.filter(PID=obj).select_related("CID")
+        ]
 
     def get_jury(self, obj):
         try:
