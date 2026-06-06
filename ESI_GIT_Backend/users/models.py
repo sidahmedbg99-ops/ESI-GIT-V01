@@ -50,7 +50,7 @@ class StudentManager(BaseUserManager):
 
 
 class Student(AbstractBaseUser, PermissionsMixin):
-    CID           = models.IntegerField(primary_key=True)
+    CID           = models.BigIntegerField(primary_key=True)
     email         = models.EmailField(max_length=255, unique=True)
     first_name    = models.CharField(max_length=100)
     last_name     = models.CharField(max_length=100)

@@ -13,6 +13,7 @@ FIELD_ALIASES = {
     "last_name":  ["nom", "last_name", "lastname", "nom de famille", "surname"],
     "first_name": ["prénom", "prenom", "first_name", "firstname", "prénom(s)"],
     "email":      ["email", "e-mail", "mail", "adresse email", "adresse mail", "courriel"],
+    "specialty": ["specialty", "spécialité", "specialite", "filiere", "filière", "affectation"],
 }
 
 
@@ -56,7 +57,7 @@ def import_Student_from_file(file, level: int, academic_year: str = None):
         academic_year: only used when level == 1; defaults to platform setting
 
     Returns:
-        promoted (int), new (int), orphans (list), errors (list), users (list)
+        promoted (int), new (int), transfers (list), errors (list), users (list)
     """
     from users.models import Student
 
@@ -88,6 +89,12 @@ def import_Student_from_file(file, level: int, academic_year: str = None):
                 f"En-têtes détectés : {', '.join(actual_headers)}"
             )
         }], []
+    
+    if level == 4 and "specialty" not in col_map:
+        return 0, 0, [], [{
+            "row": "-",
+            "error": "Colonne spécialité requise pour l'import M1."
+        }], []
 
     # ── Defaults ──────────────────────────────────────────────────────────────
     if academic_year is None:
@@ -95,7 +102,7 @@ def import_Student_from_file(file, level: int, academic_year: str = None):
 
     promoted_count = 0
     new_count      = 0
-    orphans        = []
+    transfers      = []
     errors         = []
     users          = []
 
@@ -113,6 +120,7 @@ def import_Student_from_file(file, level: int, academic_year: str = None):
         first_name = str(row[col_map["first_name"]]).strip().title()
         email_raw  = str(row.get(col_map.get("email", ""), "")).strip().lower()
         email      = email_raw if "@" in email_raw else None
+        raw_specialty = str(row.get(col_map.get("specialty", ""), "")).strip()
 
         if not last_name or not first_name:
             errors.append({"row": row_num, "error": f"Nom/prénom manquant pour matricule {cid}"}); continue
@@ -120,23 +128,26 @@ def import_Student_from_file(file, level: int, academic_year: str = None):
         # ── Promote or create ─────────────────────────────────────────────────
         existing = Student.objects.filter(CID=cid).first()
 
+        specialty_obj = None
+        if level == 4:
+            from admin_panel.models import Specialty
+            if not raw_specialty:
+                errors.append({"row": row_num, "error": f"Spécialité requise pour M1 (matricule {cid})"}); continue
+            specialty_obj = Specialty.objects.filter(name__iexact=raw_specialty).first()
+            if not specialty_obj:
+                errors.append({"row": row_num, "error": f"Spécialité introuvable : '{raw_specialty}' (matricule {cid})"}); continue
+
         if existing:
             existing.level = level
-            existing.save(update_fields=["level"])
+            if specialty_obj:
+                existing.specialty = specialty_obj
+            fields = ["level", "specialty"] if specialty_obj else ["level"]
+            existing.save(update_fields=fields)
             promoted_count += 1
-            users.append({"CID": cid, "name": f"{first_name} {last_name}", "action": "promoted"})
+            users.append({"CID": cid, "name": f"{first_name} {last_name}", "email": existing.email, "action": "promoted"})
+
 
         else:
-            if level != 1:
-                # Unknown CID at L2+ = transfer student or data issue
-                orphans.append({
-                    "CID": cid,
-                    "name": f"{first_name} {last_name}",
-                    "reason": "Introuvable dans le système (étudiant transféré ?)"
-                })
-                continue
-
-            # New L1 student — generate password and email credentials
             from admin_panel.serializers import generate_password
             password = generate_password()
 
@@ -144,9 +155,10 @@ def import_Student_from_file(file, level: int, academic_year: str = None):
                 CID=cid,
                 first_name=first_name,
                 last_name=last_name,
-                email=email or f"{cid}@esi-sba.dz",  # fallback if no email column
-                level=1,
+                email=email or f"{cid}@esi-sba.dz",
+                level=level,
                 academic_year=academic_year,
+                specialty=specialty_obj,
                 is_active=True,
                 is_blocked=False,
                 is_first_login=True,
@@ -158,12 +170,25 @@ def import_Student_from_file(file, level: int, academic_year: str = None):
                 try:
                     send_account_email(email, password, "student")
                 except Exception:
-                    pass  # don't fail the whole import over one email
+                    pass
 
-            new_count += 1
-            users.append({"CID": cid, "name": f"{first_name} {last_name}", "action": "new"})
+            if level != 1:
+                transfers.append({
+                    "CID": cid,
+                    "name": f"{first_name} {last_name}",
+                    "email": email or f"{cid}@esi-sba.dz",
+                    "action": "transfer",
+                    "warning": "Academic year set to platform default — please verify."
+                })
+            else:
+                new_count += 1
+                users.append({"CID": cid, "name": f"{first_name} {last_name}", "email": email or f"{cid}@esi-sba.dz", "action": "new"})
 
-    return promoted_count, new_count, orphans, errors, users
+
+
+
+
+    return promoted_count, new_count, transfers, errors, users
 
 STAFF_FIELD_ALIASES = {
     "email":      ["email", "e-mail", "mail", "adresse email", "courriel"],

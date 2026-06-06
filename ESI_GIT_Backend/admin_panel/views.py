@@ -351,13 +351,13 @@ def upload_students(request):
 
     academic_year = request.data.get("academic_year") or None  # None = use platform setting
 
-    promoted, new, orphans, errors, users = import_Student_from_file(file, level=level, academic_year=academic_year)
+    promoted, new, transfers, errors, users = import_Student_from_file(file, level=level, academic_year=academic_year)
 
     return Response({
         "message": f"{promoted} promu(s), {new} nouveau(x) étudiant(s) importé(s).",
         "promoted": promoted,
         "new": new,
-        "orphans": orphans,
+        "transfers": transfers,
         "errors": errors,
         "users": users,
     })

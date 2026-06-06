@@ -327,6 +327,15 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
   const [result, setResult] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [activeYear, setActiveYear] = useState('');
+  const LEVEL_LABELS = { '1': '1CP', '2': '2CP', '3': '1CS', '4': '2CS', '5': '3CS' };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      client.get(ENDPOINTS.admin.settings).then(r => setActiveYear(r.data.current_academic_year || '')).catch(() => {});
+    }
+  }, [isOpen]);
 
   const handleFile = (f) => {
     if (!f) return;
@@ -339,8 +348,13 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
     setResult(null);
   };
 
-  const handleUpload = async () => {
+  const handleUpload = () => {
     if (!file) return;
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedUpload = async () => {
+    setShowConfirm(false);
     setLoading(true);
     setResult(null);
     try {
@@ -353,11 +367,10 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
         success: true,
         promoted: data.promoted || 0,
         new: data.new || 0,
-        orphans: data.orphans || [],
+        transfers: data.transfers || [],
         errors: data.errors || [],
         users: data.users || [],
       });
-      if (onImported) onImported();
     } catch (e) {
       const msg = e?.response?.data?.error || 'Erreur lors de l\'import';
       setResult({ success: false, errors: [msg] });
@@ -369,7 +382,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
   const reset = () => { setFile(null); setResult(null); };
 
   return (
-    <Modal isOpen={isOpen} onClose={() => { reset(); onClose(); }} title={`📥 ${t('ImportUsers')}`} size="lg">
+    <Modal isOpen={isOpen} onClose={() => { reset(); onClose(); if (onImported) onImported(); }} title={`📥 ${t('ImportUsers')}`} size="lg">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
         {/* Type selector */}
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -389,11 +402,11 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[
-                { v: '1', label: 'L1', desc: 'Nouveaux' },
-                { v: '2', label: 'L2', desc: '2ème année' },
-                { v: '3', label: 'L3', desc: '3ème année' },
-                { v: '4', label: 'M1', desc: '4ème année' },
-                { v: '5', label: 'M2', desc: '5ème année' },
+                { v: '1', label: '1CP', desc: 'Nouveaux' },
+                { v: '2', label: '2CP', desc: '2ème année' },
+                { v: '3', label: '1CS', desc: '3ème année' },
+                { v: '4', label: '2CS', desc: '4ème année' },
+                { v: '5', label: '3CS', desc: '5ème année' },
               ].map(({ v, label, desc }) => (
                 <button key={v} onClick={() => setLevel(v)}
                   style={{ padding: '8px 14px', borderRadius: '10px', border: `2px solid ${level === v ? 'var(--primary)' : 'var(--border)'}`, background: level === v ? 'var(--primary-subtle)' : 'var(--bg)', color: level === v ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center' }}>
@@ -404,7 +417,10 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
             </div>
             {level !== '1' && (
               <p style={{ fontSize: '11px', color: '#F59E0B', marginTop: '8px', fontWeight: 600 }}>
-                ⚠️ Les étudiants existants seront promus au niveau {['','L1','L2','L3','M1','M2'][level]}. Les CIDs inconnus seront signalés comme orphelins.
+                {level === '5'
+                  ? `⚠️ Les étudiants présents dans ce fichier auront leur niveau mis à jour en ${LEVEL_LABELS[level]}. Les étudiants de l'année précédente absents de ce fichier seront considérés comme diplômés. Les nouveaux CIDs seront créés et marqués comme transférés — vérifiez leur année de promotion après l'import.`
+                  : `⚠️ Les étudiants présents dans ce fichier auront leur niveau mis à jour en ${LEVEL_LABELS[level]}. Les nouveaux CIDs seront créés et marqués comme transférés — vérifiez leur année de promotion après l'import.`
+                }
               </p>
             )}
           </div>
@@ -423,6 +439,11 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
               {result.promoted > 0 && (
                 <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#DBEAFE', color: '#2563EB', fontSize: '12px', fontWeight: 700 }}>
                   ⬆️ {result.promoted} promu{result.promoted > 1 ? 's' : ''}
+                </span>
+              )}
+              {result.transfers?.length > 0 && (
+                <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#DBEAFE', color: '#2563EB', fontSize: '12px', fontWeight: 700 }}>
+                  🔄 {result.transfers.length} transféré{result.transfers.length > 1 ? 's' : ''}
                 </span>
               )}
               {result.orphans?.length > 0 && (
@@ -449,6 +470,19 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
               </div>
             )}
 
+            {result.transfers?.length > 0 && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', borderRadius: '8px', background: '#EFF6FF', border: '1px solid #93C5FD' }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB', marginBottom: '6px' }}>
+                  ⚠️ {result.transfers.length} étudiant(s) transféré(s) créé(s) — vérifiez leur année de promotion
+                </p>
+                {result.transfers.map((o, i) => (
+                  <p key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0' }}>
+                    {o.CID} — {o.name}
+                  </p>
+                ))}
+              </div>
+            )}
+
              <p style={{ fontSize: '14px', fontWeight: 700, color: '#16A34A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                <IoCheckmarkCircleOutline size={18} /> {t('AccountsCreated')}
              </p>
@@ -466,8 +500,11 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
                      <td style={{ padding: '8px', fontWeight: 600 }}>{u.name}</td>
                      <td style={{ padding: '8px', color: 'var(--text-muted)' }}>{u.email}</td>
                      <td style={{ padding: '8px' }}>
-                       <code style={{ background: 'var(--primary-subtle)', color: 'var(--primary)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>{u.password}</code>
-                     </td>
+                        {u.action === 'promoted'
+                          ? <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Déjà existant — niveau mis à jour</span>
+                          : <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>✉️ Mot de passe envoyé par email</span>
+                        }
+                      </td>
                    </tr>
                  ))}
                </tbody>
@@ -480,7 +517,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
           <div style={{ padding: '12px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
             <strong style={{ color: 'var(--text-primary)' }}>📋 Colonnes attendues :</strong><br/>
             {userType === 'student'
-              ? <code style={{ fontSize: '11px' }}>Matricule, Nom, Prénom, Email (optionnel)</code>
+              ? <code style={{ fontSize: '11px' }}>Matricule, Nom, Prénom, Email{level === '4' ? ', Spécialité' : ''}</code>
               : <code style={{ fontSize: '11px' }}>email, first_name, last_name, is_admin (0/1), is_teacher (0/1)</code>
             }
             <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
@@ -552,6 +589,14 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
           )}
         </div>
       </div>
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleConfirmedUpload}
+        title="Confirmer l'import"
+        message={`Vous allez importer "${file?.name}" comme liste des étudiants ${LEVEL_LABELS[level]} de l'année ${activeYear}. Confirmer ?`}
+        type="warning"
+      />
     </Modal>
   );
 }
