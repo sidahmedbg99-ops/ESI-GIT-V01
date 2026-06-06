@@ -13,21 +13,16 @@ PUBLIC
 -"Group: group title" in the group title shouldnt be there
 -make supervisor name more visible
 -remove x/6 members to x members , this implys that you need 6 members
--fix archive attachments not showing up
     TEACHER
 -the warning pop up needs to be fixed in requests , its only shading a part of the page
 -the refuse final submssion prompt needs to be in the website not the browser pop up , same for the warning in approuving inside the group
 -add each students role next to their name when a supervisor creats a task for a group
 -jury should be able to see the attachments of the project they will judge
--archive cant see group memberes , only as object object
--archive cant see supervisor only as __
     ADMIN
--can see project attachments , projects graded should be last 
+-projects graded should be last 
 -when archiving all active projects , you need all of them to be graded 
 -date set to stop students from leaving the project
 -better stats
--fix archive not showing
--show livrables for student toggle dosent work
     ADDITIONS
 -quit group check so students dosent leave a group in the middle of the year
 -admin have the abbility fully to edit the group edit the members / supervisor in case of problems
