@@ -335,32 +335,32 @@ def reset_password_student(request, student_id: int):
 @api_view(["POST"])
 @permission_classes([IsAdmin])
 def upload_students(request):
-    """
-    POST /api/admin/students/upload/
-
-    Bulk-import students from a CSV or XLSX file.
-    Each valid row creates a student account and emails credentials.
-
-    Form field: ``file`` (multipart/form-data)
-    Response 200: { message, created, errors }
-    Response 400: no file provided
-    """
     file = request.FILES.get("file")
     if not file:
-        return Response(
-            {"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
-        )
-    created, errors, users = import_Student_from_file(file)
-    return Response(
-        {
-            "message": f"{created} student(s) imported.",
-            "created": created,
-            "errors": errors,
-            "users": users,
-        }
-    )
+        return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
+    raw_level = request.data.get("level")
+    if not raw_level:
+        return Response({"error": "level is required (1–5)."}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        level = int(raw_level)
+        if level not in range(1, 6):
+            raise ValueError
+    except ValueError:
+        return Response({"error": "level must be an integer between 1 and 5."}, status=status.HTTP_400_BAD_REQUEST)
 
+    academic_year = request.data.get("academic_year") or None  # None = use platform setting
+
+    promoted, new, orphans, errors, users = import_Student_from_file(file, level=level, academic_year=academic_year)
+
+    return Response({
+        "message": f"{promoted} promu(s), {new} nouveau(x) étudiant(s) importé(s).",
+        "promoted": promoted,
+        "new": new,
+        "orphans": orphans,
+        "errors": errors,
+        "users": users,
+    })
 # ──────────────────────────────────────────────────────────────────────────────
 # 4. STAFF CRUD
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1050,8 +1050,28 @@ class AdvanceAcademicYearAPI(APIView):
         if not settings:
             return Response({"error": "Platform settings not found."}, status=400)
 
+        # Block if any active project with a jury assigned is not yet graded
+        from projects.models import Projects
+        from jury.models import ProjectJury, Grades
+
+        active_projects = Projects.objects.filter(archived=False)
+
+        # Only check projects that have a jury assigned — those are the ones
+        # expected to be graded before year can advance
+        juried_pids = set(ProjectJury.objects.values_list("PID_id", flat=True))
+        graded_pids = set(Grades.objects.filter(final_grade__isnull=False).values_list("PID_id", flat=True))
+
+        ungraded = active_projects.filter(PID__in=juried_pids).exclude(PID__in=graded_pids)
+        if ungraded.exists():
+            ungraded_names = list(ungraded.values_list("name", flat=True)[:5])
+            return Response({
+                "error": "Impossible d'avancer l'année : certains projets ont un jury assigné mais ne sont pas encore notés.",
+                "ungraded_count": ungraded.count(),
+                "examples": ungraded_names,
+            }, status=400)
+
         # Archive all active projects
-        archived_count = Projects.objects.filter(archived=False).update(archived=True)
+        archived_count = active_projects.update(archived=True)
 
         # Bump the year — parse "2024-2025" → "2025-2026"
         try:

@@ -51,6 +51,8 @@ export function AuthProvider({ children }) {
       }
       return false;
     } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || 'Email ou mot de passe incorrect.';
+      setError(msg);
       return false;
     }
   };

@@ -322,6 +322,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
   const { t } = useLanguage();
   const [file, setFile] = useState(null);
   const [userType, setUserType] = useState('student');
+  const [level, setLevel] = useState('1');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [dragOver, setDragOver] = useState(false);
@@ -345,13 +346,16 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
     try {
       const fd = new FormData();
       fd.append('file', file);
+      if (userType === 'student') fd.append('level', level);
       const endpoint = userType === 'student' ? ENDPOINTS.admin.student.upload : ENDPOINTS.admin.staff.upload;
       const { data } = await client.post(endpoint, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setResult({ 
-        success: true, 
-        created: data.created, 
+      setResult({
+        success: true,
+        promoted: data.promoted || 0,
+        new: data.new || 0,
+        orphans: data.orphans || [],
         errors: data.errors || [],
-        users: data.users || [] 
+        users: data.users || [],
       });
       if (onImported) onImported();
     } catch (e) {
@@ -370,16 +374,81 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
         {/* Type selector */}
         <div style={{ display: 'flex', gap: '10px' }}>
           {[{ v: 'student', label: `🎓 ${t('Students')}` }, { v: 'staff', label: `👨‍🏫 ${t('StaffMembers')}` }].map(({ v, label }) => (
-            <button key={v} onClick={() => { setUserType(v); reset(); }}
+            <button key={v} onClick={() => { setUserType(v); setLevel('1'); reset(); }}
               style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${userType === v ? 'var(--primary)' : 'var(--border)'}`, background: userType === v ? 'var(--primary-subtle)' : 'var(--bg)', color: userType === v ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s' }}>
               {label}
             </button>
           ))}
         </div>
 
+        {/* Level selector — students only */}
+        {userType === 'student' && !result && (
+          <div>
+            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
+              NIVEAU DU FICHIER
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { v: '1', label: 'L1', desc: 'Nouveaux' },
+                { v: '2', label: 'L2', desc: '2ème année' },
+                { v: '3', label: 'L3', desc: '3ème année' },
+                { v: '4', label: 'M1', desc: '4ème année' },
+                { v: '5', label: 'M2', desc: '5ème année' },
+              ].map(({ v, label, desc }) => (
+                <button key={v} onClick={() => setLevel(v)}
+                  style={{ padding: '8px 14px', borderRadius: '10px', border: `2px solid ${level === v ? 'var(--primary)' : 'var(--border)'}`, background: level === v ? 'var(--primary-subtle)' : 'var(--bg)', color: level === v ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center' }}>
+                  <div>{label}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 400, marginTop: '2px' }}>{desc}</div>
+                </button>
+              ))}
+            </div>
+            {level !== '1' && (
+              <p style={{ fontSize: '11px', color: '#F59E0B', marginTop: '8px', fontWeight: 600 }}>
+                ⚠️ Les étudiants existants seront promus au niveau {['','L1','L2','L3','M1','M2'][level]}. Les CIDs inconnus seront signalés comme orphelins.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Results with Password List */}
-        {result && result.success && result.users.length > 0 && (
+        {result && result.success && (
           <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '10px' }}>
+            {/* Summary counts */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+              {result.new > 0 && (
+                <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#DCFCE7', color: '#16A34A', fontSize: '12px', fontWeight: 700 }}>
+                  ✅ {result.new} nouveau{result.new > 1 ? 'x' : ''}
+                </span>
+              )}
+              {result.promoted > 0 && (
+                <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#DBEAFE', color: '#2563EB', fontSize: '12px', fontWeight: 700 }}>
+                  ⬆️ {result.promoted} promu{result.promoted > 1 ? 's' : ''}
+                </span>
+              )}
+              {result.orphans?.length > 0 && (
+                <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#FEF3C7', color: '#D97706', fontSize: '12px', fontWeight: 700 }}>
+                  ⚠️ {result.orphans.length} orphelin{result.orphans.length > 1 ? 's' : ''}
+                </span>
+              )}
+              {result.errors?.length > 0 && (
+                <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#FEE2E2', color: '#DC2626', fontSize: '12px', fontWeight: 700 }}>
+                  ❌ {result.errors.length} erreur{result.errors.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+
+            {/* Orphans list */}
+            {result.orphans?.length > 0 && (
+              <div style={{ marginBottom: '12px', padding: '10px 12px', borderRadius: '8px', background: '#FFFBEB', border: '1px solid #FCD34D' }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>CIDs introuvables (à créer manuellement)</p>
+                {result.orphans.map((o, i) => (
+                  <p key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0' }}>
+                    {o.CID} — {o.name}
+                  </p>
+                ))}
+              </div>
+            )}
+
              <p style={{ fontSize: '14px', fontWeight: 700, color: '#16A34A', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                <IoCheckmarkCircleOutline size={18} /> {t('AccountsCreated')}
              </p>
@@ -411,7 +480,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
           <div style={{ padding: '12px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
             <strong style={{ color: 'var(--text-primary)' }}>📋 Colonnes attendues :</strong><br/>
             {userType === 'student'
-              ? <code style={{ fontSize: '11px' }}>CID, email, first_name, last_name, specialty, academic_year</code>
+              ? <code style={{ fontSize: '11px' }}>Matricule, Nom, Prénom, Email (optionnel)</code>
               : <code style={{ fontSize: '11px' }}>email, first_name, last_name, is_admin (0/1), is_teacher (0/1)</code>
             }
             <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>

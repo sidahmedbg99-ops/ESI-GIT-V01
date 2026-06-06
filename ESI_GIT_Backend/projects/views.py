@@ -1004,6 +1004,12 @@ class AttachmentView(APIView):
         except SProjects.DoesNotExist:
             return Response({"error": "You are not in a project"}, status=404)
 
+        if not membership.is_leader:
+            return Response({"error": "Only the project leader can delete attachments."}, status=403)
+
+        if membership.PID.final_submission_approved:
+            return Response({"error": "Attachments cannot be deleted after the supervisor has approved the final submission."}, status=400)
+
         attachment_id = request.data.get("attachment_id")
         if not attachment_id:
             return Response({"error": "attachment_id is required"}, status=400)

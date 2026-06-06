@@ -1,36 +1,49 @@
-PUBLIC
--when clicking on a user profile , you can see a little card with info on him with a way to click his email to open gmail
+----------------------------------------PUBLIC----------------------------------------
 -add color depth for light mode , in it everything is white which makes the form kinda disappear
 -add password min 8 chars when creating it.
--login page if you input wrong ones it refreshes
--Not Found: /apitoken/refresh/
-[03/Jun/2026 15:27:07] "POST /apitoken/refresh/ HTTP/1.1" 404 3813
-    STUDENT
+
+
+----------------------------------------STUDENT----------------------------------------
+    *DESIGN/DISPLAY:
 -dark mode , join a project , choosing a role makes it very white 
--lock deleting documents after final submssion Approved
 -private repo support , with the operations , student can modify , supervisor only load commits no editing
 -leader can lock and confirm it the group so no one leaves , he do it when his group is all there (cant do it if less that 3 members)
 -"Group: group title" in the group title shouldnt be there
 -make supervisor name more visible
 -remove x/6 members to x members , this implys that you need 6 members
-    TEACHER
+
+    *LOGIC/CRASH BUGS:
+
+----------------------------------------TEACHER----------------------------------------
+    *DESIGN/DISPLAY:
 -the warning pop up needs to be fixed in requests , its only shading a part of the page
 -the refuse final submssion prompt needs to be in the website not the browser pop up , same for the warning in approuving inside the group
 -add each students role next to their name when a supervisor creats a task for a group
--jury should be able to see the attachments of the project they will judge
-    ADMIN
+
+
+    *LOGIC/CRASH BUGS:
+
+----------------------------------------ADMIN----------------------------------------
+    *DESIGN/DISPLAY:
 -projects graded should be last 
+-better stats
+
+    *LOGIC/CRASH BUGS:
 -when archiving all active projects , you need all of them to be graded 
 -date set to stop students from leaving the project
--better stats
-    ADDITIONS
--quit group check so students dosent leave a group in the middle of the year
--admin have the abbility fully to edit the group edit the members / supervisor in case of problems
--year rollover (we can split the student import in 4 , and if the user exist on the past year then add level +1 , if not then add him as a new student)
--archive filters (by level)
 
-    NEW FEATURES
--ressources page for everyone
+----------------------------------------ADDITIONS----------------------------------------
+    *DESIGN/DISPLAY:
+-archive filters (by level)
+-when clicking on a user profile , you can see a little card with info on him with a way to click his email to open gmail
+
+    *LOGIC/CRASH BUGS:
+-quit group check so students dosent leave a group in the middle of the year
+-year rollover (we can split the student import in 4 , and if the user exist on the past year then add level +1 , if not then add him as a new student)
+
+----------------------------------------NEW FEATURES----------------------------------------
 -meeting attendance
+-ressources page for everyone
 -notifications system for admin
 -real time notifications
+--------------------------------------------------------------------------------------------

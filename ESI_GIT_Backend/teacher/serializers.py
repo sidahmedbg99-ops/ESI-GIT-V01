@@ -66,7 +66,7 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
     attachments = serializers.SerializerMethodField()
     supervisor_name = serializers.SerializerMethodField()
     supervisor_id   = serializers.SerializerMethodField()
-
+    members = serializers.SerializerMethodField()
     
 
     class Meta:
@@ -77,7 +77,7 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
             "creation_date", "finish_date",
             "members", "progress", "tasks", "meetings", "attachments",
             "github_url", "supervisor_feedback", "submitted_to_supervisor",
-            "final_submission_approved", "supervisor_name", "supervisor_id",
+            "final_submission_approved", "supervisor_name", "supervisor_id","members",
         ]
 
     def get_supervisor_name(self, obj):
@@ -98,7 +98,7 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
             }
             for m in memberships
         ]
-
+    
     def get_progress(self, obj):
         from tasks.models import Task
         tasks = Task.objects.filter(PID=obj)

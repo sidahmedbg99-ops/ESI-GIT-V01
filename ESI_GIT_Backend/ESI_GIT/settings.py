@@ -72,6 +72,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,   # each refresh call issues a new refresh token
     "BLACKLIST_AFTER_ROTATION": False,  # set True if you add simplejwt.token_blacklist to INSTALLED_APPS
     "AUTH_HEADER_TYPES": ("Bearer",),
+    "TOKEN_REFRESH_SERIALIZER": "users.authentication.CustomTokenRefreshSerializer",
 }
 
 

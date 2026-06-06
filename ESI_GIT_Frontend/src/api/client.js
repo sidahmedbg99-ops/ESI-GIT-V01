@@ -44,7 +44,8 @@ client.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('token/refresh')
+      !originalRequest.url?.includes('token/refresh') &&
+      !originalRequest.url?.includes('login/')
     ) {
       const refreshToken = localStorage.getItem('esi-refresh');
 
@@ -72,7 +73,7 @@ client.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          `${BASE_URL}token/refresh/`,
+          `${BASE_URL}/token/refresh/`,
           { refresh: refreshToken }
         );
 
