@@ -13,6 +13,7 @@ import { useAdmin } from '../../context/AdminContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { TECH_COLORS } from '../../constants';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
 
 // Constants will be defined inside the component to use the translation function
 
@@ -192,8 +193,12 @@ export default function AdminArchive() {
                   )}
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{t('Supervisor')} : {p.encadreur || p.teacher_name || '—'}</p>
+                {(p.attachments || []).length > 0 && (
+                  <AttachmentsPopover attachments={p.attachments} />
+                )}
               </Card>
             ))}
+
             {filtered.length === 0 && (
               <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
                 <IoArchiveOutline size={40} style={{ marginBottom: '12px', opacity: 0.3 }}/>

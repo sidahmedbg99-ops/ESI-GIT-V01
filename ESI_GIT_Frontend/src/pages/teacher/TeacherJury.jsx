@@ -8,6 +8,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useTeacher } from '../../context/TeacherContext';
 import { useAuth } from '../../context/AuthContext';
 import { getFileUrl } from '../../api/config';
+import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
 
 
 export default function TeacherJury() {
@@ -201,13 +202,8 @@ export default function TeacherJury() {
                   </div>
                   
                   {(j.attachments || []).length > 0 && (
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-                      {j.attachments.map(att => (
-                        <a key={att.id} href={getFileUrl(att.url)} target="_blank" rel="noreferrer" 
-                           style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, textDecoration: 'none' }}>
-                          📎 {att.filename} {att.is_final ? '(Final)' : ''}
-                        </a>
-                      ))}
+                    <div style={{ marginTop: '12px' }}>
+                      <AttachmentsPopover attachments={j.attachments.map(a => ({ ...a, file_url: a.file_url || getFileUrl(a.url) }))} />
                     </div>
                   )}
                 </div>
@@ -243,14 +239,9 @@ export default function TeacherJury() {
             )}
             
             {(gradeModal?.attachments || []).length > 0 && (
-              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Documents :</p>
-                {gradeModal.attachments.map(att => (
-                  <a key={att.id} href={getFileUrl(att.url)} target="_blank" rel="noreferrer" 
-                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
-                    📎 {att.filename} {att.is_final ? '(Final)' : ''}
-                  </a>
-                ))}
+              <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Documents :</span>
+                <AttachmentsPopover attachments={gradeModal.attachments.map(a => ({ ...a, file_url: a.file_url || getFileUrl(a.url) }))} />
               </div>
             )}
           </div>

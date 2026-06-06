@@ -25,7 +25,7 @@ from .views import (
     AvailableSupervisorsView,
 )
 
-from .views import AttachmentView
+from .views import AttachmentView, ProjectAttachmentsReadView
 from jury.views import assign_jury
 
 
@@ -64,6 +64,7 @@ urlpatterns = [
         name="available-supervisors",
     ),
     path("attachments/", AttachmentView.as_view(), name="attachments"),
+    path("attachments/<int:pid>/", ProjectAttachmentsReadView.as_view(), name="project-attachments-read"),
     path("projects/group-status/", StudentGroupStatusView.as_view()),
     path("public-settings/", PublicSettingsView.as_view()),
 ]

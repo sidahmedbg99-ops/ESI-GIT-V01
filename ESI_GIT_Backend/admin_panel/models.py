@@ -54,16 +54,11 @@ class PlatformSettings(models.Model):
     """
     # existing
     students_can_see_archived_projects = models.BooleanField(default=False)
-
+    students_can_see_attachments       = models.BooleanField(default=False)
     # added: controls whether students can see who their jury members are
     jury_page_visible                  = models.BooleanField(default=False)
-
     # added: displayed across the platform e.g. "2024-2025"
     current_academic_year              = models.CharField(max_length=20, default=_current_academic_year)
-
-    
-    
-
     # added: shown on public pages (Home, About) before login
     contact_email                      = models.CharField(max_length=100, default="egit@esi-sba.dz")
 

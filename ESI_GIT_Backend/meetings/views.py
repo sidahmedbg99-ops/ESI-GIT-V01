@@ -19,7 +19,7 @@ class MeetingListCreateView(APIView):
         student = request.user
 
         try:
-            membership = SProjects.objects.get(CID=student, PID__year=student.academic_year, PID__archived=False)
+            membership = SProjects.objects.get(CID=student, PID__academic_level=student.level, PID__archived=False)
         except SProjects.DoesNotExist:
             return Response(
                 {"error": "You are not in any project this year"},
@@ -33,7 +33,7 @@ class MeetingListCreateView(APIView):
         student = request.user
 
         try:
-            membership = SProjects.objects.get(CID=student, PID__year=student.academic_year, PID__archived=False)
+            membership = SProjects.objects.get(CID=student, PID__academic_level=student.level, PID__archived=False)
         except SProjects.DoesNotExist:
             return Response(
                 {"error": "You are not in any project this year"},

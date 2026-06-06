@@ -251,7 +251,13 @@ export default function Taches() {
               {tasks[c.id]?.length ?? 0}
             </span>
           ))}
-          <Button icon={<IoAddOutline size={18} />} onClick={() => setModalOpen(true)}>{t('NewTask')}</Button>
+          {group?.final_submission_approved ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: 'var(--radius-lg)', background: '#FEF9C3', border: '1px solid #FDE047', fontSize: '12px', fontWeight: 600, color: '#A16207' }}>
+              🔒 {t('ProjectFinalized') || 'Projet finalisé — tâches désactivées'}
+            </div>
+          ) : (
+            <Button icon={<IoAddOutline size={18} />} onClick={() => setModalOpen(true)}>{t('NewTask')}</Button>
+          )}
         </div>
       </div>
 

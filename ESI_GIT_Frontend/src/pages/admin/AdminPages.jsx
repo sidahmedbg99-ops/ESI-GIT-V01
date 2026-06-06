@@ -321,6 +321,7 @@ function PanelYears({ onBack }) {
 
 function PanelCategories() {
   const { t } = useLanguage();
+  const { reloadSpecialties } = useAdmin();
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(false);
   
@@ -353,7 +354,7 @@ function PanelCategories() {
       toast.success("Supprimée");
     } catch (e) {
     console.error('FULL ERROR:', e?.response?.status, e?.response?.data);
-    toast.error(e?.response?.data?.error || "Erreur lors de l'ajout");
+    toast.error(e?.response?.data?.error || "Erreur lors de la suppression");
   }
   };
 
@@ -442,6 +443,7 @@ function PanelVisibility() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
           {[
             { key: 'students_can_see_archived_projects', label: t('ShowArchiveStudents'), desc: t('ShowArchiveStudents_Desc') },
+            { key: 'students_can_see_attachments', label: 'Livrables visibles (étudiants)', desc: 'Les étudiants peuvent voir les livrables des projets archivés' },
             { key: 'jury_page_visible', label: t('JuryPageVisible') || 'Enable jury page for teachers', desc: 'Teachers can access the jury grading page' },
           ].map(s => (
             <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)' }}>

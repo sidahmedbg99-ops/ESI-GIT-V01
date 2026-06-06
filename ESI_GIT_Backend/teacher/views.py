@@ -292,7 +292,7 @@ class TeacherGroupDetailView(APIView):
             return Response({"error": "Group not found"}, status=404)
 
         return Response(
-            TeacherGroupDetailSerializer(project, context={"teacher": teacher}).data
+            TeacherGroupDetailSerializer(project, context={"teacher": teacher, "request": request}).data
         )
 
     def patch(self, request, pid):
@@ -302,6 +302,11 @@ class TeacherGroupDetailView(APIView):
             return Response({"error": "Group not found"}, status=404)
 
         # handle final submission approval/rejection
+        if not project.submitted_to_supervisor:
+            return Response(
+                {"error": "No final submission request from this group yet."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         approved = request.data.get("final_submission_approved")
         feedback = request.data.get("supervisor_feedback")
 
@@ -499,13 +504,14 @@ class TeacherMeetingListCreateView(APIView):
                 {"error": "Project not found or you are not its supervisor"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-
+        
+        location = serializer.validated_data.get("location") or serializer.validated_data.get("type", "Présentielle")
         meeting = Meeting.objects.create(
             PID=project,
             title=data["title"],
             date=data["date"],
             time=data["time"],
-            location=data["location"],
+            location=location,
             created_by_staff=teacher,
             status="approved",
         )
@@ -664,6 +670,11 @@ class TeacherAssignTaskView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         data = cast(Dict[str, Any], serializer.validated_data)
 
+        if project.final_submission_approved:
+            return Response(
+                {"error": "This project has been finalized. No new tasks can be created."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         task = Task.objects.create(
             PID=project,
             title=data["title"],
@@ -748,7 +759,7 @@ class TeacherJuryListView(APIView):
                 "a_evaluer": to_evaluate,
                 "evaluees": evaluated,
                 "active_formula": formula_data,
-                "defenses": TeacherJurySerializer(juries, many=True, context={"request": request}).data,
+                "defenses": TeacherJurySerializer(juries, many=True, context={"request": request, "graded_pids": graded_pids}).data,
             }
         )
 

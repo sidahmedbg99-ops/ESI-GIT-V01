@@ -414,4 +414,4 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlatformSettings
-        fields = ["students_can_see_archived_projects", "jury_page_visible", "contact_email"]
+        fields = ["students_can_see_archived_projects", "students_can_see_attachments", "jury_page_visible", "contact_email"]

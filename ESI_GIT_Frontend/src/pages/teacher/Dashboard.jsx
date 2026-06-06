@@ -1,7 +1,7 @@
 import {
   IoPeopleOutline, IoCalendarOutline,
   IoCheckmarkCircleOutline, IoStarOutline,
-  IoTimeOutline, IoTrendingUpOutline,
+  IoTimeOutline, IoTrendingUpOutline,IoDocumentTextOutline
 } from 'react-icons/io5';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,

@@ -137,7 +137,7 @@ def list_users(request):
         if specialty_id:
             students = students.filter(specialty_id=specialty_id)
         if study_year:
-            students = students.filter(year=study_year)
+            students = students.filter(level=study_year)
         if academic_year:
             students = students.filter(academic_year__iexact=academic_year)
 
@@ -617,124 +617,128 @@ class AdvancedAnalyticsAPI(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
-        from projects.models import Projects, SProjects
-        from tasks.models import Task
-        from jury.models import Grades, ProjectJury
+        try:
+            from projects.models import Projects, SProjects
+            from tasks.models import Task
+            from jury.models import Grades, ProjectJury
 
-        now = datetime.now()
-        thirty_days_ago = now - timedelta(days=30)
+            now = datetime.now()
+            thirty_days_ago = now - timedelta(days=30)
 
-        # 1. Active vs Inactive Students
-        total_students = Student.objects.count()
-        students_with_group = SProjects.objects.values('CID').distinct().count()
-        
-        # 2. At-risk Students (Past-due tasks)
-        at_risk_count = Task.objects.filter(
-            state__in=['todo', 'in_progress'], 
-            deadline__lt=now.date()
-        ).values('assignments__CID').distinct().count()
+            # 1. Active vs Inactive Students
+            total_students = Student.objects.count()
+            students_with_group = SProjects.objects.values('CID').distinct().count()
+            
+            # 2. At-risk Students (Past-due tasks)
+            at_risk_count = Task.objects.filter(
+                state__in=['todo', 'in_progress'], 
+                deadline__lt=now.date()
+            ).values('assignments__CID').distinct().count()
 
-        # 3. Grade Trends (by month)
-        grade_trends = (
-            Grades.objects.filter(final_grade__isnull=False)
-            .annotate(month=TruncMonth('PID__creation_date'))
-            .values('month')
-            .annotate(avg_grade=Avg('final_grade'))
-            .order_by('month')
-        )
+            # 3. Grade Trends (by month)
+            grade_trends = (
+                Grades.objects.filter(final_grade__isnull=False)
+                .annotate(month=TruncMonth('PID__creation_date'))
+                .values('month')
+                .annotate(avg_grade=Avg('final_grade'))
+                .order_by('month')
+            )
 
-        # 4. Specialty Performance (Module difficulty)
-        specialty_performance = (
-            Projects.objects.filter(grades__final_grade__isnull=False)
-            .values('specialty')
-            .annotate(avg_grade=Avg('grades__final_grade'), count=Count('PID'))
-            .order_by('-avg_grade')
-        )
+            # 4. Specialty Performance (Module difficulty)
+            specialty_performance = (
+                Projects.objects.filter(grades__final_grade__isnull=False)
+                .values('specialty')
+                .annotate(avg_grade=Avg('grades__final_grade'), count=Count('PID'))
+                .order_by('-avg_grade')
+            )
 
-        # 5. Pass/Fail Rates
-        final_grades_qs = Grades.objects.filter(final_grade__isnull=False)
-        pass_count = final_grades_qs.filter(final_grade__gte=10).count()
-        fail_count = final_grades_qs.filter(final_grade__lt=10).count()
-        total_final_grades = final_grades_qs.count()
+            # 5. Pass/Fail Rates
+            final_grades_qs = Grades.objects.filter(final_grade__isnull=False)
+            pass_count = final_grades_qs.filter(final_grade__gte=10).count()
+            fail_count = final_grades_qs.filter(final_grade__lt=10).count()
+            total_final_grades = final_grades_qs.count()
 
-        # 6. Task Completion Rate
-        total_tasks = Task.objects.count()
-        done_tasks = Task.objects.filter(state='done').count()
+            # 6. Task Completion Rate
+            total_tasks = Task.objects.count()
+            done_tasks = Task.objects.filter(state='done').count()
 
-        # 7. Late Submissions (Approximate: Past due tasks)
-        late_tasks_count = Task.objects.filter(deadline__lt=now.date()).exclude(state='done').count()
+            # 7. Late Submissions (Approximate: Past due tasks)
+            late_tasks_count = Task.objects.filter(deadline__lt=now.date()).exclude(state='done').count()
 
-        # 8. Teacher Grading Patterns (Average grade given across all juries)
-        # We look at the actual grades given in each slot (g1, g2, g3)
-        teacher_patterns = []
-        teachers = Staff.objects.filter(is_teacher=True)
-        # to:
-        for t in teachers:
-            # All grades for projects where this teacher was on the jury
-            jury_pids = ProjectJury.objects.filter(
-                models.Q(teacher1_id=t) | models.Q(teacher2_id=t) | models.Q(teacher3_id=t)
-            ).values_list('PID_id', flat=True)
-            grades_qs = Grades.objects.filter(PID__in=jury_pids, final_grade__isnull=False)
-            all_teacher_grades = [g.final_grade for g in grades_qs if g.final_grade is not None]
-            if all_teacher_grades:
-                avg = sum(all_teacher_grades) / len(all_teacher_grades)
-                teacher_patterns.append({
-                    "TID": t.TID,
-                    "first_name": t.first_name,
-                    "last_name": t.last_name,
-                    "name": t.full_name, # Frontend might expect 'name'
-                    "avg_given": round(avg, 2),
-                    "grade": round(avg, 2) # Frontend AdminPages uses 'grade'
+            # 8. Teacher Grading Patterns (Average grade given across all juries)
+            # We look at the actual grades given in each slot (g1, g2, g3)
+            teacher_patterns = []
+            teachers = Staff.objects.filter(is_teacher=True)
+            # to:
+            for t in teachers:
+                # All grades for projects where this teacher was on the jury
+                jury_pids = ProjectJury.objects.filter(
+                    Q(teacher1_id=t) | Q(teacher2_id=t) | Q(teacher3_id=t)
+                ).values_list('PID_id', flat=True)
+                grades_qs = Grades.objects.filter(PID__in=jury_pids, final_grade__isnull=False)
+                all_teacher_grades = [g.final_grade for g in grades_qs if g.final_grade is not None]
+                if all_teacher_grades:
+                    avg = sum(all_teacher_grades) / len(all_teacher_grades)
+                    teacher_patterns.append({
+                        "TID": t.TID,
+                        "first_name": t.first_name,
+                        "last_name": t.last_name,
+                        "name": t.full_name, # Frontend might expect 'name'
+                        "avg_given": round(avg, 2),
+                        "grade": round(avg, 2) # Frontend AdminPages uses 'grade'
+                    })
+            
+            teacher_patterns.sort(key=lambda x: x['avg_given'], reverse=True)
+            teacher_patterns = teacher_patterns[:10]
+
+            # 9. Detailed Student List for Export
+            # [Student Name, Project, Supervisor, Grade]
+            student_list = []
+            memberships = SProjects.objects.select_related('CID', 'PID', 'PID__TID').all()
+            
+            # Pre-fetch grades to avoid N+1
+            project_grades_map = {g.PID_id: g.final_grade for g in Grades.objects.all()}
+            
+            for m in memberships:
+                student_list.append({
+                    "student_name": m.CID.full_name,
+                    "project_name": m.PID.name,
+                    "supervisor": m.PID.TID.full_name if m.PID.TID else "—",
+                    "grade": project_grades_map.get(m.PID.PID, "—")
                 })
-        
-        teacher_patterns.sort(key=lambda x: x['avg_given'], reverse=True)
-        teacher_patterns = teacher_patterns[:10]
 
-        # 9. Detailed Student List for Export
-        # [Student Name, Project, Supervisor, Grade]
-        student_list = []
-        memberships = SProjects.objects.select_related('CID', 'PID', 'PID__TID').all()
-        
-        # Pre-fetch grades to avoid N+1
-        project_grades_map = {g.PID_id: g.final_grade for g in Grades.objects.all()}
-        
-        for m in memberships:
-            student_list.append({
-                "student_name": m.CID.full_name,
-                "project_name": m.PID.name,
-                "supervisor": m.PID.TID.full_name if m.PID.TID else "—",
-                "grade": project_grades_map.get(m.PID.PID, "—")
+            # 10. System Usage (Creations per month)
+            usage_trends = (
+                Projects.objects.annotate(month=TruncMonth('creation_date'))
+                .values('month')
+                .annotate(projects=Count('PID'))
+                .order_by('month')
+            )
+
+            return Response({
+                "student_stats": {
+                    "active": students_with_group,
+                    "inactive": max(0, total_students - students_with_group),
+                    "at_risk": at_risk_count,
+                },
+                "performance": {
+                    "grade_trends": list(grade_trends),
+                    "specialty_ranking": list(specialty_performance),
+                    "pass_rate": round((pass_count / total_final_grades * 100) if total_final_grades > 0 else 0, 1),
+                    "fail_rate": round((fail_count / total_final_grades * 100) if total_final_grades > 0 else 0, 1),
+                },
+                "operations": {
+                    "task_completion_rate": round((done_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1),
+                    "late_tasks": late_tasks_count,
+                    "total_tasks": total_tasks,
+                },
+                "teacher_patterns": teacher_patterns,
+                "usage_trends": list(usage_trends),
+                "student_list": student_list,
             })
-
-        # 10. System Usage (Creations per month)
-        usage_trends = (
-            Projects.objects.annotate(month=TruncMonth('creation_date'))
-            .values('month')
-            .annotate(projects=Count('PID'))
-            .order_by('month')
-        )
-
-        return Response({
-            "student_stats": {
-                "active": students_with_group,
-                "inactive": max(0, total_students - students_with_group),
-                "at_risk": at_risk_count,
-            },
-            "performance": {
-                "grade_trends": list(grade_trends),
-                "specialty_ranking": list(specialty_performance),
-                "pass_rate": round((pass_count / total_final_grades * 100) if total_final_grades > 0 else 0, 1),
-                "fail_rate": round((fail_count / total_final_grades * 100) if total_final_grades > 0 else 0, 1),
-            },
-            "operations": {
-                "task_completion_rate": round((done_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1),
-                "late_tasks": late_tasks_count,
-                "total_tasks": total_tasks,
-            },
-            "teacher_patterns": teacher_patterns,
-            "usage_trends": list(usage_trends),
-            "student_list": student_list,
-        })
+        except Exception as e:
+            import traceback
+            return Response({"error": str(e), "trace": traceback.format_exc()}, status=500)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 7. ACADEMIC STRUCTURE  –  GET /api/admin/academic-structure/

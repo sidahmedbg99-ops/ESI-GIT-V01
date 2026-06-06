@@ -75,7 +75,8 @@ class Schedule(models.Model):
     presentation_date = models.DateField()
     presentation_time = models.TimeField()
     room              = models.CharField(max_length=50)
-    duration_minutes  = models.IntegerField(default=30)
+    duration_minutes  = models.IntegerField(default=60)
+    department_name   = models.CharField(max_length=100, blank=True, default='')
 
     class Meta:
         db_table = "schedules"

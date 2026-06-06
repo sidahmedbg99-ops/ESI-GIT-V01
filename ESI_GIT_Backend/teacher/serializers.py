@@ -127,14 +127,17 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
 
     def get_attachments(self, obj):
         from projects.models import ProjectAttachment
+        request = self.context.get("request")
         attachments = ProjectAttachment.objects.filter(PID=obj)
         return [
             {
                 "id": a.id,
                 "filename": a.filename,
+                "title": getattr(a, 'title', a.filename),
                 "attachment_type": a.attachment_type,
                 "is_final": a.is_final,
                 "uploaded_at": a.uploaded_at,
+                "file": request.build_absolute_uri(a.file.url) if request and a.file else None,
             }
             for a in attachments
         ]
@@ -197,7 +200,7 @@ class TeacherCreateMeetingSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     date = serializers.DateField()
     time = serializers.TimeField()
-    location = serializers.CharField(max_length=200)
+    location = serializers.CharField(max_length=200, required=False, default="")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -243,6 +246,7 @@ class TeacherJurySerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     is_evaluated = serializers.SerializerMethodField()
     document = serializers.SerializerMethodField()
+    attachments = serializers.SerializerMethodField()
     president_name = serializers.CharField(source="teacher1_id.full_name", read_only=True)
     examiner1_name = serializers.CharField(source="teacher2_id.full_name", read_only=True)
     examiner2_name = serializers.CharField(source="teacher3_id.full_name", read_only=True)
@@ -252,22 +256,21 @@ class TeacherJurySerializer(serializers.ModelSerializer):
         model = ProjectJury
         fields = [
             "PID_id", "project_name", "group_code", "specialty",
-            "schedule", "members", "is_evaluated", "document",
+            "schedule", "members", "is_evaluated", "document", "attachments",
             "teacher1_id", "teacher2_id", "teacher3_id", "supervisor_id",
             "president_name", "examiner1_name", "examiner2_name",
             "my_role",
         ]
 
     def get_schedule(self, obj):
-        try:
-            s = Schedule.objects.get(PID=obj.PID)
-            return {
-                "date": s.presentation_date,
-                "time": s.presentation_time,
-                "room": s.room,
-            }
-        except Schedule.DoesNotExist:
+        s = Schedule.objects.filter(PID=obj.PID).order_by('-id').first()
+        if not s:
             return None
+        return {
+            "date": s.presentation_date,
+            "time": s.presentation_time,
+            "room": s.room,
+        }
 
     def get_members(self, obj):
         memberships = SProjects.objects.filter(PID=obj.PID).select_related("CID")
@@ -287,6 +290,21 @@ class TeacherJurySerializer(serializers.ModelSerializer):
             return {"filename": att.filename, "url": att.file.url if att.file else None}
         return None
     
+    def get_attachments(self, obj):
+        from projects.models import ProjectAttachment
+        request = self.context.get("request")
+        attachments = ProjectAttachment.objects.filter(PID=obj.PID).order_by("-uploaded_at")
+        return [
+            {
+                "id":              a.id,
+                "filename":        a.filename,
+                "attachment_type": a.attachment_type,
+                "uploaded_at":     str(a.uploaded_at),
+                "file_url":        request.build_absolute_uri(a.file.url) if (request and a.file) else None,
+            }
+            for a in attachments
+        ]
+    
     def get_my_role(self, obj):
         request = self.context.get("request")
         if not request:
@@ -297,6 +315,8 @@ class TeacherJurySerializer(serializers.ModelSerializer):
             return "president" if obj.teacher1_id == teacher else "member"
         except:
             return "member"
+        
+    
 
 
 class TeacherEvaluationSerializer(serializers.Serializer):

@@ -71,7 +71,7 @@ def admin_groups_list(request):
     if specialty:
         groups = groups.filter(specialty__icontains=specialty)
 
-    serializer = AdminGroupListSerializer(groups.order_by("-creation_date"), many=True)
+    serializer = AdminGroupListSerializer(groups.order_by("-creation_date"), many=True, context={"request": request})
     return Response(serializer.data)
 
 
@@ -157,7 +157,7 @@ def archived_projects(request):
     # Admin or Staff → always allowed
     if is_admin or is_staff:
         projects = Projects.objects.filter(archived=True).order_by("-creation_date")
-        serializer = AdminProjectSerializer(projects, many=True)
+        serializer = AdminProjectSerializer(projects, many=True, context={"request": request})
         return Response(serializer.data)
 
     # Student → check platform settings
@@ -171,7 +171,7 @@ def archived_projects(request):
             )
 
         projects = Projects.objects.filter(archived=True).order_by("-creation_date")
-        serializer = StudentProjectSerializer(projects, many=True)
+        serializer = StudentProjectSerializer(projects, many=True, context={"request": request})
         return Response(serializer.data)
 
     return Response({"error": "Unauthorized"}, status=403)
@@ -935,7 +935,7 @@ class AttachmentView(APIView):
 
     def post(self, request):
         try:
-            membership = SProjects.objects.get(CID=request.user, PID__year=request.user.academic_year, PID__archived=False)
+            membership = SProjects.objects.get(CID=request.user, PID__academic_level=request.user.level, PID__archived=False)
 
         except SProjects.DoesNotExist:
             return Response({"error": "You are not in a project"}, status=404)
@@ -978,6 +978,45 @@ class AttachmentView(APIView):
         attachment.file.delete(save=False)  # delete from disk too
         attachment.delete()
         return Response({"message": "Attachment deleted"})
+
+# add after AttachmentView class:
+
+class ProjectAttachmentsReadView(APIView):
+    """Read-only attachment list for admin and jury members."""
+
+    def get(self, request, pid):
+        from users.models import Staff
+        from jury.models import ProjectJury
+
+        # allow admin
+        is_admin = request.user.is_authenticated and getattr(request.user, 'role', None) == 'admin'
+
+        # allow jury member
+        is_jury = False
+        if not is_admin and request.user.is_authenticated:
+            try:
+                staff = Staff.objects.get(TID=request.user.id)
+                jury  = ProjectJury.objects.get(PID_id=pid)
+                is_jury = staff in [jury.teacher1_id, jury.teacher2_id, jury.teacher3_id]
+            except (Staff.DoesNotExist, ProjectJury.DoesNotExist):
+                pass
+
+        if not is_admin and not is_jury:
+            return Response({"error": "Forbidden"}, status=403)
+
+        attachments = ProjectAttachment.objects.filter(PID_id=pid).order_by("-uploaded_at")
+        data = [
+            {
+                "id":              a.id,
+                "filename":        a.filename,
+                "attachment_type": a.attachment_type,
+                "uploaded_at":     a.uploaded_at,
+                "file_url":        request.build_absolute_uri(a.file.url) if a.file else None,
+            }
+            for a in attachments
+        ]
+        return Response(data)
+    
 
 class StudentGroupStatusView(APIView):
     permission_classes = [IsStudent]

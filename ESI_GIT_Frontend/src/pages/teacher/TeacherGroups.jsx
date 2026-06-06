@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
+import { toast } from 'react-hot-toast';
 import {
   IoPeopleOutline, IoCalendarOutline,
   IoLogoGithub, IoCopyOutline, IoCheckboxOutline,
@@ -12,6 +13,7 @@ import {
 import { useTeacher } from '../../context/TeacherContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { ROLE_OPTIONS } from '../../constants';
+import { groupApi } from '../../api/groups';
 
 const ROLE_MAP = Object.fromEntries((ROLE_OPTIONS || []).map(r => [r.value, r]));
 
@@ -21,7 +23,7 @@ export default function TeacherGroups() {
   const list = groups || [];
   const [selected, setSelected] = useState(null);
   const group = selected ? list.find(g => g._id === selected) || null : null;
-
+  const [detailData, setDetailData] = useState(null);
   // GitHub
   const [repoUrl,    setRepoUrl]    = useState('');
   const [ghData,     setGhData]     = useState(null);
@@ -48,14 +50,15 @@ export default function TeacherGroups() {
   };
 
   useEffect(() => {
+    if (!selected) { setDetailData(null); return; }
+    // fetch full detail including attachments
+    groupApi.getTeacherGroupDetail(selected)
+      .then(data => setDetailData(data))
+      .catch(() => setDetailData(null));
+    // existing github logic below stays unchanged
     if (group) {
       setRepoUrl(group.github_url || '');
-      if (group.github_url) {
-        loadGitHub(group.github_url);
-      } else {
-        setGhData(null);
-        setGhError('');
-      }
+      if (group.github_url) loadGitHub(group.github_url);
     }
   }, [selected, group]);
 
@@ -87,7 +90,7 @@ export default function TeacherGroups() {
       description: taskDesc.trim(),
       priority:    taskPriority,
       deadline:    taskDeadline || null,
-      assigneeIds: taskAssigneeIds.length > 0 ? taskAssigneeIds : group.studentIds ?? [],
+      assigneeIds: taskAssigneeIds.length > 0 ? taskAssigneeIds : (team.members || []).map(m => m.CID),
     });
     setTaskModal(false);
     setTaskTitle(''); setTaskDesc(''); setTaskPriority('medium'); setTaskDeadline(''); setTaskAssigneeIds([]);
@@ -96,18 +99,22 @@ export default function TeacherGroups() {
 
   const handleScheduleMeeting = async () => {
     if (!meetTitle.trim() || !meetDate || !meetTime || !group) return;
-    if (!group.TID) { toast.error(t('Error')); return; }
     setMeetSubmitting(true);
-    await scheduleMeeting(group._id, {
-      title: meetTitle.trim(),
-      date:  meetDate,
-      time:  meetTime,
-      type:  meetType,
-      desc:  meetDesc.trim(),
-    });
-    setMeetModal(false);
-    setMeetTitle(''); setMeetDate(''); setMeetTime(''); setMeetType('Présentielle'); setMeetDesc('');
-    setMeetSubmitting(false);
+    try {
+      await scheduleMeeting(group._id, { 
+        title: meetTitle.trim(),
+        date:  meetDate,
+        time:  meetTime,
+        type:  meetType,
+        desc:  meetDesc.trim(),
+      }
+      );
+      setMeetModal(false);
+      setMeetTitle(''); setMeetDate(''); setMeetTime('');
+      setMeetType('Présentielle'); setMeetDesc('');
+    } finally {
+      setMeetSubmitting(false);
+    }
   };
 
   if (list.length === 0 && (supervisorRequests || []).length === 0) {
@@ -177,7 +184,7 @@ export default function TeacherGroups() {
   }
 
   // Detail view
-  const team = group;
+  const team = detailData ? { ...group, ...detailData } : group;
   return (
     <DashboardLayout>
       <div style={{ borderRadius: 'var(--radius-2xl)', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 50%, #8B5CF6 100%)', padding: '28px 32px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
@@ -199,13 +206,31 @@ export default function TeacherGroups() {
             <div>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--primary)', marginBottom: '6px' }}>{t('ValidationRequest')}</h3>
               <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{t('ValidationRequestSub')}</p>
+              {(team.attachments || []).length === 0
+                ? <p style={{ fontSize: '12px', color: '#EF4444', marginTop: '4px', fontWeight: 500 }}>⚠️ Aucun document projet joint.</p>
+                : <p style={{ fontSize: '12px', color: '#10B981', marginTop: '4px', fontWeight: 500 }}>📎 {team.attachments.length} document(s) joint(s)</p>
+              }
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button variant="outline" onClick={() => {
                 const reason = prompt(t('Reject') + " :");
                 if (reason) updateGroup(team._id, { final_submission_approved: false, supervisor_feedback: reason });
               }} style={{ borderColor: '#EF4444', color: '#EF4444' }}>{t('Reject')}</Button>
-              <Button onClick={() => updateGroup(team._id, { final_submission_approved: true })} style={{ background: '#10B981', borderColor: '#10B981' }}>{t('Approve')}</Button>
+              <Button onClick={async () => {
+                const hasAttachments = (team.attachments || []).length > 0;
+                const confirmed = window.confirm(
+                  (hasAttachments
+                    ? `📎 ${team.attachments.length} document(s) joint(s).\n\n`
+                    : '⚠️ Aucun document projet joint.\n\n') +
+                  'En approuvant cette soumission finale :\n• La création de tâches sera désactivée\n• Les réunions resteront accessibles\n\nConfirmer l\'approbation ?'
+                );
+                if (!confirmed) return;
+                try {
+                  await updateGroup(team._id, { final_submission_approved: true });
+                } catch (e) { /* toast handled in context */ }
+              }} style={{ background: '#10B981', borderColor: '#10B981' }}>
+                {t('Approve')}
+              </Button>
             </div>
           </div>
         </Card>
@@ -213,10 +238,16 @@ export default function TeacherGroups() {
 
       {/* Quick-action bar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <button onClick={() => setTaskModal(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
-          <IoCheckboxOutline size={16}/> {t('AssignTask')}
-        </button>
+        {team?.final_submission_approved ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px', background: '#FEF9C3', border: '1px solid #FDE047', color: '#A16207', fontWeight: 600, fontSize: '13px' }}>
+            🔒 {t('AssignTask')} — {t('ProjectApproved') || 'Projet approuvé'}
+          </div>
+        ) : (
+          <button onClick={() => setTaskModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+            <IoCheckboxOutline size={16}/> {t('AssignTask')}
+          </button>
+        )}
         <button onClick={() => setMeetModal(true)}
           style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px', background: 'var(--accent)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
           <IoCalendarOutline size={16}/> {t('ScheduleMeeting')}
@@ -232,14 +263,19 @@ export default function TeacherGroups() {
             <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{t('GithubRepo')}</h3>
           </div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-            <input value={repoUrl} onChange={e => setRepoUrl(e.target.value)} placeholder="https://github.com/org/repo"
-              disabled={!!group?.github_url}
-              style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', opacity: group?.github_url ? 0.75 : 1 }}/>
-            {!group?.github_url && (
-              <button onClick={() => loadGitHub(repoUrl)} disabled={ghLoading}
-                style={{ padding: '9px 16px', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', opacity: ghLoading ? 0.6 : 1 }}>
-                {ghLoading ? '...' : t('Load')}
-              </button>
+            {group?.github_url ? (
+              <>
+                <input value={repoUrl} readOnly
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-secondary)', outline: 'none', opacity: 0.75, cursor: 'default' }}/>
+                <button onClick={() => loadGitHub(repoUrl)} disabled={ghLoading}
+                  style={{ padding: '9px 16px', borderRadius: '8px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', opacity: ghLoading ? 0.6 : 1 }}>
+                  {ghLoading ? '...' : '↻ ' + t('Load')}
+                </button>
+              </>
+            ) : (
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '9px 0' }}>
+                Aucun dépôt renseigné par le groupe.
+              </p>
             )}
             {repoUrl && (
               <button onClick={() => { navigator.clipboard.writeText(repoUrl); setRepoCopied(true); setTimeout(() => setRepoCopied(false), 1500); }}
@@ -274,19 +310,88 @@ export default function TeacherGroups() {
 
         {/* Project Document Viewer */}
         <Card>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-            <IoDocumentTextOutline size={18}/>
-            <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{t('ProjectDocs')}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <IoDocumentTextOutline size={18}/>
+              <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{t('ProjectDocs')}</h3>
+            </div>
+            {(team.attachments || []).length > 0 && (
+              <button
+                // Replace the zip onClick handler body:
+                onClick={async () => {
+                  const attachments = (team.attachments || []).filter(a => a.file);
+                  if (attachments.length === 0) return;
+                  const toastId = toast.loading('Préparation du zip...');
+                  try {
+                    const { default: JSZip } = await import('jszip');
+                    const zip = new JSZip();
+                    const results = await Promise.allSettled(
+                      attachments.map(async (a) => {
+                        const res = await fetch(a.file, { credentials: 'include' });
+                        if (!res.ok) throw new Error('fetch failed');
+                        const blob = await res.blob();
+                        zip.file(a.filename || a.title || `attachment_${a.id}`, blob);
+                      })
+                    );
+                    const failed = results.filter(r => r.status === 'rejected').length;
+                    if (failed === results.length) {
+                      // All failed (CORS) — fall back to individual downloads
+                      toast.dismiss(toastId);
+                      toast.error('Téléchargement groupé impossible, ouverture individuelle.');
+                      attachments.forEach(a => window.open(a.file, '_blank'));
+                      return;
+                    }
+                    const content = await zip.generateAsync({ type: 'blob' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = `${team.title || 'documents'}.zip`;
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    toast.dismiss(toastId);
+                    if (failed > 0) toast.success(`Zip créé (${results.length - failed}/${results.length} fichiers)`);
+                    else toast.success('Zip téléchargé');
+                  } catch (e) {
+                    toast.dismiss(toastId);
+                    toast.error('Erreur lors du téléchargement');
+                  }
+                }}
+                target="_blank"
+                style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--primary-subtle)', color: 'var(--primary)', border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                ⬇ Tout télécharger
+              </button>
+            )}
           </div>
-          {team.document ? (
-             <div style={{ padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-               <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Le groupe a soumis un document :</p>
-               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontSize: '13px', fontWeight: 600, border: '1px solid rgba(79,70,229,0.2)' }}>
-                 <IoDocumentTextOutline size={16} /> {team.document}
-               </div>
-             </div>
+          {(team.attachments || []).length === 0 ? (
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('NoFile')}</p>
           ) : (
-             <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('NoFile')}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {(team.attachments || []).map(a => (
+                <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <IoDocumentTextOutline size={16} color="var(--primary)"/>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: 600 }}>{a.title || a.filename}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{a.attachment_type} · {new Date(a.uploaded_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  {a.file ? (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <a href={a.file} target="_blank" rel="noopener noreferrer"
+                        style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
+                        Ouvrir
+                      </a>
+                      <a href={a.file} target="_blank" download={a.filename || a.title || 'attachment'}
+                        style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
+                        ⬇
+                      </a>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Non disponible</span>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </Card>
       </div>
@@ -351,9 +456,9 @@ export default function TeacherGroups() {
             <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>{t('AssignTo')}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {(team.members || []).map(m => (
-                <label key={m.cid} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                  <input type="checkbox" checked={taskAssigneeIds.includes(m.cid)}
-                    onChange={e => setTaskAssigneeIds(prev => e.target.checked ? [...prev, m.cid] : prev.filter(id => id !== m.cid))}/>
+                <label key={m.CID} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input type="checkbox" checked={taskAssigneeIds.includes(m.CID)}
+                    onChange={e => setTaskAssigneeIds(prev => e.target.checked ? [...prev, m.CID] : prev.filter(id => id !== m.CID))}/>
                   <span style={{ fontWeight: 500 }}>{m.name}</span>
                 </label>
               ))}
@@ -362,7 +467,7 @@ export default function TeacherGroups() {
           </div>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
             <button onClick={() => setTaskModal(false)} style={{ padding: '9px 20px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>{t('Cancel')}</button>
-            <button onClick={handleAssignTask} disabled={!taskTitle.trim() || taskSubmitting}
+            <button onClick={handleAssignTask} disabled={!taskTitle.trim() || taskSubmitting || team?.final_submission_approved}
               style={{ padding: '9px 20px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: taskTitle.trim() ? 'pointer' : 'not-allowed', opacity: taskTitle.trim() ? 1 : 0.5 }}>
               {taskSubmitting ? '...' : `✓ ${t('Confirm')}`}
             </button>

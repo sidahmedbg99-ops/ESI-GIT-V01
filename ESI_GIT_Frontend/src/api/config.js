@@ -33,12 +33,14 @@ export const ENDPOINTS = {
     byId: (id) => `projects/admin/groups/${id}/`,                 // GET
     adminProject: (id) => `projects/admin/projects/${id}/`,       // GET/PUT/DELETE
     assignJury: (id) => `jury/admin/jury/assign/${id}/`,          // POST
+    editJury:   (id) => `jury/admin/jury/edit/${id}/`,            // PATCH
+    schedule: 'jury/admin/schedule/create/',                      // POST
     archive: (id) => `projects/admin/projects/${id}/archive/`,    // PATCH
     restore: (id) => `projects/admin/projects/${id}/restore/`,    // PATCH
     archived: 'projects/projects/archived/',                      // GET (role-based)
     delete: (id) => `projects/admin/projects/${id}/`,             // DELETE
     studentsWithoutGroup: 'projects/admin/students-without-group/', // GET
-
+    attachments: (pid) => `projects/attachments/${pid}/`,          // GET (admin/jury)
     // Student
     myProject: 'projects/my-project/',             // GET
     create: 'projects/create/',                    // POST
@@ -100,6 +102,7 @@ export const ENDPOINTS = {
     meetingAction: (id) => `teacher/meetings/${id}/`, // PATCH
     jury: 'teacher/jury/',                         // GET
     evaluateJury: (pid) => `teacher/jury/${pid}/evaluate/`, // POST
+    juryAttachments: (pid) => `projects/attachments/${pid}/`,      // GET (jury member)
   },
 
   // ── Evaluations (teacher jury scoring) ────────────────────────────

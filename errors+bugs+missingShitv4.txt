@@ -4,11 +4,11 @@ PUBLIC
 -Not Found: /apitoken/refresh/
 [03/Jun/2026 15:27:07] "POST /apitoken/refresh/ HTTP/1.1" 404 3813
     STUDENT
-ITS OVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+-tasks page , create task button should not be seen , and if its not seen it writes why because the project is finalized 
     TEACHER
--uploaded docs cant be seen from the supervisor side
--schedule meeting for a group , when you fill the from and try to create it it cant be pressed
--creating a task and trying to select one student will select all other students    
+-install all should have a zip even if its just a single file (pdf)
+-creating a task button is disabled after approuving the project , either we give the reason why its not working or not show it at all
+-there is a warning inside the project page , but we also need a warning inside the requests page where it has all the requests
     ADMIN
 -if you add a specialty and try to add a new user it isnt in the drop down menu - NEEDS REFRESHING THE PAGE
 -when adding / deleting the specialty , it works but the error pop up for no reason
@@ -24,6 +24,8 @@ ITS OVERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
 -dark mode , join a project , choosing a role makes it very white 
 -add each students role next to their name when a supervisor creats a task for a group
 -lock deleting documents after final submssion Approved
+-private repo support , with the operations , student can modify , supervisor only load commits no editing
+-when clicking on a user profile , you can see a little card with info on him with a way to click his email to open gmail
 ----------------------------------------------------------------------------------
 
 

@@ -37,6 +37,7 @@ export function AdminProvider({ children }) {
   const [departments, setDepartments] = useState([]);
   const [platformSettings, setPlatformSettings] = useState({
     students_can_see_archived_projects: false,
+    students_can_see_attachments: false,
     current_academic_year: '2024-2025',
     project_types: 'PFE,Stage,Projet',
     presentation_weight: 20,
@@ -320,41 +321,29 @@ export function AdminProvider({ children }) {
     }
   }, [groups, pushActivity]);
 
-  const assignJury = useCallback(async (groupId, selection) => {
+  const assignJury = useCallback(async (groupId, slots) => {
+    // slots = { teacher1: id, teacher2: id, teacher3: id }
     try {
-      // selection = [{teacherId, role}, ...] — 3 teachers, supervisor auto-added by backend
-      const president = selection.find(x => x.role === 'president')?.teacherId;
-      const examiner = selection.find(x => x.role !== 'president')?.teacherId;
-      const supervisorId = groups?.find(g => g._id === groupId)?.teacherId;
-
-      if (!president || !examiner || !supervisorId) {
-        toast.error("Sélectionnez 2 membres dont 1 président");
-        return false;
-      }
-
       await groupApi.assignJury(groupId, {
-        teacher1_id: parseInt(president),
-        teacher2_id: parseInt(examiner),
-        teacher3_id: parseInt(supervisorId),
+        teacher1_id: parseInt(slots.teacher1),
+        teacher2_id: parseInt(slots.teacher2),
+        teacher3_id: parseInt(slots.teacher3),
       });
 
       setGroups(prev => prev?.map(g => {
         if (g._id !== groupId) return g;
-        const pres  = users?.find(u => u._id === president  || u.id === president);
-        const ex1   = users?.find(u => u._id === examiner1  || u.id === examiner1);
-        const ex2   = users?.find(u => u._id === examiner2  || u.id === examiner2);
-        const sup   = users?.find(u => u._id === g.teacherId || u.id === g.teacherId);
-
+        const t1 = users?.find(u => u._id == slots.teacher1 || u.id == slots.teacher1);
+        const t2 = users?.find(u => u._id == slots.teacher2 || u.id == slots.teacher2);
+        const t3 = users?.find(u => u._id == slots.teacher3 || u.id == slots.teacher3);
         return {
           ...g,
           jury: {
-            supervisor: sup?.name || sup?.full_name || '—',
-            president: pres?.name || pres?.full_name || '—',
-            examiner1: ex1?.name  || ex1?.full_name  || '—',
-            examiner2: ex2?.name  || ex2?.full_name  || '—',
-          }
+            president: t1?.name || '—',
+            examiner1: t2?.name || '—',
+            examiner2: t3?.name || '—',
+          },
         };
-      }));
+      }) ?? prev);
 
       pushActivity({ type: 'jury_assigned', action: 'Jury assigné', desc: groupId, color: '#8B5CF6' });
       toast.success('Jury assigné avec succès');
@@ -365,6 +354,66 @@ export function AdminProvider({ children }) {
       return false;
     }
   }, [pushActivity, users]);
+
+  // after the assignJury useCallback, add:
+  const editJury = useCallback(async (groupId, slots) => {
+    try {
+      await groupApi.editJury(groupId, {
+        teacher1_id: parseInt(slots.teacher1),
+        teacher2_id: parseInt(slots.teacher2),
+        teacher3_id: parseInt(slots.teacher3),
+      });
+
+      setGroups(prev => prev?.map(g => {
+        if (g._id !== groupId) return g;
+        const t1 = users?.find(u => u._id == slots.teacher1 || u.id == slots.teacher1);
+        const t2 = users?.find(u => u._id == slots.teacher2 || u.id == slots.teacher2);
+        const t3 = users?.find(u => u._id == slots.teacher3 || u.id == slots.teacher3);
+        return {
+          ...g,
+          jury: {
+            president: t1?.name || '—',
+            examiner1: t2?.name || '—',
+            examiner2: t3?.name || '—',
+          },
+        };
+      }) ?? prev);
+
+      pushActivity({ type: 'jury_edited', action: 'Jury modifié', desc: groupId, color: '#8B5CF6' });
+      toast.success('Jury modifié avec succès');
+      return true;
+    } catch (e) {
+      console.error(e);
+      toast.error(e?.response?.data?.error || 'Erreur lors de la modification');
+      return false;
+    }
+  }, [pushActivity, users]);
+
+  const scheduleDefense = useCallback(async (groupId, { date, time, room, department }) => {
+    try {
+      await client.post(ENDPOINTS.groups.schedule, {
+        PID: groupId,
+        presentation_date: date,
+        presentation_time: time,
+        room,
+        ...(department ? { department_name: department } : {}),
+      });
+
+      setGroups(prev => prev?.map(g =>
+        g._id === groupId
+          ? { ...g, schedule: { presentation_date: date, presentation_time: time, room } }
+          : g
+      ) ?? prev);
+
+      pushActivity({ type: 'defense_scheduled', action: 'Soutenance planifiée', desc: groupId, color: '#10B981' });
+      toast.success('Soutenance planifiée avec succès');
+    } catch (e) {
+      console.error(e);
+      const msg = e?.response?.data?.error || 'Erreur lors de la planification';
+      toast.error(msg);
+      throw e; // re-throw so ScheduleModal can catch and display it
+    }
+  }, [pushActivity]);
 
   const restoreGroup = useCallback(async (groupId) => {
     try {
@@ -568,6 +617,8 @@ export function AdminProvider({ children }) {
     addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup, deleteArchiveProject, toggleProjectVisibility,
     updatePlatformSettings, fetchAdvancedAnalytics,
     assignJury,
+    editJury,
+    scheduleDefense,
     addMeeting, updateMeetingStatus,
     loadThread, sendMessage, receiveMessage, markThreadRead,
     setActiveContact, pushActivity,

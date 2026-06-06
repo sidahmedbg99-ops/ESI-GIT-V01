@@ -24,6 +24,8 @@ export default function TeacherRequests() {
 
   const safeRequests = supervisorRequests || [];
   const safeGroups = groups || [];
+  const [confirmReq, setConfirmReq] = useState(null); // { id } for supervisor requests
+  const [confirmFinal, setConfirmFinal] = useState(null); // { groupId } for final validations
 
   // Groups that have submitted for final validation
   const finalSubmissions = safeGroups.filter(g => g.submitted_to_supervisor && !g.final_submission_approved);
@@ -105,7 +107,7 @@ export default function TeacherRequests() {
 
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button 
-                      onClick={() => respondToSupervisorRequest(req.id, 'approved')}
+                      onClick={() => setConfirmReq({ id: req.id })}
                       style={{ flex: 1, padding: '10px', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
                       <IoCheckmarkCircleOutline size={16} /> {t('Approve')}
@@ -125,13 +127,20 @@ export default function TeacherRequests() {
 
         {/* 2. Final Validation Requests */}
         <section>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-            <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <IoShieldCheckmarkOutline size={18} />
+          <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: finalSubmissions.length > 0 ? '10px' : '0' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <IoShieldCheckmarkOutline size={18} />
+                </div>
+                <h2 style={{ fontSize: '18px', fontWeight: 700 }}>{t('FinalValidationRequests')}</h2>
+                <Badge variant="success">{finalSubmissions.length}</Badge>
+              </div>
+              {finalSubmissions.length > 0 && (
+                <div style={{ padding: '10px 16px', borderRadius: '10px', background: '#FEF9C3', border: '1px solid #FDE047', fontSize: '12px', color: '#92400E', lineHeight: 1.6 }}>
+                  ⚠️ <strong>Attention :</strong> Approuver une soumission finale valide le projet pour la <strong>soutenance</strong>. La création de tâches sera <strong>désactivée</strong> pour ce groupe. Les réunions restent accessibles.
+                </div>
+              )}
             </div>
-            <h2 style={{ fontSize: '18px', fontWeight: 700 }}>{t('FinalValidationRequests')}</h2>
-            <Badge variant="success">{finalSubmissions.length}</Badge>
-          </div>
 
           {finalSubmissions.length === 0 ? (
             <Card style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
@@ -170,7 +179,7 @@ export default function TeacherRequests() {
                       )}
 
                       <button 
-                        onClick={() => handleValidation(g._id || g.PID, true)}
+                        onClick={() => setConfirmFinal({ groupId: g._id || g.PID })}
                         style={{ padding: '10px 20px', borderRadius: '10px', background: '#10B981', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                       >
                         <IoCheckmarkCircleOutline size={18} /> {t('Approve')}
@@ -208,6 +217,49 @@ export default function TeacherRequests() {
           )}
         </section>
 
+        {/* Confirmation modal for supervisor request approval */}
+        {confirmReq && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '28px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '12px', background: '#FEF9C3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>⚠️</div>
+              <h3 style={{ fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>Action irréversible</h3>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>
+                Vous êtes sur le point d'<strong>accepter cette demande d'encadrement</strong>. Cette action ne peut pas être annulée. Voulez-vous continuer ?
+              </p>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setConfirmReq(null)} style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <button onClick={() => { respondToSupervisorRequest(confirmReq.id, 'approved'); setConfirmReq(null); }}
+                  style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+                  Oui, confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation modal for final validation approval */}
+        {confirmFinal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '28px', maxWidth: '420px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '12px', background: '#FEF9C3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>⚠️</div>
+              <h3 style={{ fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>Action irréversible</h3>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>
+                Approuver cette soumission finale <strong>valide le projet pour la soutenance</strong>. La création de tâches sera désactivée pour ce groupe. Cette action est <strong>définitive</strong>.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setConfirmFinal(null)} style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <button onClick={() => { handleValidation(confirmFinal.groupId, true); setConfirmFinal(null); }}
+                  style={{ padding: '10px 20px', borderRadius: '10px', background: '#10B981', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+                  Oui, approuver
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

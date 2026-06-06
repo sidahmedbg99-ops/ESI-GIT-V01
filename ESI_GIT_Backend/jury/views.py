@@ -41,7 +41,8 @@ def assign_jury(request, pk):
 
     # supervisor must be one of the 3
     supervisor_id = project.TID_id
-    if supervisor_id and supervisor_id not in [teacher1_id, teacher2_id, teacher3_id]:
+    ids_as_int = [int(x) for x in [teacher1_id, teacher2_id, teacher3_id] if x is not None]
+    if supervisor_id and supervisor_id not in ids_as_int:
         return Response(
             {"error": "Project supervisor must be one of the jury members"},
             status=400
@@ -80,6 +81,107 @@ def assign_jury(request, pk):
         return Response({"message": "Jury assigned successfully", "created": created}, status=201)
     return Response(serializer.errors, status=400)
 
+@api_view(["PATCH"])
+def edit_jury(request, pk):
+    if not IsAdmin().has_permission(request, None):
+        return Response({"error": "Admin only"}, status=403)
+
+    try:
+        from projects.models import Projects
+        project = Projects.objects.get(pk=pk)
+    except Projects.DoesNotExist:
+        return Response({"error": "Project not found"}, status=404)
+
+    try:
+        jury = ProjectJury.objects.get(PID=project)
+    except ProjectJury.DoesNotExist:
+        return Response({"error": "No jury assigned to this project yet"}, status=404)
+
+    teacher1_id = request.data.get("teacher1_id")
+    teacher2_id = request.data.get("teacher2_id")
+    teacher3_id = request.data.get("teacher3_id")
+
+    if len({teacher1_id, teacher2_id, teacher3_id}) < 3:
+        return Response({"error": "Jury members must be 3 distinct teachers"}, status=400)
+
+    supervisor_id = project.TID_id
+    if supervisor_id not in [teacher1_id, teacher2_id, teacher3_id]:
+        return Response({"error": "Project supervisor must be one of the jury members"}, status=400)
+
+    from users.models import Staff
+    try:
+        t1 = Staff.objects.get(TID=teacher1_id)
+        t2 = Staff.objects.get(TID=teacher2_id)
+        t3 = Staff.objects.get(TID=teacher3_id)
+    except Staff.DoesNotExist:
+        return Response({"error": "One or more teachers not found"}, status=400)
+
+    # snapshot old state before overwriting: {tid: role}
+    old_map = {
+        jury.teacher1_id_id: "president",
+        jury.teacher2_id_id: "examiner1",
+        jury.teacher3_id_id: "examiner2",
+    }
+    # new state: teacher1 is always president (slot 1)
+    new_map = {
+        t1.TID: "president",
+        t2.TID: "examiner1",
+        t3.TID: "examiner2",
+    }
+
+    old_ids = set(old_map.keys())
+    new_ids = set(new_map.keys())
+    added       = new_ids - old_ids
+    removed     = old_ids - new_ids
+    stayed      = old_ids & new_ids
+    role_changed = {tid for tid in stayed if old_map[tid] != new_map[tid]}
+
+    jury.teacher1_id = t1
+    jury.teacher2_id = t2
+    jury.teacher3_id = t3
+    jury.save()
+
+    # notify added
+    for tid in added:
+        notify(
+            recipient_type="staff",
+            recipient_id=tid,
+            title="Jury assignment",
+            message=f'You have been assigned as a jury member for "{project.name}".',
+        )
+
+    # notify removed
+    for tid in removed:
+        notify(
+            recipient_type="staff",
+            recipient_id=tid,
+            title="Jury removal",
+            message=f'You have been removed from the jury for "{project.name}".',
+        )
+
+    # notify role changes
+    role_label = {"president": "Président", "examiner1": "Examinateur 1", "examiner2": "Examinateur 2"}
+    for tid in role_changed:
+        notify(
+            recipient_type="staff",
+            recipient_id=tid,
+            title="Jury role updated",
+            message=f'Your role in the jury for "{project.name}" has changed from {role_label[old_map[tid]]} to {role_label[new_map[tid]]}.',
+        )
+
+    # notify group members if anything changed
+    anything_changed = added or removed or role_changed
+    if anything_changed:
+        members = SProjects.objects.filter(PID=project).select_related("CID")
+        for m in members:
+            notify(
+                recipient_type="student",
+                recipient_id=m.CID.CID,
+                title="Jury updated",
+                message=f'The jury for your project "{project.name}" has been updated.',
+            )
+
+    return Response({"message": "Jury updated successfully"}, status=200)
 
 # ─────────────────────────────────────────
 # Jury List
@@ -105,7 +207,6 @@ def create_schedule(request):
     if not IsAdmin().has_permission(request, None):
         return Response({"error": "Admin only"}, status=403)
 
-    # get project to check approval (M2 fix)
     pid = request.data.get("PID")
     try:
         from projects.models import Projects

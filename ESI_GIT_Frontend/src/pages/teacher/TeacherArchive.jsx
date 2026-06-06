@@ -7,6 +7,7 @@ import { IoSearchOutline, IoStarOutline, IoPeopleOutline, IoGitBranchOutline, Io
 import { archiveApi } from '../../api/archive';
 import { useApi } from '../../hooks/useApi';
 import { useLanguage } from '../../context/LanguageContext';
+import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
 
 const TECH_COLORS = { Python:'#3B7ACF', React:'#61DAFB', 'Node.js':'#43A047', MongoDB:'#4CAF50', TensorFlow:'#FF6F00', FastAPI:'#009688', 'Vue.js':'#42B883', Docker:'#2496ED' };
 
@@ -98,7 +99,7 @@ export default function TeacherArchive() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '16px' }}>
             {filtered.map(p => (
-              <Card key={p._id} hover style={{ padding: '22px' }}>
+              <Card key={p.PID ?? p._id} hover style={{ padding: '22px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', gap: '10px' }}>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{p.group} · {p.year} · {p.specialite || p.specialty}</p>
@@ -131,6 +132,10 @@ export default function TeacherArchive() {
                   </a>
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>{t('Supervisor')} : {p.encadreur || '—'}</p>
+
+                {(p.attachments || []).length > 0 && (
+                  <AttachmentsPopover attachments={p.attachments} />
+                )}
               </Card>
             ))}
             {filtered.length === 0 && (

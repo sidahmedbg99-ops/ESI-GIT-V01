@@ -42,10 +42,13 @@ export function TeacherProvider({ children }) {
     return list.map(g => ({
       ...g, _id: g.PID,
       title: g.name,
+      // Replace the members map inside normalizeGroups (the .map(m => ({...m, _id: m.CID ... line):
       members: (g.members || []).map(m => ({
-        ...m, _id: m.CID,
-        name: m.name || m.student_name,
-        avatar: (m.name || m.student_name || 'S')[0]
+        ...m,
+        _id: m.CID ?? m.student_id,
+        CID: m.CID ?? m.student_id,
+        name: m.name || m.student_name || m.student_email || 'Étudiant',
+        avatar: (m.name || m.student_name || 'S')[0],
       })),
     }));
   };
@@ -78,10 +81,6 @@ export function TeacherProvider({ children }) {
     });
     loadArchive().then(a => setArchive(Array.isArray(a) ? a : [])).catch(() => setArchive([]));
     
-    // Load platform settings for weights
-    client.get(ENDPOINTS.admin.platformSettings).then(res => {
-      setPlatformSettings(res.data);
-    }).catch(err => console.error('Teacher: platform settings load failed', err));
   }, [user, isTeacher]);
 
   const pushActivity = useCallback((entry) => {
@@ -101,9 +100,21 @@ export function TeacherProvider({ children }) {
   const updateGroup = useCallback(async (groupId, patch) => {
     try {
       const u = await groupApi.updateGroup(groupId, patch);
-      setGroups(p => p?.map(g => (g._id === groupId || g.PID === groupId) ? { ...u, _id: u.PID } : g) ?? p);
-      return u;
-    } catch (e) { console.error(e); }
+      const normalized = {
+        ...u,
+        _id: u.PID,
+        title: u.name,
+        members: (u.members || []).map(m => ({
+          ...m,
+          _id: m.CID ?? m.student_id,
+          CID: m.CID ?? m.student_id,
+          name: m.name || m.student_name || m.student_email || 'Étudiant',
+          avatar: (m.name || m.student_name || 'S')[0],
+        })),
+      };
+      setGroups(p => p?.map(g => (g._id === groupId || g.PID === groupId) ? normalized : g) ?? p);
+      return normalized;
+    } catch (e) { console.error(e); toast.error('Erreur mise à jour');}
   }, []);
 
   const archiveGroup = useCallback(async (groupId) => {
@@ -149,7 +160,10 @@ export function TeacherProvider({ children }) {
       setMeetings(p => [...(p ?? []), m]);
       pushActivity({ type: 'meeting_scheduled', action: 'Réunion planifiée', desc: m.title || meetingData.title, color: 'var(--accent)' });
       toast.success('Réunion programmée'); return m;
-    } catch (e) { console.error(e); toast.error("Erreur planification"); }
+    } catch (e) { 
+        console.error('Meeting error:', e?.response?.status, e?.response?.data); 
+        toast.error(e?.response?.data?.error || e?.response?.data?.project_id?.[0] || "Erreur planification"); 
+      }
   }, [user, pushActivity]);
 
   const addMeeting = useCallback(async (meetingData) => {

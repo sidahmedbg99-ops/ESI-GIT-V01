@@ -13,7 +13,9 @@ import { archiveApi } from '../../api/archive';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 import { TECH_COLORS } from '../../constants';
-
+import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
+import client from '../../api/client';
+import { ENDPOINTS } from '../../api/config';
 // Constants moved inside component for translation
 
 function ChipBar({ values, active, onSelect, colorMap, t }) {
@@ -89,6 +91,13 @@ export function Archive() {
     setFilterCat(cat === filterCat ? null : cat);
     setFilterValue('all');
   };
+
+  const [canSeeAttachments, setCanSeeAttachments] = useState(false);
+  useEffect(() => {
+    client.get(ENDPOINTS.admin.platformSettings)
+      .then(res => setCanSeeAttachments(res.data.students_can_see_attachments ?? false))
+      .catch(() => {});
+  }, []);
 
   return (
     <DashboardLayout>
@@ -214,6 +223,9 @@ export function Archive() {
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
                   {(p.tech || []).map((t,i) => <span key={i} style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: (TECH_COLORS[t]||'#6B7280')+'18', color: TECH_COLORS[t]||'#6B7280', fontWeight: 600 }}>{t}</span>)}
                 </div>
+                {canSeeAttachments && (p.attachments || []).length > 0 && (
+                  <AttachmentsPopover attachments={p.attachments} />
+                )}
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)' }}>
                     <IoPeopleOutline size={13}/>{(p.members || []).join(', ')}

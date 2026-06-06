@@ -7,6 +7,7 @@ export const groupApi = {
   getById:          async (id)        => { const { data } = await client.get(ENDPOINTS.groups.byId(id));              return data; },
   deleteGroup:      async (id)        => { const { data } = await client.delete(ENDPOINTS.groups.delete(id));         return data; },
   assignJury:       async (id, body)  => { const { data } = await client.post(ENDPOINTS.groups.assignJury(id), body); return data; },
+  editJury:         async (id, body)  => { const { data } = await client.patch(ENDPOINTS.groups.editJury(id), body);  return data; },
   archiveProject:   async (id)        => { const { data } = await client.patch(ENDPOINTS.groups.archive(id));         return data; },
   restoreProject:   async (id)        => { const { data } = await client.patch(ENDPOINTS.groups.restore(id));         return data; },
   getArchived:      async ()          => { const { data } = await client.get(ENDPOINTS.groups.archived);              return data; },
@@ -73,6 +74,7 @@ export const groupApi = {
 
   // ── Teacher side ───────────────────────────────────────────────
   getTeacherGroups: async () => { const { data } = await client.get(ENDPOINTS.teacher.groups); return data; },
+  getTeacherGroupDetail: async (pid) => { const { data } = await client.get(ENDPOINTS.teacher.groupDetail(pid)); return data; },
   respondToSupervisorRequest: async (reqId, status) => {
     const action = status === 'approved' ? 'accept' : (status === 'rejected' ? 'reject' : status);
     const { data } = await client.patch(ENDPOINTS.teacher.supervisorAction(reqId), { action });

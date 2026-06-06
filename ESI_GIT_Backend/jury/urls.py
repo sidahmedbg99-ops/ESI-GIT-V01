@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     assign_jury,
+    edit_jury,
     list_juries,
     create_schedule,
     list_schedules,
@@ -11,6 +12,7 @@ from .views import (
 
 urlpatterns = [
     path("admin/jury/assign/<int:pk>/", assign_jury),
+    path("admin/jury/edit/<int:pk>/", edit_jury),
     path("admin/jury/", list_juries),
     path("admin/schedule/create/", create_schedule),
     path("admin/schedule/", list_schedules),

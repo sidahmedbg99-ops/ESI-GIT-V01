@@ -16,7 +16,7 @@ class AdminProjectSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     jury = serializers.SerializerMethodField()
     grades = serializers.SerializerMethodField()
-
+    attachments = serializers.SerializerMethodField()
     student_ids = serializers.ListField(write_only=True, required=False)
 
     teacher_id = serializers.IntegerField(write_only=True, required=False)
@@ -71,7 +71,19 @@ class AdminProjectSerializer(serializers.ModelSerializer):
             }
         except Exception:
             return None
-
+    def get_attachments(self, obj):
+        request = self.context.get("request")
+        return [
+            {
+                "id":              a.id,
+                "filename":        a.filename,
+                "attachment_type": a.attachment_type,
+                "uploaded_at":     str(a.uploaded_at),
+                "file_url":        request.build_absolute_uri(a.file.url) if (request and a.file) else None,
+            }
+            for a in obj.attachments.order_by("-uploaded_at")
+        ]
+    
     def create(self, validated_data):
         student_ids = validated_data.pop("student_ids", [])
         teacher_id = validated_data.pop("teacher_id", None)
@@ -122,6 +134,7 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
     jury = serializers.SerializerMethodField()
     schedule = serializers.SerializerMethodField()
     grades = serializers.SerializerMethodField()
+    attachments = serializers.SerializerMethodField()
 
     class Meta:
         model = Projects
@@ -131,11 +144,15 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
             "specialty",
             "year",
             "archived",
+            "TID",
             "teacher_name",
             "Student_count",
             "jury",
             "schedule",
             "grades",
+            "final_submission_approved",
+            "submitted_to_supervisor",
+            "attachments",
         ]
 
     def get_teacher_name(self, obj):
@@ -154,6 +171,9 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
                 "examiner1": jury.teacher2_id.full_name,
                 "examiner2": jury.teacher3_id.full_name,
                 "assigned_at": jury.assigned_at,
+                "teacher1_id": jury.teacher1_id.TID,
+                "teacher2_id": jury.teacher2_id.TID,
+                "teacher3_id": jury.teacher3_id.TID,
             }
         except Exception:
             return None
@@ -189,12 +209,28 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
             }
         except Exception:
             return None
+        
+    def get_attachments(self, obj):
+        from .models import ProjectAttachment
+        request = self.context.get("request")
+        attachments = ProjectAttachment.objects.filter(PID=obj).order_by("-uploaded_at")
+        return [
+            {
+                "id":              a.id,
+                "filename":        a.filename,
+                "attachment_type": a.attachment_type,
+                "uploaded_at":     str(a.uploaded_at),
+                "file_url":        request.build_absolute_uri(a.file.url) if (request and a.file) else None,
+            }
+            for a in attachments
+        ]
 
 
 class AdminGroupDetailsSerializer(serializers.ModelSerializer):
     teacher_name = serializers.SerializerMethodField()
     Student = serializers.SerializerMethodField()
     attachments_count = serializers.SerializerMethodField()
+    attachments       = serializers.SerializerMethodField()
     supervisor_requests = serializers.SerializerMethodField()
     meetings_stats = serializers.SerializerMethodField()
 
@@ -210,6 +246,7 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
             "teacher_name",
             "Student",
             "attachments_count",
+            "attachments",
             "supervisor_requests",
             "meetings_stats",
             "jury",
@@ -235,6 +272,19 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
 
     def get_attachments_count(self, obj):
         return obj.attachments.count()
+    
+    def get_attachments(self, obj):
+        request = self.context.get("request")
+        return [
+            {
+                "id":              a.id,
+                "filename":        a.filename,
+                "attachment_type": a.attachment_type,
+                "uploaded_at":     str(a.uploaded_at),
+                "file_url":        request.build_absolute_uri(a.file.url) if (request and a.file) else None,
+            }
+            for a in obj.attachments.order_by("-uploaded_at")
+        ]
 
     def get_supervisor_requests(self, obj):
         from .models import SupervisorRequest
@@ -384,7 +434,7 @@ class StudentProjectSerializer(serializers.ModelSerializer):
     group = serializers.CharField(source="invite_code", read_only=True)
     specialite = serializers.CharField(source="specialty", read_only=True)
     repo = serializers.CharField(source="github_url", read_only=True)
-
+    attachments = serializers.SerializerMethodField()
     class Meta:
         model = Projects
         fields = [
@@ -400,6 +450,7 @@ class StudentProjectSerializer(serializers.ModelSerializer):
             "members",
             "grades",
             "tech_stack",
+            "attachments",
         ]
 
     def get_teacher_name(self, obj):
@@ -420,7 +471,19 @@ class StudentProjectSerializer(serializers.ModelSerializer):
             }
         except Grades.DoesNotExist:
             return None
-
+        
+    def get_attachments(self, obj):
+        request = self.context.get("request")
+        return [
+            {
+                "id":              a.id,
+                "filename":        a.filename,
+                "attachment_type": a.attachment_type,
+                "uploaded_at":     str(a.uploaded_at),
+                "file_url":        request.build_absolute_uri(a.file.url) if (request and a.file) else None,
+            }
+            for a in obj.attachments.order_by("-uploaded_at")
+        ]
 
 # ─────────────────────────────────────────
 # STUDENT SIDE SERIALIZERS
