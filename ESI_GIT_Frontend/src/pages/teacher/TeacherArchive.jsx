@@ -125,7 +125,7 @@ export default function TeacherArchive() {
                 </div>
                 <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    <IoPeopleOutline size={13}/>{(p.members || []).join(', ')}
+                    <IoPeopleOutline size={13}/>{(p.members || []).map(m => m.name || m).join(', ')}
                   </div>
                   <a href={p.repo ? (p.repo.startsWith('http') ? p.repo : `https://${p.repo}`) : '#'} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontFamily: 'monospace' }}>
                     <IoGitBranchOutline size={13}/>{p.repo ? p.repo.split('/').slice(-1)[0] : 'No Repo'}

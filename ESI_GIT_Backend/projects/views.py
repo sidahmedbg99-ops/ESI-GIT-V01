@@ -1027,7 +1027,7 @@ class ProjectAttachmentsReadView(APIView):
         from jury.models import ProjectJury
 
         # allow admin
-        is_admin = request.user.is_authenticated and getattr(request.user, 'role', None) == 'admin'
+        is_admin = IsAdmin().has_permission(request, None)
 
         # allow jury member
         is_jury = False
@@ -1091,4 +1091,5 @@ class PublicSettingsView(APIView):
         return Response({
             "current_academic_year": settings.current_academic_year,
             "contact_email": settings.contact_email,
+            "students_can_see_attachments": settings.students_can_see_attachments,
         })

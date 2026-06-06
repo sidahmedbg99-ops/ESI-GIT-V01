@@ -64,6 +64,10 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
     tasks = serializers.SerializerMethodField()
     meetings = serializers.SerializerMethodField()
     attachments = serializers.SerializerMethodField()
+    supervisor_name = serializers.SerializerMethodField()
+    supervisor_id   = serializers.SerializerMethodField()
+
+    
 
     class Meta:
         model = Projects
@@ -73,9 +77,15 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
             "creation_date", "finish_date",
             "members", "progress", "tasks", "meetings", "attachments",
             "github_url", "supervisor_feedback", "submitted_to_supervisor",
-            "final_submission_approved",
+            "final_submission_approved", "supervisor_name", "supervisor_id",
         ]
 
+    def get_supervisor_name(self, obj):
+        return obj.TID.full_name if obj.TID else None
+
+    def get_supervisor_id(self, obj):
+        return obj.TID.TID if obj.TID else None
+    
     def get_members(self, obj):
         memberships = SProjects.objects.filter(PID=obj).select_related("CID")
         return [

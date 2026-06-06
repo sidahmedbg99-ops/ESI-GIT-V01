@@ -344,9 +344,6 @@ class AdminGroupDetailsSerializer(serializers.ModelSerializer):
             grades = Grades.objects.get(PID=obj)
 
             return {
-                "grade1": grades.grade1,
-                "grade2": grades.grade2,
-                "grade3": grades.grade3,
                 "final_grade": grades.final_grade,
                 "comments": grades.comments,
             }

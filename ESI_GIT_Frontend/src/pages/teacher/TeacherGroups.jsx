@@ -410,7 +410,7 @@ export default function TeacherGroups() {
                   </div>
                   <div>
                     <p style={{ fontSize: '13px', fontWeight: 600 }}>{m.name}</p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.cid}</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.CID}</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

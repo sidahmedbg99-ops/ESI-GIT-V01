@@ -94,7 +94,7 @@ export function Archive() {
 
   const [canSeeAttachments, setCanSeeAttachments] = useState(false);
   useEffect(() => {
-    client.get(ENDPOINTS.admin.platformSettings)
+    client.get(ENDPOINTS.groups.publicSettings)
       .then(res => setCanSeeAttachments(res.data.students_can_see_attachments ?? false))
       .catch(() => {});
   }, []);

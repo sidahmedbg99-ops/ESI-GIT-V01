@@ -105,7 +105,8 @@ def edit_jury(request, pk):
         return Response({"error": "Jury members must be 3 distinct teachers"}, status=400)
 
     supervisor_id = project.TID_id
-    if supervisor_id not in [teacher1_id, teacher2_id, teacher3_id]:
+    ids_as_int = [int(x) for x in [teacher1_id, teacher2_id, teacher3_id] if x is not None]
+    if supervisor_id and supervisor_id not in ids_as_int:
         return Response({"error": "Project supervisor must be one of the jury members"}, status=400)
 
     from users.models import Staff

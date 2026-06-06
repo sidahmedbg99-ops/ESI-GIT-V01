@@ -72,11 +72,8 @@ export function AuthProvider({ children }) {
     if (localStorage.getItem('esi-token') && !user) {
       authApi.getMe().then(r => {
         if (r && r.email) {
-          const currentRole = user?.role;
-          const newRole = r.role === 'staff' 
-            ? (r.is_admin 
-                ? (currentRole === 'teacher' ? 'teacher' : 'admin') 
-                : 'teacher') 
+          const newRole = r.role === 'staff'
+            ? (r.is_admin ? 'admin' : 'teacher')
             : r.role;
 
           const normalized = { 

@@ -148,12 +148,13 @@ export function AdminProvider({ children }) {
         name:      p.name,
         group:     p.invite_code,
         year:      p.year || new Date().getFullYear().toString(),
-        specialite: u.specialty?.name || u.specialty,
+        specialite: p.specialty?.name || p.specialty,
         encadreur: p.teacher_name,
         members:   (p.members || []).map(m => typeof m === 'object' ? (m.name || m.student_name) : m),
         grade:     p.grade ?? p.grades?.final_grade ?? null,
         tech:      (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
         archived:  true,
+        github_url: p.github_url || null,
       }));
       setArchive(archived);
     }).catch(() => setArchive([]));
@@ -478,12 +479,13 @@ export function AdminProvider({ children }) {
             name:      p.name,
             group:     p.invite_code,
             year:      p.year || new Date().getFullYear().toString(),
-            specialite: u.specialty?.name || u.specialty,
+            specialite: p.specialty?.name || p.specialty,
             encadreur: p.teacher_name,
             members:   (p.members || []).map(m => m.student_name || m.name),
             grade:     p.grades?.final_grade || null,
             tech:      (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
             archived:  true,
+            github_url: p.github_url || null,
           }));
           setArchive(archived);
         });

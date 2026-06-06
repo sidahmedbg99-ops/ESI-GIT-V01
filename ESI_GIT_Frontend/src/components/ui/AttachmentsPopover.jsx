@@ -45,7 +45,7 @@ export default function AttachmentsPopover({ attachments = [], label = null }) {
 
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 999,
+          position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 999,
           background: 'var(--bg-card)', border: '1px solid var(--border)',
           borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
           width: '280px', overflow: 'hidden',

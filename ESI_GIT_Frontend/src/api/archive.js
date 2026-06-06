@@ -8,7 +8,11 @@ export const archiveApi = {
     const list = Array.isArray(data) ? data : [];
     return list.map(p => ({
       ...p,
-      tech: (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
+      tech:      (p.tech_stack || '').split(',').map(s => s.trim()).filter(Boolean),
+      encadreur: p.teacher_name || p.encadreur || null,
+      group:     p.invite_code  || p.group     || null,
+      specialite:p.specialty?.name || p.specialty || null,
+      repo:      p.github_url   || p.repo      || null,
     }));
   },
 

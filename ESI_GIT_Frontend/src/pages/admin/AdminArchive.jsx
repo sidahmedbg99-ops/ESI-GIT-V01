@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import {
-  IoArchiveOutline, IoSearchOutline, IoStarOutline,
-  IoPeopleOutline, IoFunnelOutline, IoGitBranchOutline, IoRefreshOutline, IoTrashOutline,
+import { IoArchiveOutline, IoSearchOutline, IoStarOutline,
+  IoPeopleOutline, IoFunnelOutline, IoGitBranchOutline, IoRefreshOutline, IoTrashOutline, IoLogoGithub,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -193,6 +192,19 @@ export default function AdminArchive() {
                   )}
                 </div>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{t('Supervisor')} : {p.encadreur || p.teacher_name || '—'}</p>
+                <div style={{ marginTop: '6px' }}>
+                  {p.github_url ? (
+                    <a href={p.github_url.startsWith('http') ? p.github_url : `https://${p.github_url}`} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                      <IoLogoGithub size={13}/> {p.github_url.replace(/^https?:\/\/(www\.)?github\.com\//, '')}
+                    </a>
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                      <IoGitBranchOutline size={13}/> No Repo
+                    </span>
+                  )}
+                </div>
+
                 {(p.attachments || []).length > 0 && (
                   <AttachmentsPopover attachments={p.attachments} />
                 )}
