@@ -340,8 +340,7 @@ class AdminAssignStudentView(APIView):
         ).exists():
             return Response({"error": "Student is already in an active group this year"}, status=400)
 
-        if SProjects.objects.filter(PID=project).count() >= 6:
-            return Response({"error": "Group is full (max 6)"}, status=400)
+        
 
         # If making this student leader, remove existing leader first
         if is_leader:
@@ -355,7 +354,46 @@ class AdminAssignStudentView(APIView):
         )
 
         return Response({"success": True}, status=201)
+    
+class AdminChangeSupervisorView(APIView):
+    def patch(self, request, pk):
+        if not IsAdmin().has_permission(request, None):
+            return Response({"error": "Admin only"}, status=403)
 
+        teacher_id = request.data.get("teacher_id")
+        if not teacher_id:
+            return Response({"error": "teacher_id is required"}, status=400)
+
+        try:
+            project = Projects.objects.get(pk=pk)
+        except Projects.DoesNotExist:
+            return Response({"error": "Group not found"}, status=404)
+
+        try:
+            teacher = Staff.objects.get(TID=teacher_id)
+        except Staff.DoesNotExist:
+            return Response({"error": "Teacher not found"}, status=404)
+
+        old_supervisor = project.TID
+        project.TID = teacher
+        project.save()
+
+        from notifications.utils import notify
+        notify(
+            recipient_type="staff",
+            recipient_id=teacher.TID,
+            title="Supervisor assignment",
+            message=f'You have been assigned as supervisor for "{project.name}".',
+        )
+        if old_supervisor and old_supervisor.TID != teacher.TID:
+            notify(
+                recipient_type="staff",
+                recipient_id=old_supervisor.TID,
+                title="Supervisor removed",
+                message=f'You have been removed as supervisor for "{project.name}".',
+            )
+
+        return Response({"success": True, "teacher_name": teacher.full_name})
 
 # ─────────────────────────────────────────
 # STUDENT SIDE VIEWS

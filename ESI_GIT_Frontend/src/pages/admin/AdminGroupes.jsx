@@ -3,7 +3,7 @@ import {
   IoPeopleOutline, IoSearchOutline, IoAddOutline, IoEyeOutline,
   IoTrashOutline, IoCheckmarkCircleOutline, IoCloseCircleOutline,
   IoPersonOutline, IoRibbonOutline, IoSchoolOutline, IoTimeOutline,
-  IoArrowBackOutline,
+  IoArrowBackOutline,IoArchiveOutline 
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -14,6 +14,7 @@ import Modal from '../../components/ui/Modal';
 import { useAdmin } from '../../context/AdminContext';
 import { useLanguage } from '../../context/LanguageContext';
 import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
+import { IoPersonAddOutline, IoSwapHorizontalOutline } from 'react-icons/io5';
 
 // ── Jury assign modal ──────────────────────────────────────────────
 function JuryModal({ group, users, onClose, onAssign, isEdit}) {
@@ -252,12 +253,19 @@ function ScheduleModal({ group, onClose, onSchedule }) {
   );
 }
 // ── Group detail modal ─────────────────────────────────────────────
-function GroupDetailModal({ group: g, users, onClose, onAssignJury, onSchedule }) {
+function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchive, onAddMember, onChangeSupervisor }) {
+
   const { t } = useLanguage();
   if (!g) return null;
+  const isGraded = !!(g.grades?.final_grade != null);
   const finalGrade  = g.grades?.final_grade ?? null;
   const attachments = g.attachments ?? [];
   
+  const [showAddMember, setShowAddMember]       = useState(false);
+  const [newMemberCid, setNewMemberCid]          = useState('');
+  const [showChangeSup, setShowChangeSup]        = useState(false);
+  const [newSupId, setNewSupId]                  = useState('');
+
   const teacher = (users || []).find(u => u._id === g.teacherId);
   let juryMembers = [];
   if (Array.isArray(g.jury)) {
@@ -412,23 +420,68 @@ function GroupDetailModal({ group: g, users, onClose, onAssignJury, onSchedule }
             </div>
           )}
         </div>
+
+        {showAddMember && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+            <select value={newMemberCid} onChange={e => setNewMemberCid(e.target.value)}
+              style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', fontSize: '13px', color: 'var(--text-primary)' }}>
+              <option value="">— Choisir étudiant —</option>
+              {(users || []).filter(u => u.role === 'student').map(u => (
+                <option key={u._id} value={u._id}>{u.name}</option>
+              ))}
+            </select>
+            <Button onClick={async () => { if (!newMemberCid) return; const ok = await onAddMember(g._id ?? g.PID, newMemberCid); if (ok) { setShowAddMember(false); setNewMemberCid(''); } }}>
+              Ajouter
+            </Button>
+          </div>
+        )}
+
+        {showChangeSup && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+            <select value={newSupId} onChange={e => setNewSupId(e.target.value)}
+              style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', fontSize: '13px', color: 'var(--text-primary)' }}>
+              <option value="">— Choisir encadreur —</option>
+              {(users || []).filter(u => u.role === 'teacher' || u.role === 'admin').map(u => (
+                <option key={u._id} value={u._id}>{u.name}</option>
+              ))}
+            </select>
+            <Button onClick={async () => { if (!newSupId) return; const ok = await onChangeSupervisor(g._id ?? g.PID, newSupId); if (ok) { setShowChangeSup(false); setNewSupId(''); } }}>
+              Confirmer
+            </Button>
+          </div>
+        )}
         
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
           <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          <div title={!g.final_submission_approved ? t('WaitSupervisorValidation') : ''}>
+          {isGraded && !g.archived && (
+            <Button
+              variant="danger"
+              onClick={async () => { await onArchive(g._id ?? g.PID); onClose(); }}
+              icon={<IoArchiveOutline size={16}/>}
+            >
+              Archiver
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => setShowAddMember(v => !v)} icon={<IoPersonAddOutline size={16}/>}>
+            + Membre
+          </Button>
+          <Button variant="ghost" onClick={() => setShowChangeSup(v => !v)} icon={<IoSwapHorizontalOutline size={16}/>}>
+            Encadreur
+          </Button>
+          <div title={isGraded ? 'Projet terminé et noté' : !g.final_submission_approved ? t('WaitSupervisorValidation') : ''}>
             <Button
               variant="secondary"
               onClick={() => { onClose(); onSchedule(g); }}
-              disabled={!g.final_submission_approved}
+              disabled={!g.final_submission_approved || isGraded}
               icon={<IoTimeOutline size={16}/>}
             >
               Planifier
             </Button>
           </div>
-          <div title={!g.final_submission_approved ? t('WaitSupervisorValidation') : ''}>
+          <div title={isGraded ? 'Projet terminé et noté' : !g.final_submission_approved ? t('WaitSupervisorValidation') : ''}>
             <Button
               onClick={() => { onClose(); onAssignJury(g); }}
-              disabled={!g.final_submission_approved}
+              disabled={!g.final_submission_approved || isGraded}
               icon={<IoRibbonOutline size={16}/>}
             >
               {juryMembers.length ? t('EditJury') : t('AssignJury')}
@@ -594,7 +647,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
 // ── Main page ──────────────────────────────────────────────────────
 export default function AdminGroupes() {
   const { t } = useLanguage();
-  const { groups, users, departments, updateGroup, addGroup, assignJury, editJury, scheduleDefense, reloadGroups } = useAdmin();
+  const { groups, users, departments, updateGroup, addGroup, assignJury, editJury, scheduleDefense, reloadGroups, archiveGroup, addMember, changeSupervisor } = useAdmin();
   const safeGroups = groups || [];
   const safeUsers  = users  || [];
 
@@ -747,13 +800,7 @@ export default function AdminGroupes() {
         </div>
       </div>
 
-      <GroupDetailModal
-        group={detailGrp}
-        users={safeUsers}
-        onClose={() => setDetailGrp(null)}
-        onAssignJury={g => { setDetailGrp(null); setJuryGrp(g); }}
-        onSchedule={g => { setDetailGrp(null); setScheduleGrp(g); }}
-      />
+      {detailGrp && <GroupDetailModal g={detailGrp} users={safeUsers} onClose={() => setDetailGrp(null)} onAssignJury={g => { setDetailGrp(null); setJuryGrp(g); }} onSchedule={g => { setDetailGrp(null); setScheduleGrp(g); }} onArchive={archiveGroup} onAddMember={addMember} onChangeSupervisor={changeSupervisor}/>}
       {juryGrp && <JuryModal group={juryGrp} users={safeUsers} onClose={() => setJuryGrp(null)} onAssign={handleAssignJury} isEdit={!!(juryGrp.jury?.teacher1_id)}/>}
       {scheduleGrp && <ScheduleModal group={scheduleGrp} onClose={() => setScheduleGrp(null)} onSchedule={handleSchedule}/>}
       {createGrp && <CreateGroupModal withoutGroup={withoutGroup} onClose={() => setCreateGrp(false)} onSubmit={addGroup}/>}

@@ -157,7 +157,7 @@ export default function AdminDashboard() {
             { label: 'Total tâches',         value: ops.total_tasks ?? 0,                                                              color: '#6B7280' },
             { label: 'Tâches terminées',     value: Math.round(((ops.task_completion_rate ?? 0) / 100) * (ops.total_tasks ?? 0)),      color: '#10B981' },
             { label: 'Tâches en retard',     value: ops.late_tasks  ?? 0,                                                              color: '#EF4444' },
-            { label: 'Étudiants à risque',   value: stu.at_risk     ?? 0,                                                              color: '#F59E0B' },
+            { label: 'Étudiants inactifs',   value: stu.inactive    ?? 0,   color: '#F59E0B' },
           ].map((item, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < 3 ? '1px solid var(--border)' : 'none' }}>
               <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.label}</span>

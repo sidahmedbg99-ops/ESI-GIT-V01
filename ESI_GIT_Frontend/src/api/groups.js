@@ -28,6 +28,8 @@ export const groupApi = {
     return data;
   },
 
+  addMember:        async (id, body) => { const { data } = await client.post(ENDPOINTS.groups.addMember(id), body);        return data; },
+  changeSupervisor: async (id, body) => { const { data } = await client.patch(ENDPOINTS.groups.changeSupervisor(id), body); return data; },
   // ── Student side ───────────────────────────────────────────────
   getStudentGroup:   async ()          => { const { data } = await client.get(ENDPOINTS.groups.myProject);            return data; },
   getPublicSettings: async ()          => { const { data } = await client.get(ENDPOINTS.groups.publicSettings);       return data; },

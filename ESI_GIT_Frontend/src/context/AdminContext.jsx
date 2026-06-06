@@ -496,6 +496,29 @@ export function AdminProvider({ children }) {
     }
   }, [loadGroups, loadArchive]);
 
+  const addMember = useCallback(async (groupId, studentId, role = 'fullstack') => {
+    try {
+      await groupApi.addMember(groupId, { student_id: studentId, role });
+      await reloadGroups();
+      toast.success('Membre ajouté');
+      return true;
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Erreur');
+      return false;
+    }
+  }, [reloadGroups]);
+
+  const changeSupervisor = useCallback(async (groupId, teacherId) => {
+    try {
+      const res = await groupApi.changeSupervisor(groupId, { teacher_id: teacherId });
+      setGroups(prev => prev?.map(g => g._id === groupId ? { ...g, teacherId, teacher_name: res.teacher_name } : g) ?? prev);
+      toast.success('Encadreur modifié');
+      return true;
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Erreur');
+      return false;
+    }
+  }, []);
   // ── MEETINGS ──────────────────────────────────────────────────────
   const addMeeting = useCallback(async (meetingData) => {
     try {
@@ -626,6 +649,7 @@ export function AdminProvider({ children }) {
     evaluationFormula, setEvaluationFormula,
     reloadSpecialties,
     reloadGroups,
+    addMember, changeSupervisor,
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
