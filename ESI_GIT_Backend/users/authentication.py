@@ -29,21 +29,18 @@ class CustomJWTAuthentication(JWTAuthentication):
         raise AuthenticationFailed("Invalid token")
 
 class CustomTokenRefreshSerializer(TokenRefreshSerializer):
-    """
-    Override simplejwt's refresh serializer so it uses our dual-model
-    lookup (Student by CID, Staff by TID) instead of get_user_model().objects.get(id=...).
-    """
-
     def validate(self, attrs):
-        # Let simplejwt decode and rotate the token normally
-        data = super().validate(attrs)
+        from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+        from rest_framework_simplejwt.exceptions import TokenError
 
-        # Re-read user_type from the new access token to embed it again
-        refresh = RefreshToken(attrs["refresh"])
+        try:
+            refresh = RefreshToken(attrs["refresh"])
+        except TokenError as e:
+            raise InvalidToken(str(e))
+
         user_type = refresh.get("user_type")
         user_id   = refresh.get("user_id")
 
-        # Look up the user with our custom logic
         if user_type == "student":
             try:
                 user = Student.objects.get(CID=user_id)
@@ -57,11 +54,16 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
         else:
             raise InvalidToken("Invalid token type")
 
-        # Stamp user_type onto the new access token so CustomJWTAuthentication
-        # can still read it on the next request
-        from rest_framework_simplejwt.tokens import AccessToken
-        new_access = AccessToken(data["access"])
+        refresh.set_jti()
+        refresh.set_exp()
+        refresh.set_iat()
+
+        new_access = refresh.access_token
         new_access["user_type"] = user_type
-        data["access"] = str(new_access)
+
+        data = {
+            "access": str(new_access),
+            "refresh": str(refresh),
+        }
 
         return data

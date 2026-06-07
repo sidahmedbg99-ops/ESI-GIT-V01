@@ -21,6 +21,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from users.authentication import CustomTokenRefreshSerializer
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/admin/", include("admin_panel.urls")),
@@ -31,5 +33,5 @@ urlpatterns = [
     path("api/meetings/", include("meetings.urls")),
     path("api/notifications/", include("notifications.urls")),
     path("api/teacher/", include("teacher.urls")),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/token/refresh/", TokenRefreshView.as_view(serializer_class=CustomTokenRefreshSerializer), name="token_refresh"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
