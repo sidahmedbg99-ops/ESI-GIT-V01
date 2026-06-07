@@ -3,7 +3,7 @@ import {
   IoPeopleOutline, IoSearchOutline, IoAddOutline, IoEyeOutline,
   IoTrashOutline, IoCheckmarkCircleOutline, IoCloseCircleOutline,
   IoPersonOutline, IoRibbonOutline, IoSchoolOutline, IoTimeOutline,
-  IoArrowBackOutline,IoArchiveOutline,IoCreateOutline,
+  IoArrowBackOutline,IoArchiveOutline,IoCreateOutline,IoStarOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -16,48 +16,55 @@ import { useLanguage } from '../../context/LanguageContext';
 import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
 import { IoPersonAddOutline, IoSwapHorizontalOutline } from 'react-icons/io5';
 
-// ── Jury assign modal ──────────────────────────────────────────────
-function JuryModal({ group, users, onClose, onAssign, isEdit}) {
+// ── Jury + Schedule combined modal ────────────────────────────────
+function JuryScheduleModal({ group, users, onClose, onAssign, onSchedule }) {
   const { t } = useLanguage();
   const supervisorId = group?.teacherId;
+  const isEdit = !!(group.jury?.president);
 
-  // All teachers (include admin-teachers, include the supervisor)
   const allTeachers = (users || [])
     .filter(u => u.role === 'teacher' || u.role === 'admin' || u.type === 'staff')
     .sort((a, b) => {
-      const aId = a._id ?? a.id;
-      const bId = b._id ?? b.id;
+      const aId = a._id ?? a.id; const bId = b._id ?? b.id;
       if (aId === supervisorId) return -1;
       if (bId === supervisorId) return 1;
       return 0;
     });
 
-  // Pre-select supervisor as president
+  // jury state — pre-fill from existing jury names by matching users
+  const resolveId = name => (users || []).find(u => u.name === name)?._id;
   const [selected, setSelected] = useState(() => {
-    if (isEdit && group.jury?.teacher1_id) {
+    if (isEdit) {
+      const t1 = resolveId(group.jury.president);
+      const t2 = resolveId(group.jury.examiner1);
+      const t3 = resolveId(group.jury.examiner2);
       return [
-        { teacherId: group.jury.teacher1_id, role: 'president' },
-        { teacherId: group.jury.teacher2_id, role: 'examiner' },
-        { teacherId: group.jury.teacher3_id, role: 'examiner' },
-      ];
+        t1 && { teacherId: t1, role: 'president' },
+        t2 && { teacherId: t2, role: 'examiner' },
+        t3 && { teacherId: t3, role: 'examiner' },
+      ].filter(Boolean);
     }
     if (!supervisorId) return [];
     return [{ teacherId: supervisorId, role: 'president' }];
   });
 
-  const toggle = (id) => {
+  // schedule state — pre-fill from existing schedule
+  const today = new Date().toISOString().split('T')[0];
+  const [date, setDate]   = useState(group.schedule?.presentation_date  || '');
+  const [time, setTime]   = useState(group.schedule?.presentation_time  || '');
+  const [room, setRoom]   = useState(group.schedule?.room               || '');
+  const [dept, setDept]   = useState(group.schedule?.department_name    || '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const toggle = id => {
     setSelected(prev => {
       const exists = prev.find(x => x.teacherId === id);
-      if (exists) {
-        // Don't allow deselecting supervisor
-        if (id === supervisorId) return prev;
-        return prev.filter(x => x.teacherId !== id);
-      }
+      if (exists) { if (id === supervisorId) return prev; return prev.filter(x => x.teacherId !== id); }
       if (prev.length >= 3) return prev;
       return [...prev, { teacherId: id, role: 'examiner' }];
     });
   };
-
   const changeRole = (e, id) => {
     e.stopPropagation();
     setSelected(prev => prev.map(x => x.teacherId === id ? { ...x, role: e.target.value } : x));
@@ -65,140 +72,24 @@ function JuryModal({ group, users, onClose, onAssign, isEdit}) {
 
   const supervisorIncluded = selected.some(x => x.teacherId === supervisorId);
   const presidentCount = selected.filter(x => x.role === 'president').length;
-
-  const originalMap = isEdit && group.jury?.teacher1_id
-    ? {
-        [group.jury.teacher1_id]: 'president',
-        [group.jury.teacher2_id]: 'examiner',
-        [group.jury.teacher3_id]: 'examiner',
-      }
-    : null;
-  const hasChanges = !isEdit || !originalMap ||
-    selected.some(x => !(x.teacherId in originalMap)) ||
-    selected.some(x => x.teacherId in originalMap && x.role !== originalMap[x.teacherId]) ||
-    Object.keys(originalMap).some(id => !selected.find(x => String(x.teacherId) === String(id)));
-
-  const canSubmit = selected.length === 3 && supervisorIncluded && presidentCount === 1 && hasChanges;
-
-  const handleSubmit = () => {
-    const pres = selected.find(x => x.role === 'president') || selected[0];
-    const rest = selected.filter(x => x.teacherId !== pres.teacherId);
-    onAssign(group._id ?? group.PID, {
-      teacher1: pres.teacherId,
-      teacher2: rest[0]?.teacherId,
-      teacher3: rest[1]?.teacherId,
-    }, isEdit);
-    onClose();
-  };
-
-  return (
-    <Modal isOpen onClose={onClose} title={`${t('AssignJury')} — ${group?.title || group?.groupCode}`} size="md">
-      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-        Sélectionnez 3 enseignants. L'encadreur est pré-sélectionné et obligatoire.
-      </p>
-
-      <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px', letterSpacing: '0.06em' }}>
-        {selected.length}/3 sélectionnés
-      </p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px', maxHeight: '340px', overflowY: 'auto' }}>
-        {allTeachers.map(tVal => {
-          const id = tVal._id ?? tVal.id;
-          const sel = selected.find(x => x.teacherId === id);
-          const isSelected = !!sel;
-          const isSupervisor = id === supervisorId;
-          const disabled = !isSelected && selected.length >= 3;
-
-          return (
-            <div key={id} onClick={() => !disabled && toggle(id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '10px 14px', borderRadius: '10px',
-                background: isSelected ? 'var(--primary-subtle)' : 'var(--bg)',
-                border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
-                cursor: isSupervisor ? 'default' : (disabled ? 'not-allowed' : 'pointer'),
-                opacity: disabled ? 0.45 : 1,
-                transition: 'all 0.15s',
-              }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: isSupervisor ? 'var(--primary)' : 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-                {tVal.name?.charAt(0)}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '13px', fontWeight: 600 }}>{tVal.name}</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{tVal.specialty || tVal.department || '—'}</p>
-              </div>
-              {isSupervisor && (
-                <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#10B98120', color: '#10B981', flexShrink: 0 }}>
-                  Encadreur
-                </span>
-              )}
-              {isSelected && (
-                <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
-                  <select value={sel.role} onChange={e => changeRole(e, id)}
-                    style={{ padding: '5px 8px', borderRadius: '6px', fontSize: '12px', border: '1px solid var(--border)', background: '#fff', outline: 'none' }}>
-                    <option value="president">Président</option>
-                    <option value="examiner">Examinateur</option>
-                  </select>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {allTeachers.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>{t('NoGroupYet')}</p>}
-      </div>
-
-      {selected.length === 3 && !supervisorIncluded && (
-        <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '12px', fontWeight: 600, marginBottom: '12px' }}>
-          ⚠️ L'encadreur doit faire partie des 3 membres du jury.
-        </div>
-      )}
-
-      {selected.length === 3 && presidentCount !== 1 && (
-        <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '12px', fontWeight: 600, marginBottom: '12px' }}>
-          ⚠️ Le jury doit avoir exactement 1 président.
-        </div>
-      )}
-
-      {isEdit && selected.length === 3 && !hasChanges && (
-        <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', fontSize: '12px', fontWeight: 600, marginBottom: '12px' }}>
-          ℹ️ Aucune modification détectée.
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '13px', color: canSubmit ? 'var(--success)' : 'var(--text-muted)' }}>
-          {canSubmit ? '✅ Jury complet' : presidentCount !== 1 ? `${presidentCount} président(s) — 1 requis` : `${selected.length}/3 membres`}
-        </span>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          <Button onClick={handleSubmit} icon={<IoRibbonOutline size={16}/>} disabled={!canSubmit}>
-            {t('AssignJury')}
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-
-// ── Schedule modal ─────────────────────────────────────────────────
-function ScheduleModal({ group, onClose, onSchedule }) {
-  const { t } = useLanguage();
-  const [date, setDate]     = useState('');
-  const [time, setTime]     = useState('');
-  const [room, setRoom]     = useState('');
-  const [dept, setDept]     = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError]   = useState('');
-
-  const today = new Date().toISOString().split('T')[0];
-  const canSubmit = date && time && room.trim() && dept && date >= today;
+  const juryValid = selected.length === 3 && supervisorIncluded && presidentCount === 1;
+  const scheduleValid = date && time && room.trim() && dept && date >= today;
+  const canSubmit = juryValid;
 
   const handleSubmit = async () => {
     setError('');
     setSubmitting(true);
     try {
-      await onSchedule(group._id ?? group.PID, { date, time, room: room.trim(), department: dept });
+      const pres = selected.find(x => x.role === 'president') || selected[0];
+      const rest = selected.filter(x => x.teacherId !== pres.teacherId);
+      await onAssign(group._id ?? group.PID, {
+        teacher1: pres.teacherId,
+        teacher2: rest[0]?.teacherId,
+        teacher3: rest[1]?.teacherId,
+      }, isEdit);
+      if (scheduleValid) {
+        await onSchedule(group._id ?? group.PID, { date, time, room: room.trim(), department: dept });
+      }
       onClose();
     } catch (e) {
       setError(e?.response?.data?.error || t('Error'));
@@ -207,112 +98,181 @@ function ScheduleModal({ group, onClose, onSchedule }) {
     }
   };
 
-  const inputStyle = { width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' };
+  const inputStyle = { width: '100%', padding: '9px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' };
 
   return (
-    <Modal isOpen onClose={onClose} title={`Planifier la soutenance — ${group?.title || group?.groupCode}`} size="sm">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        {error && (
-          <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px' }}>
-            {error}
-          </div>
-        )}
+    <Modal isOpen onClose={onClose} title={`${isEdit ? 'Modifier' : 'Assigner'} jury & soutenance — ${group?.title || group?.groupCode}`} size="md">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        {error && <div style={{ padding: '10px 14px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px' }}>{error}</div>}
 
+        {/* ── Jury section ── */}
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Date *</label>
-          <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)} style={inputStyle}/>
-          {date && date < today && (
-            <p style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>La date ne peut pas être dans le passé.</p>
+          <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '8px' }}>
+            Jury — {selected.length}/3 sélectionnés
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
+            {allTeachers.map(tVal => {
+              const id = tVal._id ?? tVal.id;
+              const sel = selected.find(x => x.teacherId === id);
+              const isSelected = !!sel;
+              const isSupervisor = id === supervisorId;
+              const disabled = !isSelected && selected.length >= 3;
+              return (
+                <div key={id} onClick={() => !disabled && toggle(id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '10px',
+                    background: isSelected ? 'var(--primary-subtle)' : 'var(--bg)',
+                    border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                    cursor: isSupervisor ? 'default' : disabled ? 'not-allowed' : 'pointer',
+                    opacity: disabled ? 0.45 : 1, transition: 'all 0.15s' }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: isSupervisor ? 'var(--primary)' : 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                    {tVal.name?.charAt(0)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600 }}>{tVal.name}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{tVal.specialty || tVal.department || '—'}</p>
+                  </div>
+                  {isSupervisor && <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '4px', background: '#10B98120', color: '#10B981', flexShrink: 0 }}>Encadreur</span>}
+                  {isSelected && (
+                    <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
+                      <select value={sel.role} onChange={e => changeRole(e, id)}
+                        style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '12px', border: '1px solid var(--border)', background: '#fff', outline: 'none' }}>
+                        <option value="president">Président</option>
+                        <option value="examiner">Examinateur</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {selected.length === 3 && !supervisorIncluded && (
+            <div style={{ padding: '8px 12px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+              ⚠️ L'encadreur doit faire partie du jury.
+            </div>
+          )}
+          {selected.length === 3 && presidentCount !== 1 && (
+            <div style={{ padding: '8px 12px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+              ⚠️ Exactement 1 président requis.
+            </div>
           )}
         </div>
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Heure *</label>
-          <input type="time" value={time} onChange={e => setTime(e.target.value)} style={inputStyle}/>
-        </div>
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Salle *</label>
-          <input type="text" value={room} onChange={e => setRoom(e.target.value)} placeholder="ex: Salle A1" style={inputStyle}/>
-        </div>
-        <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Département *</label>
-          <select value={dept} onChange={e => setDept(e.target.value)} style={inputStyle}>
-            <option value="" disabled hidden>— Sélectionner —</option>
-            <option value="PREP">PREP</option>
-            <option value="SUP">SUP</option>
-          </select>
+
+        {/* ── Schedule section ── */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Soutenance <span style={{ fontWeight: 400, textTransform: 'none', fontSize: '11px' }}>(optionnel — peut être complété plus tard)</span>
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Date</label>
+              <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)} style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Heure</label>
+              <input type="time" value={time} onChange={e => setTime(e.target.value)} style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Salle</label>
+              <input type="text" value={room} onChange={e => setRoom(e.target.value)} placeholder="ex: Salle A1" style={inputStyle}/>
+            </div>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Département</label>
+              <select value={dept} onChange={e => setDept(e.target.value)} style={inputStyle}>
+                <option value="">— Sélectionner —</option>
+                <option value="PREP">PREP</option>
+                <option value="SUP">SUP</option>
+              </select>
+            </div>
+          </div>
+          {date && date < today && <p style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>La date ne peut pas être dans le passé.</p>}
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
-          <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          <Button onClick={handleSubmit} disabled={!canSubmit || submitting} icon={<IoTimeOutline size={16}/>}>
-            {submitting ? t('Loading') : 'Planifier'}
-          </Button>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', color: juryValid ? 'var(--success)' : 'var(--text-muted)' }}>
+            {juryValid ? `✅ Jury complet${scheduleValid ? ' · Soutenance planifiée' : ''}` : `${selected.length}/3 membres jury`}
+          </span>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
+            <Button onClick={handleSubmit} disabled={!canSubmit || submitting} icon={<IoRibbonOutline size={16}/>}>
+              {submitting ? t('Loading') : isEdit ? 'Enregistrer' : t('AssignJury')}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
   );
 }
+
+
 // ── Group detail modal ─────────────────────────────────────────────
-function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchive, onAddMember, onChangeSupervisor }) {
+function GroupDetailModal({ g, users, onClose }) {
 
   const { t } = useLanguage();
   if (!g) return null;
-  const isGraded = !!(g.grades?.final_grade != null);
-  const finalGrade  = g.grades?.final_grade ?? null;
+  const isGraded    = g.grades?.final_grade != null;
   const attachments = g.attachments ?? [];
-  
-  const [showAddMember, setShowAddMember]       = useState(false);
-  const [newMemberCid, setNewMemberCid]          = useState('');
-  const [showChangeSup, setShowChangeSup]        = useState(false);
-  const [newSupId, setNewSupId]                  = useState('');
 
   const teacher = (users || []).find(u => u._id === g.teacherId);
+
   let juryMembers = [];
   if (Array.isArray(g.jury)) {
-    // Fallback for legacy mock data arrays
     juryMembers = g.jury.map(j => {
       const isObj = typeof j === 'object';
       const id = isObj ? j.teacherId : j;
       const roleKey = isObj ? j.role : '';
       const user = (users || []).find(u => u._id === id);
-      const roleName = t(`JuryRoles.${roleKey}`) || roleKey;
-      return { name: user?.name || id, role: roleName };
+      return { name: user?.name || id, role: t(`JuryRoles.${roleKey}`) || roleKey };
     });
   } else if (g.jury && typeof g.jury === 'object') {
-    // Handle real backend object format
     if (g.jury.president) juryMembers.push({ name: g.jury.president, role: 'Président', grade: g.grades?.grade1 });
     if (g.jury.examiner1) juryMembers.push({ name: g.jury.examiner1, role: 'Examinateur', grade: g.grades?.grade2 });
     if (g.jury.examiner2) juryMembers.push({ name: g.jury.examiner2, role: 'Examinateur', grade: g.grades?.grade3 });
   }
-    
 
   return (
     <Modal isOpen onClose={onClose} title={g.groupCode ?? g.title} size="md">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div style={{ padding: '14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-          <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('Projects').slice(0,-1)}</p>
-          <p style={{ fontSize: '15px', fontWeight: 700, marginBottom: '8px' }}>{g.title || '—'}</p>
-          {g.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', fontStyle: 'italic' }}>{g.description}</p>}
-          {g.tech_stack && (
+
+        {/* ── Header: title+tags left, supervisor+members right ── */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'stretch' }}>
+          {/* Left: project title + status tags */}
+          <div style={{ flex: 1, padding: '14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+            <p style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.3 }}>{g.title || '—'}</p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {g.tech_stack.split(',').map((t, i) => <span key={i} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{t.trim()}</span>)}
+              {/* Active / Archived */}
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px',
+                background: g.archived ? 'var(--warning-subtle, #FEF3C7)' : 'var(--success-subtle, #D1FAE5)',
+                color:      g.archived ? 'var(--warning, #D97706)'        : 'var(--success, #059669)' }}>
+                {g.archived ? t('Archive') : t('Active_Stat')}
+              </span>
+              {/* Approved */}
+              {g.final_submission_approved && (
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'var(--primary-subtle)', color: 'var(--primary)' }}>
+                  {t('Approve') || 'Approuvé'}
+                </span>
+              )}
+              {/* Graded */}
+              {isGraded && (
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'var(--accent-subtle, #EDE9FE)', color: 'var(--accent, #7C3AED)' }}>
+                  {t('Graded') || 'Noté'}
+                </span>
+              )}
             </div>
-          )}
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          {[
-            { label: t('Supervisor'), value: teacher?.name || g.teacher_name || g.encadreur || '—' },
-            { label: t('Status'),    value: g.archived ? t('Archive') : t('Active_Stat') },
-            { label: t('Members'),   value: (g.Student_count || (g.members || g.studentIds || []).length) + ' ' + t('Students').toLowerCase() },
-            { label: t('Approve'), value: g.final_submission_approved ? t('Approve') : t('InProgress') },
-          ].map((f, i) => (
-            <div key={i} style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-              <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '3px' }}>{f.label}</p>
-              <p style={{ fontSize: '13px', fontWeight: 600 }}>{f.value}</p>
+          </div>
+          {/* Right: supervisor + members count */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '160px', flexShrink: 0 }}>
+            <div style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '3px' }}>{t('Supervisor')}</p>
+              <p style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teacher?.name || g.teacher_name || g.encadreur || '—'}</p>
             </div>
-          ))}
+            <div style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '3px' }}>{t('Members')}</p>
+              <p style={{ fontSize: '13px', fontWeight: 600 }}>{g.Student_count || (g.members || []).length} {t('Students').toLowerCase()}</p>
+            </div>
+          </div>
         </div>
 
+        {/* ── Members list ── */}
         {(g.members || []).length > 0 && (
           <div>
             <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>{t('Members')}</p>
@@ -329,8 +289,17 @@ function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchi
           </div>
         )}
 
+        {/* ── Jury ── */}
         <div style={{ padding: '14px', borderRadius: '10px', background: juryMembers.length ? 'var(--primary-subtle)' : 'var(--bg)', border: `1px solid ${juryMembers.length ? 'var(--primary)' : 'var(--border)'}` }}>
-          <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>{t('JuryAssigned')}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t('JuryAssigned')}</p>
+            {isGraded && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '18px', fontWeight: 800, color: 'var(--primary)' }}>
+                <IoStarOutline size={18} style={{ color: '#F59E0B', flexShrink: 0 }}/>
+                {g.grades.final_grade}<span style={{ fontSize: '13px', fontWeight: 500 }}>/20</span>
+              </span>
+            )}
+          </div>
           {juryMembers.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {juryMembers.map((member, i) => (
@@ -339,28 +308,20 @@ function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchi
                     <span style={{ fontSize: '13px', fontWeight: 600 }}>{member.name}</span>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({member.role})</span>
                   </div>
-                  {member.grade !== undefined && member.grade !== null ? (
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>{member.grade}/20</span>
-                  ) : (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{t('NonGraded')}</span>
-                  )}
                 </div>
               ))}
+              {g.grades?.feedback && (
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '4px', padding: '0 4px' }}>
+                  💬 {g.grades.feedback}
+                </p>
+              )}
             </div>
           ) : (
             <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('NoJuryAssigned')}</p>
           )}
         </div>
-        
-        {/* Final grade */}
-        {finalGrade !== null && (
-          <div style={{ padding: '14px', borderRadius: '10px', background: 'var(--primary-subtle)', border: '1px solid var(--primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Note finale</p>
-            <span style={{ fontSize: '22px', fontWeight: 800, color: 'var(--primary)' }}>{finalGrade}<span style={{ fontSize: '14px', fontWeight: 500 }}>/20</span></span>
-          </div>
-        )}
 
-        {/* Presentation */}
+        {/* ── Soutenance ── */}
         <div style={{ padding: '14px', borderRadius: '10px', background: g.schedule ? 'var(--primary-subtle)' : 'var(--bg)', border: `1px solid ${g.schedule ? '#10B981' : 'var(--border)'}` }}>
           <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Soutenance</p>
           {g.schedule ? (
@@ -377,7 +338,7 @@ function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchi
           )}
         </div>
 
-        {/* Attachments */}
+        {/* ── Livrables ── */}
         <div style={{ padding: '14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
@@ -391,14 +352,9 @@ function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchi
                   const zip = new JSZip();
                   await Promise.all(attachments.map(async a => {
                     if (!a.file_url) return;
-                    try {
-                      const res = await fetch(a.file_url);
-                      const blob = await res.blob();
-                      zip.file(a.filename, blob);
-                    } catch {}
+                    try { const res = await fetch(a.file_url); zip.file(a.filename, await res.blob()); } catch {}
                   }));
-                  const content = await zip.generateAsync({ type: 'blob' });
-                  saveAs(content, 'livrables.zip');
+                  saveAs(await zip.generateAsync({ type: 'blob' }), 'livrables.zip');
                 }}
                 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-subtle)', border: 'none', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer' }}
               >
@@ -421,79 +377,15 @@ function GroupDetailModal({ g, users, onClose, onAssignJury, onSchedule, onArchi
           )}
         </div>
 
-        {showAddMember && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-            <select value={newMemberCid} onChange={e => setNewMemberCid(e.target.value)}
-              style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', fontSize: '13px', color: 'var(--text-primary)' }}>
-              <option value="">— Choisir étudiant —</option>
-              {(users || []).filter(u => u.role === 'student').map(u => (
-                <option key={u._id} value={u._id}>{u.name}</option>
-              ))}
-            </select>
-            <Button onClick={async () => { if (!newMemberCid) return; const ok = await onAddMember(g._id ?? g.PID, newMemberCid); if (ok) { setShowAddMember(false); setNewMemberCid(''); } }}>
-              Ajouter
-            </Button>
-          </div>
-        )}
-
-        {showChangeSup && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-            <select value={newSupId} onChange={e => setNewSupId(e.target.value)}
-              style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', fontSize: '13px', color: 'var(--text-primary)' }}>
-              <option value="">— Choisir encadreur —</option>
-              {(users || []).filter(u => u.role === 'teacher' || u.role === 'admin').map(u => (
-                <option key={u._id} value={u._id}>{u.name}</option>
-              ))}
-            </select>
-            <Button onClick={async () => { if (!newSupId) return; const ok = await onChangeSupervisor(g._id ?? g.PID, newSupId); if (ok) { setShowChangeSup(false); setNewSupId(''); } }}>
-              Confirmer
-            </Button>
-          </div>
-        )}
-        
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
           <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
-          {isGraded && !g.archived && (
-            <Button
-              variant="danger"
-              onClick={async () => { await onArchive(g._id ?? g.PID); onClose(); }}
-              icon={<IoArchiveOutline size={16}/>}
-            >
-              Archiver
-            </Button>
-          )}
-          <Button variant="ghost" onClick={() => setShowAddMember(v => !v)} icon={<IoPersonAddOutline size={16}/>}>
-            + Membre
-          </Button>
-          <Button variant="ghost" onClick={() => setShowChangeSup(v => !v)} icon={<IoSwapHorizontalOutline size={16}/>}>
-            Encadreur
-          </Button>
-          <div title={isGraded ? 'Projet terminé et noté' : !g.final_submission_approved ? t('WaitSupervisorValidation') : ''}>
-            <Button
-              variant="secondary"
-              onClick={() => { onClose(); onSchedule(g); }}
-              disabled={!g.final_submission_approved || isGraded}
-              icon={<IoTimeOutline size={16}/>}
-            >
-              Planifier
-            </Button>
-          </div>
-          <div title={isGraded ? 'Projet terminé et noté' : !g.final_submission_approved ? t('WaitSupervisorValidation') : ''}>
-            <Button
-              onClick={() => { onClose(); onAssignJury(g); }}
-              disabled={!g.final_submission_approved || isGraded}
-              icon={<IoRibbonOutline size={16}/>}
-            >
-              {juryMembers.length ? t('EditJury') : t('AssignJury')}
-            </Button>
-          </div>
         </div>
       </div>
     </Modal>
   );
 }
 
-function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRemoveMember, onChangeSupervisor, onDone }) {
+function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRemoveMember, onChangeSupervisor, onArchive, onDone }) {
   const { t } = useLanguage();
   if (!g) return null;
 
@@ -633,8 +525,19 @@ function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRem
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-          <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+          {(g.grades?.final_grade != null) && !g.archived && onArchive && (
+            <Button
+              variant="danger"
+              onClick={async () => { await onArchive(g._id ?? g.PID); onClose(); }}
+              icon={<IoArchiveOutline size={16}/>}
+            >
+              Archiver
+            </Button>
+          )}
+          <div style={{ marginLeft: 'auto' }}>
+            <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -646,13 +549,15 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
   const { t } = useLanguage();
   const { users, platformSettings } = useAdmin();
   const teachers = (users || []).filter(u => u.role === 'teacher' && u.available !== false);
-  const types = platformSettings?.project_types ? platformSettings.project_types.split(',') : ['PFE', 'Stage', 'Projet'];
+  const types = ['Application Web', 'Application Mobile', 'Application Desktop', 'Système Embarqué', 'Intelligence Artificielle', 'Data Science', 'Cybersécurité', 'Réseau & Infrastructure', 'Autre'];
   
   const [selectedTeacher, setSelectedTeacher] = useState('');
+  const [supSearch,       setSupSearch]       = useState('');
+  const [supOpen,         setSupOpen]         = useState(false);
   const [selectedType, setSelectedType] = useState(types[0] || 'PFE');
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [leaderId, setLeaderId] = useState(null);
-  const [levelFilter, setLevelFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('L2');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -711,7 +616,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
 
         {/* Project title defaults to temp — notice only */}
         <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>
-          📌 Le titre du projet sera automatiquement mis à <strong>"temp"</strong>. Le chef de groupe devra le modifier après création.
+          📌 Le titre du projet sera <strong>"temp"</strong> par défaut. Le <strong>chef de groupe</strong> pourra modifier le nom et le type du projet après création.
         </div>
 
         <div>
@@ -722,12 +627,46 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
           </select>
         </div>
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Supervisor')} *</label>
-          <select value={selectedTeacher} onChange={e => setSelectedTeacher(e.target.value)}
-                  style={{ width: '100%', padding: '10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}>
-            <option value="">-- {t('Optional')} --</option>
-            {teachers.map(tr => <option key={tr._id} value={tr._id}>{tr.name}</option>)}
-          </select>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Supervisor')}</label>
+          <div style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+              onClick={() => setSupOpen(v => !v)}>
+              <IoPersonOutline size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
+              <span style={{ flex: 1, color: selectedTeacher ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                {selectedTeacher ? (teachers.find(u => String(u._id) === String(selectedTeacher))?.name || 'Encadreur') : `— ${t('Optional')} —`}
+              </span>
+              {selectedTeacher && (
+                <span onClick={e => { e.stopPropagation(); setSelectedTeacher(''); setSupSearch(''); setSupOpen(false); }}
+                  style={{ fontSize: '15px', lineHeight: 1, color: 'var(--text-muted)', cursor: 'pointer' }}>×</span>
+              )}
+            </div>
+            {supOpen && (
+              <div style={{ position: 'absolute', top: '110%', left: 0, right: 0, zIndex: 200, background: 'var(--bg-card, var(--bg))', border: '1px solid var(--border)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', overflow: 'hidden' }}>
+                <div style={{ padding: '8px' }}>
+                  <input autoFocus value={supSearch} onChange={e => setSupSearch(e.target.value)}
+                    placeholder="Rechercher..." style={{ width: '100%', padding: '7px 10px', borderRadius: '7px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}/>
+                </div>
+                <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                  {teachers
+                    .filter(u => !supSearch || u.name?.toLowerCase().includes(supSearch.toLowerCase()))
+                    .map(u => (
+                      <div key={u._id} onClick={() => { setSelectedTeacher(String(u._id)); setSupSearch(''); setSupOpen(false); }}
+                        style={{ padding: '9px 14px', fontSize: '13px', cursor: 'pointer',
+                          background: String(u._id) === String(selectedTeacher) ? 'var(--primary-subtle)' : 'transparent',
+                          color: String(u._id) === String(selectedTeacher) ? 'var(--primary)' : 'var(--text-primary)',
+                          fontWeight: String(u._id) === String(selectedTeacher) ? 700 : 400 }}
+                        onMouseEnter={e => { if (String(u._id) !== String(selectedTeacher)) e.currentTarget.style.background = 'var(--bg)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = String(u._id) === String(selectedTeacher) ? 'var(--primary-subtle)' : 'transparent'; }}
+                      >{u.name}</div>
+                    ))
+                  }
+                  {teachers.filter(u => !supSearch || u.name?.toLowerCase().includes(supSearch.toLowerCase())).length === 0 && (
+                    <p style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>Aucun résultat</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Laissez vide pour laisser le groupe choisir plus tard.</p>
         </div>
 
@@ -740,20 +679,16 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
               onChange={e => setLevelFilter(e.target.value)}
               style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', outline: 'none' }}
             >
-              <option value="all">{t('All')}</option>
-              <option value="L1">L1 (1CPI)</option>
-              <option value="L2">L2 (2CPI)</option>
-              <option value="L3">L3 (1CS)</option>
-              <option value="M1">M1 (2CS)</option>
-              <option value="M2">M2 (3CS)</option>
+              <option value="L2">2CPI</option>
+              <option value="L3">1CS</option>
+              <option value="M1">2CS</option>
+              <option value="M2">3CS</option>
             </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', padding: '10px', borderRadius: 'var(--radius-md)', background: 'var(--bg)' }}>
             {(() => {
-              const levelMap = { L1: 1, L2: 2, L3: 3, M1: 4, M2: 5 };
-              const visible = levelFilter === 'all'
-                ? withoutGroup
-                : withoutGroup.filter(s => (s.level === levelMap[levelFilter]) || (s.year === levelFilter));
+              const levelMap = { L2: 2, L3: 3, M1: 4, M2: 5 };
+              const visible = withoutGroup.filter(s => (s.level === levelMap[levelFilter]) || (s.year === levelFilter));
               if (visible.length === 0) return <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '10px' }}>{t('AllStudentsHaveGroup')}</p>;
               return visible.map(s => {
                 const sel = selectedStudents.find(x => x.cid === s._id);
@@ -802,28 +737,49 @@ export default function AdminGroupes() {
 
   const [search,       setSearch]       = useState('');
   const [filter,       setFilter]       = useState('all');
+  const [filterLevel,  setFilterLevel]  = useState('');
+  const [filterTag,    setFilterTag]    = useState('');
+  const [filterSup,    setFilterSup]    = useState('');
+  const [supSearch,    setSupSearch]    = useState('');
+  const [supOpen,      setSupOpen]      = useState(false);
   const [detailGrp,    setDetailGrp]    = useState(null);
   const [editGrp,      setEditGrp]      = useState(null);
-  const [juryGrp,      setJuryGrp]      = useState(null);
-  const [scheduleGrp,  setScheduleGrp]  = useState(null);
+  const [jurySchedGrp, setJurySchedGrp] = useState(null);
   const [createGrp,    setCreateGrp]    = useState(false);
 
   useEffect(() => { reloadGroups(); }, []);
 
   const realGroups = safeGroups.filter(g => (g.Student_count > 0));
   
-  const filtered = realGroups.filter(g => {
-    const q = search.toLowerCase();
-    const matchSearch = (g.groupCode?.toLowerCase().includes(q) ?? false) || (g.title?.toLowerCase().includes(q) ?? false);
-    const matchFilter = filter === 'all' || (filter === 'approved' && g.final_submission_approved) || (filter === 'pending' && !g.final_submission_approved);
-    return matchSearch && matchFilter;
-  });
+  const tagOrder = g => {
+    if (g.grades?.final_grade != null) return 2; // graded
+    if (g.final_submission_approved)   return 1; // approved
+    return 0;                                     // active
+  };
 
-  const handleAssignJury = (groupId, slots, isEdit) => {
+  const levelMap = { 1:'L1', 2:'L2', 3:'L3', 4:'M1', 5:'M2' };
+  const teachers = safeUsers.filter(u => u.role === 'teacher' || u.role === 'admin');
+
+  const filtered = realGroups
+    .filter(g => {
+      const q = search.toLowerCase();
+      const matchSearch = (g.groupCode?.toLowerCase().includes(q) ?? false) || (g.title?.toLowerCase().includes(q) ?? false);
+      const matchTag =
+        !filterTag ||
+        (filterTag === 'active'    && g.grades?.final_grade == null && !g.final_submission_approved) ||
+        (filterTag === 'approved'  && g.final_submission_approved && g.grades?.final_grade == null) ||
+        (filterTag === 'graded'    && g.grades?.final_grade != null);
+      const matchLevel = !filterLevel || String(g.academic_level) === filterLevel;
+      const matchSup   = !filterSup   || String(g.teacherId) === filterSup;
+      return matchSearch && matchTag && matchLevel && matchSup;
+    })
+    .sort((a, b) => tagOrder(a) - tagOrder(b));
+
+  const handleAssignJury = async (groupId, slots, isEdit) => {
     if (isEdit) {
-      editJury(groupId, slots);
+      await editJury(groupId, slots);
     } else {
-      assignJury(groupId, slots);
+      await assignJury(groupId, slots);
     }
   };
 
@@ -842,7 +798,7 @@ export default function AdminGroupes() {
   );
   const studentIds = new Set([...activeStudentIds, ...archivedStudentIds]);
   const withGroup    = students.filter(s => studentIds.has(s._id));
-  const withoutGroup = students.filter(s => !studentIds.has(String(s._id)) && s.status !== 'blocked');
+  const withoutGroup = students.filter(s => !studentIds.has(String(s._id)) && s.status !== 'blocked' && s.level !== 1);
 
   return (
     <DashboardLayout>
@@ -874,15 +830,64 @@ export default function AdminGroupes() {
 
         <div>
           <Card>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ flex: 1, minWidth: '180px' }}>
                 <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('Search')} icon={<IoSearchOutline size={14}/>}/>
               </div>
-              {['all','approved','pending'].map(f => (
-                <button key={f} onClick={() => setFilter(f)} style={{ padding: '8px 14px', borderRadius: '20px', border: filter === f ? 'none' : '1px solid var(--border)', background: filter === f ? 'var(--primary)' : 'var(--bg)', color: filter === f ? '#fff' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                  {f === 'all' ? t('All') : f === 'approved' ? (t('Approved_Stat') || 'Approuvés') : t('NonApproved_Stat')}
-                </button>
-              ))}                
+              {/* Tag filter */}
+              <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <option value="">Tous les tags</option>
+                <option value="active">Actif</option>
+                <option value="approved">Approuvé</option>
+                <option value="graded">Noté</option>
+              </select>
+              {/* Level filter — 2CPI/1CS/2CS/3CS only */}
+              <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <option value="">Tous les niveaux</option>
+                <option value="2">2CPI</option>
+                <option value="3">1CS</option>
+                <option value="4">2CS</option>
+                <option value="5">3CS</option>
+              </select>
+              {/* Supervisor — searchable picker */}
+              <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', minWidth: '160px' }}
+                  onClick={() => setSupOpen(v => !v)}>
+                  <IoPersonOutline size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
+                  <span style={{ flex: 1, color: filterSup ? 'var(--text-primary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {filterSup ? (teachers.find(u => String(u._id) === filterSup)?.name || 'Encadreur') : 'Tous les encadreurs'}
+                  </span>
+                  {filterSup && (
+                    <span onClick={e => { e.stopPropagation(); setFilterSup(''); setSupSearch(''); setSupOpen(false); }}
+                      style={{ fontSize: '14px', lineHeight: 1, color: 'var(--text-muted)', cursor: 'pointer' }}>×</span>
+                  )}
+                </div>
+                {supOpen && (
+                  <div style={{ position: 'absolute', top: '110%', left: 0, zIndex: 200, background: 'var(--bg-card, var(--bg))', border: '1px solid var(--border)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', minWidth: '220px', overflow: 'hidden' }}>
+                    <div style={{ padding: '8px' }}>
+                      <input autoFocus value={supSearch} onChange={e => setSupSearch(e.target.value)}
+                        placeholder="Rechercher..." style={{ width: '100%', padding: '7px 10px', borderRadius: '7px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' }}/>
+                    </div>
+                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                      {teachers
+                        .filter(u => !supSearch || u.name?.toLowerCase().includes(supSearch.toLowerCase()))
+                        .map(u => (
+                          <div key={u._id} onClick={() => { setFilterSup(String(u._id)); setSupSearch(''); setSupOpen(false); }}
+                            style={{ padding: '9px 14px', fontSize: '13px', cursor: 'pointer', background: String(u._id) === filterSup ? 'var(--primary-subtle)' : 'transparent', color: String(u._id) === filterSup ? 'var(--primary)' : 'var(--text-primary)', fontWeight: String(u._id) === filterSup ? 700 : 400 }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'}
+                            onMouseLeave={e => e.currentTarget.style.background = String(u._id) === filterSup ? 'var(--primary-subtle)' : 'transparent'}
+                          >{u.name}</div>
+                        ))
+                      }
+                      {teachers.filter(u => !supSearch || u.name?.toLowerCase().includes(supSearch.toLowerCase())).length === 0 && (
+                        <p style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>Aucun résultat</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <Button onClick={() => setCreateGrp(true)} icon={<IoAddOutline size={16}/>} style={{ marginLeft: 'auto' }}>{t('CreateGroup')}</Button>
             </div>
 
@@ -899,7 +904,26 @@ export default function AdminGroupes() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                           <h3 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>{g.groupCode ?? g.title}</h3>
+                          {/* Level badge */}
+                          {g.academic_level && (
+                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '5px', background: 'var(--bg-card, #1e1e2e)', border: '1px solid var(--border)', color: 'var(--text-muted)', flexShrink: 0 }}>
+                              {({ 2:'2CPI', 3:'1CS', 4:'2CS', 5:'3CS' })[g.academic_level] || `L${g.academic_level}`}
+                            </span>
+                          )}
+                          {/* Active/Archived tag always shown */}
                           <Badge variant={g.archived ? 'warning' : 'success'}>{g.archived ? t('Archive') : t('Active_Stat')}</Badge>
+                          {/* Approved tag */}
+                          {g.final_submission_approved && (
+                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'var(--primary-subtle)', color: 'var(--primary)' }}>
+                              {t('Approve') || 'Approuvé'}
+                            </span>
+                          )}
+                          {/* Graded tag */}
+                          {g.grades?.final_grade != null && (
+                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: 'var(--accent-subtle, #EDE9FE)', color: 'var(--accent, #7C3AED)' }}>
+                              {t('Graded') || 'Noté'}
+                            </span>
+                          )}
                         </div>
                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{g.title}</p>
                       </div>
@@ -911,7 +935,27 @@ export default function AdminGroupes() {
                         >
                           <IoCreateOutline size={16}/>
                         </button>
-
+                        {g.final_submission_approved && (() => {
+                          const isGraded = g.grades?.final_grade != null;
+                          const fullySet = !!g.jury?.president && !!g.schedule?.presentation_date;
+                          return (
+                            <button
+                              onClick={() => !isGraded && setJurySchedGrp(g)}
+                              title={isGraded ? 'Projet noté — modification désactivée' : fullySet ? 'Modifier jury & soutenance' : 'Assigner jury & soutenance'}
+                              style={{ width: 34, height: 34, borderRadius: '10px',
+                                background: fullySet ? 'var(--primary-subtle)' : 'var(--bg)',
+                                border: `1px solid ${fullySet ? 'var(--primary)' : 'var(--border)'}`,
+                                boxShadow: fullySet ? '0 0 0 2px var(--primary)33' : 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: isGraded ? 'not-allowed' : 'pointer',
+                                color: fullySet ? 'var(--primary)' : 'var(--text-muted)',
+                                opacity: isGraded ? 0.4 : 1,
+                                transition: 'all 0.15s' }}
+                            >
+                              <IoRibbonOutline size={16}/>
+                            </button>
+                          );
+                        })()}
                         <button onClick={() => setDetailGrp(g)} style={{ width: 34, height: 34, borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}>
                           <IoEyeOutline size={16}/>
                         </button>
@@ -929,11 +973,31 @@ export default function AdminGroupes() {
                         <IoPeopleOutline size={14}/>
                         <span style={{ fontSize: '12px' }}>{g.Student_count || 0} {t('Members').toLowerCase()}</span>
                       </div>
-                      {g.final_submission_approved && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--success)', fontSize: '12px', fontWeight: 700, marginLeft: 'auto' }}>
-                          <IoCheckmarkCircleOutline size={14}/> {t('Success')}
-                        </div>
-                      )}
+                      {g.final_submission_approved && (() => {
+                        const isGraded  = g.grades?.final_grade != null;
+                        const hasJury   = !!g.jury?.president;
+                        const hasSched  = !!g.schedule?.presentation_date;
+                        if (isGraded) return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent, #7C3AED)', fontSize: '12px', fontWeight: 700, marginLeft: 'auto' }}>
+                            ⭐ Noté — {g.grades.final_grade}/20
+                          </div>
+                        );
+                        if (hasJury && hasSched) return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--success)', fontSize: '12px', fontWeight: 700, marginLeft: 'auto' }}>
+                            <IoCheckmarkCircleOutline size={13}/> Prêt pour la soutenance
+                          </div>
+                        );
+                        if (hasJury) return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#F59E0B', fontSize: '12px', fontWeight: 600, marginLeft: 'auto' }}>
+                            ⏳ Jury ✓ — Date manquante
+                          </div>
+                        );
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#F59E0B', fontSize: '12px', fontWeight: 600, marginLeft: 'auto' }}>
+                            ⏳ Jury requis
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -949,10 +1013,9 @@ export default function AdminGroupes() {
         </div>
       </div>
 
-      {detailGrp && <GroupDetailModal g={detailGrp} users={safeUsers} onClose={() => setDetailGrp(null)} onAssignJury={g => { setDetailGrp(null); setJuryGrp(g); }} onSchedule={g => { setDetailGrp(null); setScheduleGrp(g); }} onArchive={archiveGroup} onAddMember={addMember} onChangeSupervisor={changeSupervisor}/>}
-      {editGrp && <EditGroupModal g={editGrp} withoutGroup={withoutGroup} allUsers={safeUsers} onClose={() => setEditGrp(null)} onAddMember={addMember} onRemoveMember={removeMember} onChangeSupervisor={changeSupervisor} onDone={reloadGroups}/>}
-      {juryGrp && <JuryModal group={juryGrp} users={safeUsers} onClose={() => setJuryGrp(null)} onAssign={handleAssignJury} isEdit={!!(juryGrp.jury?.teacher1_id)}/>}
-      {scheduleGrp && <ScheduleModal group={scheduleGrp} onClose={() => setScheduleGrp(null)} onSchedule={handleSchedule}/>}
+      {detailGrp && <GroupDetailModal g={detailGrp} users={safeUsers} onClose={() => setDetailGrp(null)}/>}
+      {editGrp && <EditGroupModal g={editGrp} withoutGroup={withoutGroup} allUsers={safeUsers} onClose={() => setEditGrp(null)} onAddMember={addMember} onRemoveMember={removeMember} onChangeSupervisor={changeSupervisor} onArchive={archiveGroup} onDone={reloadGroups}/>}
+      {jurySchedGrp && <JuryScheduleModal group={jurySchedGrp} users={safeUsers} onClose={() => { setJurySchedGrp(null); reloadGroups(); }} onAssign={handleAssignJury} onSchedule={handleSchedule}/>}
       {createGrp && <CreateGroupModal withoutGroup={withoutGroup} onClose={() => setCreateGrp(false)} onSubmit={addGroup}/>}
     </DashboardLayout>
   );
