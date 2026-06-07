@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { IoArchiveOutline, IoSearchOutline, IoStarOutline,
   IoPeopleOutline, IoFunnelOutline, IoGitBranchOutline, IoRefreshOutline, IoTrashOutline, IoLogoGithub,
+  IoEyeOffOutline, IoEyeOutline, IoPersonOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -13,8 +14,6 @@ import { useLanguage } from '../../context/LanguageContext';
 import { TECH_COLORS } from '../../constants';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
-
-// Constants will be defined inside the component to use the translation function
 
 function ChipBar({ values, active, onSelect, t }) {
   return (
@@ -31,38 +30,50 @@ function ChipBar({ values, active, onSelect, t }) {
   );
 }
 
+const LEVEL_LABELS = { 1: '1CPI', 2: '2CPI', 3: '1CS', 4: '2CS', 5: '3CS' };
+
 export default function AdminArchive() {
   const { t } = useLanguage();
-  const { archive, archiveLoading, restoreGroup, deleteArchiveProject, toggleProjectVisibility, updateGroup } = useAdmin();
+  const { archive, archiveLoading, restoreGroup, deleteArchiveProject, toggleProjectVisibility, updateGroup, specialties } = useAdmin();
   const [editModal, setEditModal] = useState({ isOpen: false, project: null });
   
   const FILTER_CATEGORIES = [
     { key: 'year',       label: t('AcademicYears')?.split(' ')[1] || 'Année' },
-    { key: 'encadreur',  label: t('Supervisor') },
     { key: 'specialite', label: t('Specialty') },
+    { key: 'level',      label: 'Niveau' },
   ];
   const { platformSettings, updatePlatformSettings } = useAdmin();
   const canSeeArchived = platformSettings?.students_can_see_archived_projects;
   const projects = archive || [];
 
-  const [search,      setSearch]      = useState('');
-  const [filterCat,   setFilterCat]   = useState(null);
-  const [filterValue, setFilterValue] = useState('all');
+  const [search,           setSearch]           = useState('');
+  const [filterCat,        setFilterCat]        = useState(null);
+  const [filterValue,      setFilterValue]      = useState('all');
+  const [supervisorSearch, setSupervisorSearch] = useState('');
   const [modal, setModal] = useState({ isOpen: false, projectId: null });
 
   const years      = [...new Set(projects.map(p => p.year))].filter(Boolean).sort().reverse();
-  const encadreurs = [...new Set(projects.map(p => p.encadreur))].filter(Boolean).sort();
-  const specialites= [...new Set(projects.map(p => p.specialite))].filter(Boolean).sort();
-  const catValues  = { year: years, encadreur: encadreurs, specialite: specialites };
+  const specialiteOptions = specialties.length
+    ? specialties.map(s => s.name).sort()
+    : [...new Set(projects.map(p => p.specialite))].filter(Boolean).sort();
+  const levelOptions = ['1CPI', '2CPI', '1CS', '2CS', '3CS'];
+  const catValues  = { year: years, specialite: specialiteOptions, level: levelOptions };
+  const hiddenCount = projects.filter(p => p.is_public === false).length;
 
   const firstFiltered = projects.filter(p => {
     if (!filterCat || filterValue === 'all') return true;
+    if (filterCat === 'level') {
+      const label = LEVEL_LABELS[p.academic_level] || LEVEL_LABELS[p.level];
+      return label === filterValue;
+    }
     return p[filterCat] === filterValue;
   });
 
   const filtered = firstFiltered.filter(p => {
     const q = search.toLowerCase();
-    return !search || p.name?.toLowerCase().includes(q) || p.group?.toLowerCase().includes(q) || p.encadreur?.toLowerCase().includes(q);
+    const matchesSearch = !search || p.name?.toLowerCase().includes(q) || p.encadreur?.toLowerCase().includes(q);
+    const matchesSupervisor = !supervisorSearch || (p.encadreur || p.teacher_name || '').toLowerCase().includes(supervisorSearch.toLowerCase());
+    return matchesSearch && matchesSupervisor;
   });
 
   const avgGrade = projects.length ? (projects.reduce((a, p) => a + Number(p.grades?.final_grade ?? p.grade ?? p.final_grade ?? 0), 0) / projects.length).toFixed(1) : 0;
@@ -82,6 +93,11 @@ export default function AdminArchive() {
             <div style={{ fontSize: '12px', fontWeight: 700, color: canSeeArchived ? '#16A34A' : '#DC2626' }}>
               {canSeeArchived ? '🔓 Archive visible aux étudiants' : '🔒 Archive masquée aux étudiants'}
             </div>
+            {hiddenCount > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '10px', background: '#1E293B', color: '#fff', fontSize: '11px', fontWeight: 700 }}>
+                <IoEyeOffOutline size={11}/> {hiddenCount} masqué{hiddenCount > 1 ? 's' : ''}
+              </div>
+            )}
           </div>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Cette option active/désactive l'onglet Archive pour tous les étudiants.</p>
         </div>
@@ -133,6 +149,22 @@ export default function AdminArchive() {
             )}
           </Card>
 
+          {/* Supervisor search */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', flex: '0 0 220px' }}>
+              <IoPersonOutline size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
+              <input
+                value={supervisorSearch}
+                onChange={e => setSupervisorSearch(e.target.value)}
+                placeholder="Rechercher encadreur..."
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--text-primary)', width: '100%' }}
+              />
+              {supervisorSearch && (
+                <button onClick={() => setSupervisorSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: 0, lineHeight: 1 }}>✕</button>
+              )}
+            </div>
+          </div>
+
           {/* Search */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <div style={{ width: '280px' }}>
@@ -146,12 +178,12 @@ export default function AdminArchive() {
           {/* Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
             {filtered.map(p => (
-              <Card key={p._id} hover style={{ padding: '22px' }}>
+              <Card key={p._id} hover style={{ padding: '22px', display: 'flex', flexDirection: 'column' }}>
                 {/* ── Top row: title + grade ── */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', gap: '12px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
-                      {p.group} · {p.year} · {p.specialite || p.specialty}
+                      {[LEVEL_LABELS[p.academic_level] || LEVEL_LABELS[p.level], p.year, p.specialite || p.specialty].filter(Boolean).join(' · ')}
                     </span>
                     <h3 style={{ fontSize: '15px', fontWeight: 700, lineHeight: 1.3, wordBreak: 'break-word' }}>{p.name}</h3>
                   </div>
@@ -171,28 +203,47 @@ export default function AdminArchive() {
                     <Badge variant="info">✓ {t('Approve')}</Badge>
                   )}
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px' }}>
-
                     <Button size="sm" variant="outline" onClick={() => setEditModal({ isOpen: true, project: p })} style={{ height: '24px', padding: '0 8px', fontSize: '10px' }}>{t('Edit')}</Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleProjectVisibility(p._id || p.PID, !p.is_public)}
+                      style={{ height: '24px', padding: '0 8px', fontSize: '10px', color: p.is_public === false ? '#DC2626' : '#10B981' }}
+                      title={p.is_public === false ? 'Projet masqué — cliquer pour rendre public' : 'Projet public — cliquer pour masquer'}
+                    >
+                      {p.is_public === false ? <IoEyeOffOutline size={12}/> : <IoEyeOutline size={12}/>}
+                    </Button>
                     <Button size="sm" variant="danger" onClick={() => setModal({ isOpen: true, projectId: p._id })} icon={<IoTrashOutline size={12}/>} style={{ height: '24px', padding: '0 8px', fontSize: '10px' }}>{t('Delete')}</Button>
                   </div>
                 </div>
 
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '12px' }}>{p.description}</p>
+                {/* ── Scrollable description ── */}
+                <div style={{ maxHeight: '72px', overflowY: 'auto', marginBottom: '12px' }}>
+                  {p.description ? (
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{p.description}</p>
+                  ) : (
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.5 }}>Aucune description disponible.</p>
+                  )}
+                </div>
+
+                {/* ── Tech stack ── */}
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
                   {(p.tech || []).map((tech, i) => <span key={i} style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: (TECH_COLORS[tech]||'#6B7280')+'18', color: TECH_COLORS[tech]||'#6B7280', fontWeight: 600 }}>{tech}</span>)}
                 </div>
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                    <IoPeopleOutline size={13}/>{(p.members || []).map(m => m.name || m).join(', ') || t('NoGroups')}
-                  </div>
-                  {p.jury && (
-                    <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
-                      ⚖️ {p.jury.president || p.jury.teacher1_name || t('JuryAssigned')}
+
+                {/* ── Bottom section pinned ── */}
+                <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <IoPeopleOutline size={13}/>{(p.members || []).map(m => m.name || m).join(', ') || t('NoGroups')}
                     </div>
-                  )}
-                </div>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>{t('Supervisor')} : {p.encadreur || p.teacher_name || '—'}</p>
-                <div style={{ marginTop: '6px' }}>
+                    {p.jury && (
+                      <div style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
+                        ⚖️ {p.jury.president || p.jury.teacher1_name || t('JuryAssigned')}
+                      </div>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('Supervisor')} : {p.encadreur || p.teacher_name || '—'}</p>
                   {p.github_url ? (
                     <a href={p.github_url.startsWith('http') ? p.github_url : `https://${p.github_url}`} target="_blank" rel="noopener noreferrer"
                       style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
@@ -203,11 +254,10 @@ export default function AdminArchive() {
                       <IoGitBranchOutline size={13}/> No Repo
                     </span>
                   )}
+                  {(p.attachments || []).length > 0 && (
+                    <AttachmentsPopover attachments={p.attachments} />
+                  )}
                 </div>
-
-                {(p.attachments || []).length > 0 && (
-                  <AttachmentsPopover attachments={p.attachments} />
-                )}
               </Card>
             ))}
 

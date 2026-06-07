@@ -61,8 +61,8 @@ function UserForm({ initial, onSave, onCancel }) {
     id: '', firstName: '', lastName: '', email: '', role: 'student', status: 'active',
     specialite: specialties[0]?.name || 'ISI', promo: platformSettings?.current_academic_year || '2024-2025', department: departments[0]?.name || 'Informatique',
     year: 'L3', 
-    is_teacher: initial?.role === 'student' ? false : (initial?.is_teacher ?? true),
-    is_admin: initial?.is_admin ?? false,
+    is_teacher: initial?.is_teacher ?? (initial?.role === 'teacher'),
+    is_admin: initial?.is_admin ?? (initial?.role === 'admin'),
     password: isEdit ? '' : generateRandomPassword(), ...(initial || {}),
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -155,11 +155,15 @@ function UserForm({ initial, onSave, onCancel }) {
               {form.role !== 'student' && (
                 <div style={{ display: 'flex', gap: '16px', gridColumn: '1/-1', background: 'var(--primary-subtle)', padding: '12px', borderRadius: '10px', border: '1px solid var(--primary)' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={!!form.is_teacher} onChange={e => set('is_teacher', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
+                    <input type="checkbox" checked={!!form.is_teacher}
+                      onChange={e => { if (!e.target.checked && !form.is_admin) return; set('is_teacher', e.target.checked); }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
                     <span style={{ fontSize: '13px', fontWeight: 600 }}>{t('Teachers')}</span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={!!form.is_admin} onChange={e => set('is_admin', e.target.checked)} style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
+                    <input type="checkbox" checked={!!form.is_admin}
+                      onChange={e => { if (!e.target.checked && !form.is_teacher) return; set('is_admin', e.target.checked); }}
+                      style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }} />
                     <span style={{ fontSize: '13px', fontWeight: 600 }}>{t('Admin')}</span>
                   </label>
                 </div>
@@ -207,7 +211,7 @@ function UserForm({ initial, onSave, onCancel }) {
             </Card>
           )}
 
-          {form.role === 'teacher' && (
+          {form.role !== 'student' && (
             <Card>
               <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <IoPeopleOutline size={16} color="var(--accent)"/> {t('TeacherInfo')}
@@ -223,9 +227,9 @@ function UserForm({ initial, onSave, onCancel }) {
                     options={[{ value: '', label: '— Aucune —' }, ...specialties.map(s => ({ value: s.name, label: s.full_name ? `${s.name} — ${s.full_name}` : s.name }))]}
                   />
                 </Field>
-                <Field label={t('AvailableForSupervision')}>
+                {form.is_teacher && <Field label={t('AvailableForSupervision')}>
                   <SelectBox value={String(form.available !== false)} onChange={v => set('available', v === 'true')} options={[{ value: 'true', label: `✅ ${t('Available')}` }, { value: 'false', label: `❌ ${t('Unavailable')}` }]}/>
-                </Field>
+                </Field>}
               </div>
             </Card>
           )}
@@ -283,7 +287,12 @@ function UserDetailModal({ user: u, onClose, onEdit }) {
                 {u.is_admin && <Badge variant="warning">Admin</Badge>}
               </>
             )}
-            <Badge variant={u.status === 'active' ? 'success' : 'warning'}>{u.status === 'active' ? t('Validated') : t('InProgress')}</Badge>
+            {u.status === 'blocked'
+              ? <Badge variant="danger">{t('Blocked')}</Badge>
+              : (u.first_login === true || u.first_login === 'true')
+                ? <Badge variant="warning">{t('InProgress')}</Badge>
+                : <Badge variant="success">{t('Validated')}</Badge>
+            }
           </div>
         </div>
       </div>
@@ -604,7 +613,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
 // ── Main page ─────────────────────────────────────────────────────
 export default function AdminUsers() {
   const { t } = useLanguage();
-  const { users, addUser, updateUser, removeUser } = useAdmin();
+  const { users, addUser, updateUser, removeUser, blockUser, unblockUser } = useAdmin();
   const safeUsers = users || [];
   const ROLE_LABELS = { student: t('Students').slice(0,-1), teacher: t('Teachers').slice(0,-1), admin: 'Admin' };
 
@@ -612,6 +621,7 @@ export default function AdminUsers() {
   const [formData,   setFormData]   = useState(null);
   const [search,     setSearch]     = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('');
   const [detailUser, setDetailUser] = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -622,10 +632,16 @@ export default function AdminUsers() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  const levelMap = { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5 };
   const filtered = safeUsers.filter(u => {
     const q = search.toLowerCase();
-    return (u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
-      && (roleFilter === 'all' || u.role === roleFilter);
+    const matchSearch = u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+    const matchRole = roleFilter === 'all'
+      || (roleFilter === 'student' && u.role === 'student')
+      || (roleFilter === 'teacher' && u.is_teacher === true)
+      || (roleFilter === 'admin'   && u.is_admin === true);
+    const matchLevel = !levelFilter || (u.role === 'student' && u.level === levelMap[levelFilter]);
+    return matchSearch && matchRole && matchLevel;
   });
 
   const toggleAll = () => {
@@ -669,7 +685,13 @@ export default function AdminUsers() {
 
   const handleSave = (form) => {
     if (formData?._id) updateUser(formData._id, form);
-    else addUser(form);
+    else {
+      // normalize name so addUser gets it right
+      const userPayload = { ...form,
+        name: `${form.firstName || ''} ${form.lastName || ''}`.trim(),
+      };
+      addUser(userPayload);
+    }
     setView('list');
   };
 
@@ -718,12 +740,19 @@ export default function AdminUsers() {
         </div>
       ),
     },
-    { key: 'role',   label: 'Rôle',   render: v => <Badge variant={ROLE_VARIANTS[v] || 'gray'}>{ROLE_LABELS[v] || v}</Badge> },
-    { key: 'status', label: t('Status'), render: v => (
-      <Badge variant={v === 'active' ? 'success' : v === 'blocked' ? 'danger' : 'warning'}>
-        {v === 'active' ? t('Validated') : v === 'blocked' ? t('Blocked') : t('InProgress')}
-      </Badge>
+    { key: 'role', label: 'Rôle', render: (v, row) => (
+      <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
+        {row.role === 'student' && <Badge variant="gray">{ROLE_LABELS.student}</Badge>}
+        {row.role !== 'student' && row.is_teacher && <Badge variant="info">{ROLE_LABELS.teacher}</Badge>}
+        {row.role !== 'student' && row.is_admin   && <Badge variant="primary">Admin</Badge>}
+        {row.role !== 'student' && !row.is_teacher && !row.is_admin && <Badge variant="gray">{v}</Badge>}
+      </div>
     )},
+    { key: 'status', label: t('Status'), render: (v, row) => {
+      if (v === 'blocked') return <Badge variant="danger">{t('Blocked')}</Badge>;
+      if (row.first_login === true || row.first_login === 'true') return <Badge variant="warning">{t('InProgress')}</Badge>;
+      return <Badge variant="success">{t('Validated')}</Badge>;
+    }},
     {
       key: '_id', label: t('Actions'),
       render: (_, row) => (
@@ -733,14 +762,14 @@ export default function AdminUsers() {
           )}
           {row.status !== 'pending' && (
             <button 
-              onClick={() => updateUser(row._id, { status: row.status === 'blocked' ? 'active' : 'blocked' }, row.type)} 
+              onClick={() => row.status === 'blocked' ? unblockUser(row._id) : blockUser(row._id)} 
               style={{ padding: '5px 10px', borderRadius: '8px', background: row.status === 'blocked' ? 'var(--primary-subtle)' : '#FEF2F2', border: 'none', color: row.status === 'blocked' ? 'var(--primary)' : '#EF4444', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
             >
               {row.status === 'blocked' ? t('Unblock') : t('Block')}
             </button>
           )}
 
-          {row.type === 'staff' && (
+          {row.is_teacher && row.role !== 'student' && (
             <button 
               onClick={() => updateUser(row._id, { available: !row.available }, 'staff')} 
               style={{ padding: '5px 10px', borderRadius: '8px', background: row.available ? 'var(--primary-subtle)' : '#F3F4F6', border: 'none', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
@@ -780,10 +809,12 @@ export default function AdminUsers() {
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {[
-          { label: 'Total',       value: safeUsers.length,                               color: 'var(--primary)' },
-          { label: t('Students'),   value: safeUsers.filter(u=>u.role==='student').length,  color: 'var(--primary)' },
-          { label: t('Teachers'), value: safeUsers.filter(u=>u.role==='teacher').length,  color: 'var(--accent)' },
-          { label: t('InProgress'),  value: safeUsers.filter(u=>u.status==='pending').length,color: '#F59E0B' },
+          { label: 'Total',          value: safeUsers.length,                                                            color: 'var(--primary)' },
+          { label: t('Students'),    value: safeUsers.filter(u=>u.role==='student').length,                              color: 'var(--primary)' },
+          { label: t('Teachers'),    value: safeUsers.filter(u=>u.is_teacher||u.role==='teacher').length,                color: 'var(--accent)' },
+          { label: 'Admins',         value: safeUsers.filter(u=>u.is_admin||u.role==='admin').length,                    color: '#8B5CF6' },
+          { label: t('InProgress'),  value: safeUsers.filter(u=>u.first_login===true||u.first_login==='true').length,    color: '#F59E0B' },
+          { label: t('Blocked'),     value: safeUsers.filter(u=>u.status==='blocked').length,                            color: '#EF4444' },
         ].map((c, i) => (
           <div key={i} style={{ padding: '8px 16px', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', gap: '8px', alignItems: 'center' }}>
             <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{c.label}</span>
@@ -798,13 +829,24 @@ export default function AdminUsers() {
             <div style={{ width: '220px' }}>
               <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('Search')} icon={<IoSearchOutline size={14}/>}/>
             </div>
-            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+            <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setLevelFilter(''); }}
               style={{ padding: '9px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1.5px solid var(--border)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
               <option value="all">{t('All')}</option>
               <option value="student">{t('Students')}</option>
               <option value="teacher">{t('Teachers')}</option>
               <option value="admin">Admins</option>
             </select>
+            {roleFilter === 'student' && (
+              <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)}
+                style={{ padding: '9px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1.5px solid var(--border)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
+                <option value="">Tous les niveaux</option>
+                <option value="1">1CPI</option>
+                <option value="2">2CPI</option>
+                <option value="3">1CS</option>
+                <option value="4">2CS</option>
+                <option value="5">3CS</option>
+              </select>
+            )}
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <Button icon={<IoCloudUploadOutline size={16}/>} variant="secondary" onClick={() => setIsImportModalOpen(true)}>Importer Excel</Button>

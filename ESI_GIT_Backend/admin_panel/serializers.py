@@ -210,12 +210,14 @@ class CreateStaffSerializer(serializers.ModelSerializer):
             "is_admin",
             "is_teacher",
             "is_active",
+            "available",
         ]
         extra_kwargs = {
             # TID is auto-generated (AutoField) — never supplied by the client.
             "TID":        {"read_only": True},
             "specialty":  {"required": False, "allow_null": True},
             "department": {"required": False, "allow_null": True},
+            "available":  {"required": False},
         }
 
     # ── Specialty / Department resolution ─────────────────────────────────────

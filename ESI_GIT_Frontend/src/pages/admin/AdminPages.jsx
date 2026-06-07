@@ -64,6 +64,7 @@ export function AdminAnalytics() {
   ];
 
   const [studentSearch, setStudentSearch] = useState('');
+  const [studentLevel, setStudentLevel] = useState('');
 
   const exportToCSV = (type = 'summary') => {
     let headers, rows, filename;
@@ -79,9 +80,12 @@ export function AdminAnalytics() {
       ];
       filename = `rapport_analytique_${new Date().toISOString().split('T')[0]}.csv`;
     } else {
-      headers = ["Nom Étudiant", "Projet", "Encadreur", "Note"];
-      rows = (adv.student_list || []).map(s => [
+      headers = ["Matricule", "Nom Étudiant", "Email", "Niveau", "Projet", "Encadreur", "Note"];
+      rows = (adv.student_list || []).filter(s => !currentYear || s.academic_year === currentYear).map(s => [
+        s.cid || '—',
         s.student_name,
+        s.email || '—',
+        levelLabelMap[s.level] || '—',
         s.project_name,
         s.supervisor,
         s.grade
@@ -100,11 +104,17 @@ export function AdminAnalytics() {
     document.body.removeChild(link);
   };
 
-  const filteredStudents = (adv.student_list || []).filter(s => 
-    s.student_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
-    s.project_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
-    s.supervisor?.toLowerCase().includes(studentSearch.toLowerCase())
-  );
+  const { platformSettings } = useAdmin();
+  const currentYear = platformSettings?.current_academic_year || '';
+  const levelLabelMap = { 2:'2CPI', 3:'1CS', 4:'2CS', 5:'3CS' };
+  const filteredStudents = (adv.student_list || []).filter(s => {
+    const matchSearch = s.student_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      s.project_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      s.supervisor?.toLowerCase().includes(studentSearch.toLowerCase());
+    const matchYear = !currentYear || s.academic_year === currentYear;
+    const matchLevel = !studentLevel || String(s.level) === studentLevel;
+    return matchSearch && matchYear && matchLevel;
+  });
 
 
   return (
@@ -195,14 +205,24 @@ export function AdminAnalytics() {
 
       <Card style={{ marginTop: '24px', padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t('StudentList')} & {t('Grades')}</h3>
-          <div style={{ width: '300px' }}>
-            <Input 
-              placeholder={t('Search') + "..."} 
-              value={studentSearch} 
-              onChange={e => setStudentSearch(e.target.value)}
-              icon={<IoSearchOutline size={18}/>}
-            />
+          <h3 style={{ fontSize: '18px', fontWeight: 700 }}>{t('StudentList')} & {t('Grades')} {currentYear && <span style={{ fontSize: '13px', fontWeight: 400, color: 'var(--text-muted)' }}>— {currentYear}</span>}</h3>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <select value={studentLevel} onChange={e => setStudentLevel(e.target.value)}
+              style={{ padding: '9px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1.5px solid var(--border)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
+              <option value="">Tous les niveaux</option>
+              <option value="2">2CPI</option>
+              <option value="3">1CS</option>
+              <option value="4">2CS</option>
+              <option value="5">3CS</option>
+            </select>
+            <div style={{ width: '240px' }}>
+              <Input 
+                placeholder={t('Search') + "..."}
+                value={studentSearch}
+                onChange={e => setStudentSearch(e.target.value)}
+                icon={<IoSearchOutline size={18}/>}
+              />
+            </div>
           </div>
         </div>
         
@@ -211,6 +231,8 @@ export function AdminAnalytics() {
             <thead>
               <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Student')}</th>
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>Niveau</th>
+                {studentLevel !== '2' && <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>Spécialité</th>}
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Project')}</th>
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Supervisor')}</th>
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'right' }}>{t('Grade')}</th>
@@ -220,6 +242,8 @@ export function AdminAnalytics() {
               {filteredStudents.length > 0 ? filteredStudents.map((s, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <td style={{ padding: '12px 8px', fontWeight: 600 }}>{s.student_name}</td>
+                  <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{levelLabelMap[s.level] || '—'}</td>
+                  {studentLevel !== '2' && <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.level === 2 ? '—' : (s.specialty || '—')}</td>}
                   <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.project_name}</td>
                   <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>{s.supervisor}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 800, color: s.grade !== '—' ? 'var(--primary)' : 'var(--text-muted)' }}>
@@ -228,7 +252,7 @@ export function AdminAnalytics() {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>{t('NoResults')}</td>
+                  <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>{t('NoResults')}</td>
                 </tr>
               )}
             </tbody>

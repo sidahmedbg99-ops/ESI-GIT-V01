@@ -23,7 +23,7 @@ const nowLabel = () => {
 const AdminContext = createContext(null);
 
 export function AdminProvider({ children }) {
-  const { user } = useAuth();
+  const { user, updateCurrentUser } = useAuth();
 
   const [users,          setUsers]          = useState(null);
   const [groups,         setGroups]         = useState(null);
@@ -113,16 +113,19 @@ export function AdminProvider({ children }) {
           name:   u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
           firstName: u.first_name || '',
           lastName: u.last_name || '',
-          role:   u.type === 'staff' ? (u.is_admin ? 'admin' : 'teacher') : (u.type || 'student'),
+          role:   u.type === 'staff' ? (u.is_admin && !u.is_teacher ? 'admin' : 'teacher') : (u.type || 'student'),
           avatar: (u.full_name || u.first_name || 'U')[0].toUpperCase(),
-          status: u.is_blocked ? 'blocked' : (u.is_active ? 'active' : 'pending'),
+          status:      u.is_blocked ? 'blocked' : (u.is_active ? 'active' : 'pending'),
+          first_login: u.is_first_login ?? u.IsFirstLogin ?? u.first_login ?? false,
+          is_teacher:  u.is_teacher ?? false,
+          is_admin:    u.is_admin   ?? false,
           // Field normalization for the form
-          specialite: u.specialty?.name || u.specialty,
-          promo:      u.academic_year,
-          year:       levelMapInv[u.level] || 'L3',
-          department: u.department,
-          available:  u.available ?? true,
-          type:       u.type,
+          specialite:  u.specialty?.name || u.specialty,
+          promo:       u.academic_year,
+          year:        levelMapInv[u.level] || 'L3',
+          department:  u.department,
+          available:   u.available ?? true,
+          type:        u.type,
         };
       }));
     }).catch(() => setUsers([]));
@@ -185,14 +188,21 @@ export function AdminProvider({ children }) {
   const addUser = useCallback(async (userData) => {
     try {
       const res = await usersApi.create(userData);
+      const builtName = userData.name
+        || res.full_name
+        || `${userData.firstName || userData.first_name || ''} ${userData.lastName || userData.last_name || ''}`.trim();
       const normalized = {
         ...userData,
         ...res,
-        _id:    res.id || res.student_id || res.staff_id || userData.id,
-        name:   res.full_name || userData.name,
-        role:   userData.role,
-        avatar: (userData.name || 'U')[0].toUpperCase(),
-        status: 'active',
+        _id:        res.id || res.student_id || res.staff_id || userData.id,
+        name:       builtName,
+        role:       userData.role,
+        is_teacher: res.is_teacher ?? userData.is_teacher,
+        is_admin:   res.is_admin   ?? userData.is_admin,
+        first_login: true,
+        avatar:     (builtName || 'U')[0].toUpperCase(),
+        status:     'active',
+        type:       userData.role === 'student' ? 'student' : 'staff',
       };
       setUsers(prev => [...(prev ?? []), normalized]);
       pushActivity({ type: 'user_created', action: 'Utilisateur ajouté', desc: normalized.name, color: 'var(--primary)' });
@@ -217,21 +227,34 @@ export function AdminProvider({ children }) {
       const role = passedRole || patch.role || u?.type || u?.role;
       await usersApi.update(userId, { ...patch, role });
       
+      const fn = patch.firstName || patch.first_name;
+      const ln = patch.lastName  || patch.last_name;
+      const builtName = (fn || ln) ? `${fn || ''} ${ln || ''}`.trim() : (patch.name || null);
+      const normalizedPatch = { ...patch };
+      if (normalizedPatch.firstName) { normalizedPatch.first_name = normalizedPatch.firstName; delete normalizedPatch.firstName; }
+      if (normalizedPatch.lastName)  { normalizedPatch.last_name  = normalizedPatch.lastName;  delete normalizedPatch.lastName; }
+
       setUsers(prev => prev?.map(usr => (usr._id === userId || usr.id === userId)
-        ? { 
-            ...usr, 
-            ...patch, 
-            name: patch.name || usr.name,
-            is_blocked: patch.status === 'blocked' ? true : (patch.status === 'active' ? false : usr.is_blocked),
-            is_active: patch.status === 'active' ? true : (patch.status === 'blocked' ? false : usr.is_active),
-            status: (patch.status === 'blocked' || (patch.status === undefined && usr.is_blocked)) ? 'blocked' : 
-                    ((patch.status === 'active' || (patch.status === undefined && usr.is_active)) ? 'active' : 'pending')
+        ? {
+            ...usr,
+            ...normalizedPatch,
+            name:       builtName || usr.name,
+            is_blocked: patch.status === 'blocked' ? true  : (patch.status === 'active' ? false : usr.is_blocked),
+            is_active:  patch.status === 'active'  ? true  : (patch.status === 'blocked' ? false : usr.is_active),
+            status:     (patch.status === 'blocked' || (patch.status === undefined && usr.is_blocked)) ? 'blocked' :
+                        ((patch.status === 'active' || (patch.status === undefined && usr.is_active)) ? 'active' : 'pending'),
           }
         : usr) ?? prev);
-      
+
+      // Sync AuthContext if editing self — never overwrite role/auth flags
+      if (user && (String(user._id) === String(userId) || String(user.TID) === String(userId))) {
+        const { role: _r, is_admin: _a, is_teacher: _t, type: _ty, status: _s, ...safePatch } = normalizedPatch;
+        updateCurrentUser({ ...safePatch, ...(builtName ? { name: builtName } : {}) });
+      }
+
       toast.success('Utilisateur mis à jour');
     } catch (e) { console.error(e); toast.error('Erreur lors de la mise à jour'); }
-  }, [users]);
+  }, [users, user, updateCurrentUser]);
 
   const removeUser = useCallback(async (userId) => {
     try {

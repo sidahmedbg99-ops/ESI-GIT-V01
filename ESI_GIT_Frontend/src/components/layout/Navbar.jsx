@@ -77,7 +77,7 @@ export default function Navbar() {
   }, [user]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
-  const goToProfile = () => navigate(`/${user?.role}/profil`);
+  const goToProfile = () => navigate(`/${user?.role || 'student'}/profil`);
 
   const handleSwitchRole = () => {
     if (switchRole) {
@@ -209,7 +209,7 @@ export default function Navbar() {
             </button>
           )}
 
-          {user?.is_admin && (
+          {user?.is_admin && user?.is_teacher && (
             <button
               onClick={handleSwitchRole}
               style={{

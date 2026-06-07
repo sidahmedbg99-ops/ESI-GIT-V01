@@ -438,7 +438,8 @@ class StudentProjectSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     grades = serializers.SerializerMethodField()
     group = serializers.CharField(source="invite_code", read_only=True)
-    specialite = serializers.CharField(source="specialty", read_only=True)
+    specialite = serializers.SerializerMethodField()
+    
     repo = serializers.CharField(source="github_url", read_only=True)
     attachments = serializers.SerializerMethodField()
     class Meta:
@@ -448,6 +449,7 @@ class StudentProjectSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "specialite",
+            "academic_level",
             "year",
             "group",
             "repo",
@@ -490,6 +492,11 @@ class StudentProjectSerializer(serializers.ModelSerializer):
             }
             for a in obj.attachments.order_by("-uploaded_at")
         ]
+    
+    def get_specialite(self, obj):
+        if not obj.specialty:
+            return None
+        return obj.specialty.split(' - ')[0] if ' - ' in obj.specialty else obj.specialty
 
 # ─────────────────────────────────────────
 # STUDENT SIDE SERIALIZERS

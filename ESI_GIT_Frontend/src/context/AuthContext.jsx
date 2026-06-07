@@ -104,11 +104,23 @@ export function AuthProvider({ children }) {
     });
   };
 
+  const updateCurrentUser = (patch) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch,
+        name: (patch.first_name != null || patch.last_name != null)
+          ? `${patch.first_name ?? prev.first_name ?? ''} ${patch.last_name ?? prev.last_name ?? ''}`.trim()
+          : (patch.name ?? prev.name),
+      };
+      localStorage.setItem('esi-user', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, error, isLoginLoading, clearError, switchRole }}>
+    <AuthContext.Provider value={{ user, login, logout, error, isLoginLoading, clearError, switchRole, updateCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );
 }
-
 export const useAuth = () => useContext(AuthContext);

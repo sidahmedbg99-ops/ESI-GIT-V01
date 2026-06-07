@@ -692,16 +692,27 @@ class AdvancedAnalyticsAPI(APIView):
             teacher_patterns = teacher_patterns[:10]
 
             # 9. Detailed Student List for Export
-            # [Student Name, Project, Supervisor, Grade]
+            # Filter by current academic year from platform settings
+            from admin_panel.models import PlatformSettings as PS
+            ps = PS.get_settings()
+            current_year = ps.current_academic_year
+
             student_list = []
-            memberships = SProjects.objects.select_related('CID', 'PID', 'PID__TID').all()
-            
+            memberships = SProjects.objects.select_related('CID', 'PID', 'PID__TID').filter(
+                PID__year=current_year
+            )  # archived projects included intentionally
+
             # Pre-fetch grades to avoid N+1
             project_grades_map = {g.PID_id: g.final_grade for g in Grades.objects.all()}
-            
+
             for m in memberships:
                 student_list.append({
+                    "cid": str(m.CID.CID),
                     "student_name": m.CID.full_name,
+                    "email": m.CID.email,
+                    "level": m.CID.level,
+                    "specialty": m.CID.specialty or "—",
+                    "academic_year": m.PID.year,
                     "project_name": m.PID.name,
                     "supervisor": m.PID.TID.full_name if m.PID.TID else "—",
                     "grade": project_grades_map.get(m.PID.PID, "—")

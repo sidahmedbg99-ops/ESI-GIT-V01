@@ -478,13 +478,15 @@ class CreateProjectView(APIView):
         # create the project
         data = cast(Dict[str, Any], serializer.validated_data)
 
+        from admin_panel.models import PlatformSettings as PS
+        ps = PS.get_settings()
         project = Projects.objects.create(
             name=data["name"],
             type=data["type"],
-            specialty=student.specialty,
+            specialty=student.specialty.name if student.specialty else None,
             academic_level=student.level,
             invite_code=generate_invite_code(),
-            year=student.academic_year,
+            year=ps.current_academic_year,
         )
         # add student as leader automatically
         SProjects.objects.create(
@@ -1099,7 +1101,7 @@ class StudentGroupStatusView(APIView):
         student = request.user
         students = Student.objects.filter(
             academic_year=student.academic_year,
-            specialty=student.specialty,
+            specialty=student.specialty.name if student.specialty else None,
             is_active=True,
             is_blocked=False,
         ).exclude(CID=student.CID)
