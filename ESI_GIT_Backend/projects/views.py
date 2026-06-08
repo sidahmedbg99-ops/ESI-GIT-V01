@@ -383,6 +383,7 @@ class AdminRemoveStudentView(APIView):
             return Response({"error": "Cannot remove the group leader"}, status=400)
 
         membership.delete()
+        return Response({"message": "Student removed from group"}, status=204)
     
     
 class AdminChangeSupervisorView(APIView):
@@ -430,7 +431,7 @@ class AdminChangeSupervisorView(APIView):
         )
         for req in pending_reqs:
             req_teacher = req.teacher_id
-            req.status = "admin_assigned"
+            req.status = SupervisorRequest.StatusChoices.ADMIN_ASSIGNED
             req.save()
             # Notify each teacher whose request is being voided
             if req_teacher.TID != teacher.TID:

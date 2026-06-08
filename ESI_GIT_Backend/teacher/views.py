@@ -410,7 +410,7 @@ class TeacherSupervisorRequestActionView(APIView):
             # guard: project already has a supervisor (e.g. admin assigned directly)
             if project.TID is not None:
                 # Mark this request as voided so it disappears from the teacher's list
-                req.status = "admin_assigned"
+                req.status = SupervisorRequest.StatusChoices.ADMIN_ASSIGNED
                 req.save()
                 return Response(
                     {"error": "Un administrateur a déjà assigné un encadreur à ce groupe."},

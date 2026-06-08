@@ -411,7 +411,7 @@ def update_staff(request, staff_id: int):
     Full update of a staff member's editable fields.
     """
     staff = get_object_or_404(Staff, TID=staff_id)
-    serializer = CreateStaffSerializer(staff, data=request.data)
+    serializer = CreateStaffSerializer(staff, data=request.data, partial=True)
     if serializer.is_valid():
         serializer.save()
         return Response({"message": "Staff updated successfully."})

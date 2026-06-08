@@ -9,6 +9,7 @@ class Projects(models.Model):
         PENDING  = "pending",  "Pending"
         APPROVED = "approved", "Approved"
         REJECTED = "rejected", "Rejected"
+        ADMIN_ASSIGNED = "admin_assigned", "Admin Assigned"
 
     PID            = models.AutoField(primary_key=True)
     name           = models.CharField(max_length=150)
@@ -27,7 +28,7 @@ class Projects(models.Model):
     
 
     status         = models.CharField(
-        max_length=10, choices=StatusChoices.choices, default=StatusChoices.PENDING
+        max_length=14, choices=StatusChoices.choices, default=StatusChoices.PENDING
     )
     creation_date  = models.DateField(auto_now_add=True)
     finish_date    = models.DateField(null=True, blank=True)
