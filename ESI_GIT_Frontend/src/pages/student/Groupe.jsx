@@ -493,7 +493,8 @@ export default function Groupe() {
                     ? <span style={{ color: '#FECACA' }}>{team.supervisorRequest.teacher_name} (Refusé)</span>
                     : team.encadreur
                       ? <span
-                          onClick={e => setPopover({ user: { name: team.encadreur, email: team.encadreur_email || team.teacher_email }, anchor: { x: e.clientX, y: e.clientY } })}
+                          
+                          onClick={e =>setPopover({ user: { name: team.encadreur, email: team.encadreur_email || team.teacher_email || team.supervisor_email || team.encadreurEmail || team.teacherEmail || null }, anchor: { x: e.clientX, y: e.clientY } })}
                           style={{ cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' }}
                         >{team.encadreur}</span>
                       : '—'}
@@ -869,10 +870,16 @@ export default function Groupe() {
                 const ri = ROLE_MAP[m.Role || m.role] || ROLE_OPTIONS[0];
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: 'var(--radius-md)', background: m.isMe ? 'var(--primary-subtle)' : 'var(--bg)', border: m.isMe ? '1px solid rgba(79,70,229,0.25)' : '1px solid var(--border)' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: `hsl(${i * 80 + 230},65%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>{m.avatar}</div>
+                    <div
+                      onClick={e => !m.isMe && setPopover({ user: { name: m.name, email: m.email }, anchor: { x: e.clientX, y: e.clientY } })}
+                      style={{ width: 40, height: 40, borderRadius: '50%', background: `hsl(${i * 80 + 230},65%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: 700, color: '#fff', flexShrink: 0, cursor: m.isMe ? 'default' : 'pointer' }}>
+                      {(m.name || m.avatar || '?').charAt(0).toUpperCase()}
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <p style={{ fontSize: '14px', fontWeight: 600 }}>{m.name}</p>
+                        <p
+                          onClick={e => !m.isMe && setPopover({ user: { name: m.name, email: m.email }, anchor: { x: e.clientX, y: e.clientY } })}
+                          style={{ fontSize: '14px', fontWeight: 600, cursor: m.isMe ? 'default' : 'pointer' }}>{m.name}</p>
                         {m.isMe && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>Vous</span>}
                         {(m.IsLeader || m.isChef) && <span style={{ fontSize: '10px', padding: '1px 6px', borderRadius: '4px', background: '#F59E0B22', color: '#F59E0B', fontWeight: 600 }}>Chef</span>}
                       </div>

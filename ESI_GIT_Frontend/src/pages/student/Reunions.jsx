@@ -14,6 +14,7 @@ import { useStudent } from '../../context/StudentContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { meetingsApi } from '../../api/meetings';
 import toast from 'react-hot-toast';
+import UserPopover from '../../components/ui/UserPopover';
 
 /* ─── status display config ──────────────────────────────────── */
 const STATUS_CONFIG = {
@@ -89,6 +90,7 @@ export default function Reunions() {
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
+  const [popover, setPopover] = useState(null);
 
   const encadreurName = group?.encadreur ?? group?.supervisorName ?? '—';
 
@@ -295,7 +297,9 @@ export default function Reunions() {
           <Card style={{ marginTop: '16px' }}>
             <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px' }}>Encadreur</h4>
             {group?.encadreur || group?.supervisorName ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div
+                onClick={e => setPopover({ user: { name: encadreurName, email: group?.encadreur_email || group?.teacher_email || group?.supervisor_email || group?.encadreurEmail || group?.teacherEmail || null }, anchor: { x: e.clientX, y: e.clientY } })}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 700, color: '#fff' }}>
                   {encadreurName.charAt(0)}
                 </div>
@@ -337,6 +341,7 @@ export default function Reunions() {
           </div>
         </form>
       </Modal>
+      {popover && <UserPopover user={popover.user} anchor={popover.anchor} onClose={() => setPopover(null)}/>}
     </DashboardLayout>
   );
 }

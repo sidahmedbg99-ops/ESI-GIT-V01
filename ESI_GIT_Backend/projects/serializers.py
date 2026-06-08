@@ -523,6 +523,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     # shows full project details including all members
     members       = SProjectSerializer(source="team_members", many=True, read_only=True)
     teacher_name  = serializers.SerializerMethodField()
+    teacher_email = serializers.SerializerMethodField()
     jury          = serializers.SerializerMethodField()
     schedule      = serializers.SerializerMethodField()
     grades        = serializers.SerializerMethodField()
@@ -552,6 +553,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             # relations
             "members",
             "teacher_name",
+            "teacher_email",
             "supervisor_request",
             "jury",
             "schedule",
@@ -560,6 +562,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     def get_teacher_name(self, obj):
         return obj.TID.full_name if obj.TID else None
+
+    def get_teacher_email(self, obj):
+        return obj.TID.email if obj.TID else None
 
     def get_supervisor_request(self, obj):
         """Returns the most recent supervisor request for this project."""

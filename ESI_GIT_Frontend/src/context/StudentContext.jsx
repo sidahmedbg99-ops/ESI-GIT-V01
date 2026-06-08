@@ -55,6 +55,7 @@ export function StudentProvider({ children }) {
         avatar: m.student_name?.charAt(0) || '?',
       })),
       encadreur: myGroup.teacher_name || '—',
+      encadreur_email: myGroup.teacher_email || null,
       supervisorApproved: myGroup.status === 'approved',
       github_url: myGroup.github_url,
       github: myGroup.github_url,

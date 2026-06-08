@@ -52,7 +52,7 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
     def get_members(self, obj):
         memberships = SProjects.objects.filter(PID=obj).select_related("CID")
         return [
-            {"CID": m.CID.CID, "name": m.CID.full_name, "role": m.role, "is_leader": m.is_leader}
+            {"CID": m.CID.CID, "name": m.CID.full_name, "email": m.CID.email, "role": m.role, "is_leader": m.is_leader}
             for m in memberships
         ]
 
@@ -92,6 +92,7 @@ class TeacherGroupDetailSerializer(serializers.ModelSerializer):
             {
                 "CID": m.CID.CID,
                 "name": m.CID.full_name,
+                "email": m.CID.email,
                 "role": m.role,
                 "is_leader": m.is_leader,
                 "joined_date": m.joined_date,

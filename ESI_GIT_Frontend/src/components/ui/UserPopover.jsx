@@ -1,56 +1,141 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { IoMailOutline, IoCloseOutline } from 'react-icons/io5';
 
-export default function UserPopover({ user, onClose, anchor }) {
+/**
+ * UserPopover
+ *
+ * Props:
+ *   user    – { name, email, avatar? }
+ *   anchor  – { x: clientX, y: clientY }  (raw click coordinates)
+ *   onClose – () => void
+ *
+ * Renders into document.body via a React Portal so parent overflow/z-index
+ * stacking contexts never clip or reposition it.
+ */
+export default function UserPopover({ user, anchor, onClose }) {
   const ref = useRef(null);
 
+  // Close on outside click
   useEffect(() => {
-    const handler = (e) => {
+    const handleMouseDown = (e) => {
       if (ref.current && !ref.current.contains(e.target)) onClose();
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [onClose]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
   if (!user) return null;
 
-  // Position at click point, nudge left/up if too close to screen edge
-  const W = 240;
-  const left = Math.min(anchor?.x ?? 0, window.innerWidth  - W - 12);
-  const top  = Math.min(anchor?.y ?? 0, window.innerHeight - 160 - 12);
+  // Clamp so the card never bleeds off-screen.
+  // W=260, H≈140 are the maximum card dimensions.
+  const W = 260;
+  const H = 140;
+  const OFFSET = 8;
+  const raw_left = (anchor?.x ?? 0) + OFFSET;
+  const raw_top  = (anchor?.y ?? 0) + OFFSET;
+  const left = Math.min(raw_left, window.innerWidth  - W - 12);
+  const top  = Math.min(raw_top,  window.innerHeight - H - 12);
 
-  return (
-    <div ref={ref} style={{
-      position: 'fixed', top, left, zIndex: 9999, width: W,
-      background: 'var(--bg-card, #1e1e2e)', border: '1px solid var(--border)',
-      borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)', padding: '14px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-            {(user.name || '?').charAt(0).toUpperCase()}
-          </div>
-          <p style={{ fontSize: '13px', fontWeight: 700 }}>{user.name || '—'}</p>
+  const initial = (user.name || '?').charAt(0).toUpperCase();
+
+  const card = (
+    <div
+      ref={ref}
+      style={{
+        position: 'fixed',
+        top,
+        left,
+        zIndex: 99999,
+        width: W,
+        background: 'var(--bg-card, #1e1e2e)',
+        border: '1px solid var(--border)',
+        borderRadius: '14px',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12)',
+        padding: '14px',
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* Header row: avatar + name/email + close */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+        {/* Avatar */}
+        {user.avatar
+          ? (
+            <img
+              src={user.avatar}
+              alt={user.name}
+              style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+            />
+          ) : (
+            <div style={{
+              width: 38, height: 38, borderRadius: '50%',
+              background: 'var(--primary)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              fontSize: '15px', fontWeight: 700, color: '#fff', flexShrink: 0,
+            }}>
+              {initial}
+            </div>
+          )
+        }
+
+        {/* Name + email */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            fontSize: '13px', fontWeight: 700,
+            color: 'var(--text-primary)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {user.name || '—'}
+          </p>
+          <p style={{
+            fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {user.email || '—'}
+          </p>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px', lineHeight: 1 }}>
-          <IoCloseOutline size={15}/>
+
+        {/* Close */}
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', padding: '2px', lineHeight: 1, flexShrink: 0,
+            borderRadius: '6px', display: 'flex', alignItems: 'center',
+          }}
+          aria-label="Fermer"
+        >
+          <IoCloseOutline size={16} />
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', marginBottom: '10px' }}>
-        <IoMailOutline size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {user.email || '—'}
-        </p>
-      </div>
-
+      {/* Send Email button */}
       {user.email && (
-        <a href={`mailto:${user.email}`}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', padding: '7px', borderRadius: '8px', background: 'var(--primary)', color: '#fff', fontSize: '12px', fontWeight: 600, textDecoration: 'none', boxSizing: 'border-box' }}>
-          <IoMailOutline size={13}/>
+        <a
+          href={`mailto:${user.email}`}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '6px', width: '100%', padding: '8px',
+            borderRadius: '9px', background: 'var(--primary)', color: '#fff',
+            fontSize: '12px', fontWeight: 600, textDecoration: 'none',
+            boxSizing: 'border-box', transition: 'opacity 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          <IoMailOutline size={13} />
           Envoyer un email
         </a>
       )}
     </div>
   );
+
+  return createPortal(card, document.body);
 }
