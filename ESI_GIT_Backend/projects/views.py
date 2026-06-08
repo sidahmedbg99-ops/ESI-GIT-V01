@@ -412,16 +412,46 @@ class AdminChangeSupervisorView(APIView):
         notify(
             recipient_type="staff",
             recipient_id=teacher.TID,
-            title="Supervisor assignment",
-            message=f'You have been assigned as supervisor for "{project.name}".',
+            title="Encadrement assigné",
+            message=f'Un administrateur vous a assigné comme encadreur du groupe "{project.name}".',
         )
         if old_supervisor and old_supervisor.TID != teacher.TID:
             notify(
                 recipient_type="staff",
                 recipient_id=old_supervisor.TID,
-                title="Supervisor removed",
-                message=f'You have been removed as supervisor for "{project.name}".',
+                title="Encadrement retiré",
+                message=f'Un administrateur vous a retiré comme encadreur du groupe "{project.name}".',
             )
+
+        # Cancel all pending supervision requests for this project so teachers
+        # don't see stale requests they can no longer accept
+        pending_reqs = SupervisorRequest.objects.filter(
+            project_id=project, status="pending"
+        )
+        for req in pending_reqs:
+            req_teacher = req.teacher_id
+            req.status = "admin_assigned"
+            req.save()
+            # Notify each teacher whose request is being voided
+            if req_teacher.TID != teacher.TID:
+                notify(
+                    recipient_type="staff",
+                    recipient_id=req_teacher.TID,
+                    title="Demande d'encadrement annulée",
+                    message=f'Un administrateur a assigné directement un encadreur au groupe "{project.name}". La demande de ce groupe vous concernant a été annulée.',
+                )
+
+        # Notify the group leader
+        try:
+            leader_membership = SProjects.objects.get(PID=project, is_leader=True)
+            notify(
+                recipient_type="student",
+                recipient_id=leader_membership.CID.CID,
+                title="Encadreur assigné",
+                message=f'Un administrateur a assigné {teacher.full_name} comme encadreur de votre groupe "{project.name}".',
+            )
+        except Exception:
+            pass
 
         return Response({"success": True, "teacher_name": teacher.full_name})
 
@@ -483,7 +513,7 @@ class CreateProjectView(APIView):
         project = Projects.objects.create(
             name=data["name"],
             type=data["type"],
-            specialty=student.specialty.name if student.specialty else None,
+            specialty=student.specialty,
             academic_level=student.level,
             invite_code=generate_invite_code(),
             year=ps.current_academic_year,
@@ -1101,7 +1131,7 @@ class StudentGroupStatusView(APIView):
         student = request.user
         students = Student.objects.filter(
             academic_year=student.academic_year,
-            specialty=student.specialty.name if student.specialty else None,
+            specialty=student.specialty,
             is_active=True,
             is_blocked=False,
         ).exclude(CID=student.CID)

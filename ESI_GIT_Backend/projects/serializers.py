@@ -92,6 +92,11 @@ class AdminProjectSerializer(serializers.ModelSerializer):
             teacher = Staff.objects.get(TID=teacher_id)
             validated_data["TID"] = teacher
 
+        # Always use the active academic year from platform settings
+        from admin_panel.models import PlatformSettings
+        ps = PlatformSettings.get_settings()
+        validated_data["year"] = ps.current_academic_year
+
         validated_data["invite_code"] = self.generate_invite_code()
         project = Projects.objects.create(**validated_data)
 
@@ -166,7 +171,7 @@ class AdminGroupListSerializer(serializers.ModelSerializer):
     
     def get_members(self, obj):
         return [
-            {"id": rel.CID.CID, "name": rel.CID.full_name, "is_leader": rel.is_leader}
+            {"id": rel.CID.CID, "name": rel.CID.full_name, "email": rel.CID.email, "is_leader": rel.is_leader}
             for rel in SProjects.objects.filter(PID=obj).select_related("CID")
         ]
 
@@ -438,8 +443,7 @@ class StudentProjectSerializer(serializers.ModelSerializer):
     members = serializers.SerializerMethodField()
     grades = serializers.SerializerMethodField()
     group = serializers.CharField(source="invite_code", read_only=True)
-    specialite = serializers.SerializerMethodField()
-    
+    specialite = serializers.CharField(source="specialty", read_only=True)
     repo = serializers.CharField(source="github_url", read_only=True)
     attachments = serializers.SerializerMethodField()
     class Meta:
@@ -449,7 +453,6 @@ class StudentProjectSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "specialite",
-            "academic_level",
             "year",
             "group",
             "repo",
@@ -492,11 +495,6 @@ class StudentProjectSerializer(serializers.ModelSerializer):
             }
             for a in obj.attachments.order_by("-uploaded_at")
         ]
-    
-    def get_specialite(self, obj):
-        if not obj.specialty:
-            return None
-        return obj.specialty.split(' - ')[0] if ' - ' in obj.specialty else obj.specialty
 
 # ─────────────────────────────────────────
 # STUDENT SIDE SERIALIZERS

@@ -47,7 +47,8 @@ export function TeacherProvider({ children }) {
         ...m,
         _id: m.CID ?? m.student_id,
         CID: m.CID ?? m.student_id,
-        name: m.name || m.student_name || m.student_email || 'Étudiant',
+        name:  m.name  || m.student_name  || m.student_email || 'Étudiant',
+        email: m.email || m.student_email || '',
         avatar: (m.name || m.student_name || 'S')[0],
       })),
     }));
@@ -67,10 +68,15 @@ export function TeacherProvider({ children }) {
   useEffect(() => {
     if (!user?._id || !isTeacher) return;
 
-    loadGroups().then(res => {
-      setGroups(normalizeGroups(res));
-      setSupervisorRequests(normalizeRequests(res));
-    }).catch(() => { setGroups([]); setSupervisorRequests([]); });
+    const fetchRequests = () => {
+      loadGroups().then(res => {
+        setGroups(normalizeGroups(res));
+        setSupervisorRequests(normalizeRequests(res));
+      }).catch(() => { setGroups([]); setSupervisorRequests([]); });
+    };
+
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 30000); // 30s polling — matches notification polling
 
     loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(() => setMeetings([]));
     loadEvaluations()
@@ -80,7 +86,8 @@ export function TeacherProvider({ children }) {
       else setEvaluations({ assignees: 0, defenses: [] });
     });
     loadArchive().then(a => setArchive(Array.isArray(a) ? a : [])).catch(() => setArchive([]));
-    
+
+    return () => clearInterval(interval);
   }, [user, isTeacher]);
 
   const pushActivity = useCallback((entry) => {
@@ -138,7 +145,7 @@ export function TeacherProvider({ children }) {
       setGroups(normalizeGroups(res));
       setSupervisorRequests(normalizeRequests(res));
       toast.success(status === 'approved' ? 'Requête acceptée !' : 'Requête refusée');
-    } catch (e) { console.error(e); toast.error('Erreur réponse'); }
+    } catch (e) { console.error(e); toast.error(e?.response?.data?.error || 'Erreur réponse'); }
   }, []);
 
   // ── Tasks ──────────────────────────────────────────────────────────

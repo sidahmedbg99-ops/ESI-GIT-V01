@@ -401,16 +401,19 @@ class TeacherSupervisorRequestActionView(APIView):
             )
         except SupervisorRequest.DoesNotExist:
             return Response(
-                {"error": "Request not found or already handled"}, status=404
+                {"error": "Cette demande n'existe plus. Un administrateur a peut-être déjà assigné un encadreur à ce groupe."}, status=404
             )
 
         if action == "accept":
             project = req.project_id
 
-            # guard: project already has a supervisor
+            # guard: project already has a supervisor (e.g. admin assigned directly)
             if project.TID is not None:
+                # Mark this request as voided so it disappears from the teacher's list
+                req.status = "admin_assigned"
+                req.save()
                 return Response(
-                    {"error": "Project already has a supervisor"},
+                    {"error": "Un administrateur a déjà assigné un encadreur à ce groupe."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

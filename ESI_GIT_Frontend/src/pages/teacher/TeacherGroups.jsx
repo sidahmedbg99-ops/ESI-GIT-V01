@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import UserPopover from '../../components/ui/UserPopover';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -30,6 +31,8 @@ export default function TeacherGroups() {
   const [ghLoading,  setGhLoading]  = useState(false);
   const [ghError,    setGhError]    = useState('');
   const [repoCopied, setRepoCopied] = useState(false);
+  const [popover, setPopover] = useState(null);
+
 
   const loadGitHub = async (url) => {
     if (!url) return;
@@ -404,7 +407,8 @@ export default function TeacherGroups() {
             const roleInfo = ROLE_MAP[m.role] || { label: m.role, color: '#6B7280' };
             return (
               <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                  onClick={e => setPopover({ user: { name: m.name, email: m.email }, anchor: { x: e.clientX, y: e.clientY } })}>
                   <div style={{ width: 34, height: 34, borderRadius: '50%', background: `hsl(${i*80+230},70%,55%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#fff' }}>
                     {(m.name || '?').charAt(0).toUpperCase()}
                   </div>
@@ -520,6 +524,7 @@ export default function TeacherGroups() {
           </div>
         </div>
       </Modal>
+      {popover && <UserPopover user={popover.user} anchor={popover.anchor} onClose={() => setPopover(null)}/>}
     </DashboardLayout>
   );
 }

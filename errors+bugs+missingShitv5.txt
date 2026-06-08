@@ -1,7 +1,7 @@
 ----------------------------------------PUBLIC----------------------------------------
 -add color depth for light mode , in it everything is white which makes the form kinda disappear
 -add password min 8 chars when creating it.
-
+-make it show if you are blocked / invalid email when logging in
 ----------------------------------------STUDENT----------------------------------------
     *DESIGN/DISPLAY:
 -dark mode , join a project , choosing a role makes it very white 
@@ -10,6 +10,7 @@
 -"Group: group title" in the group title shouldnt be there
 -make supervisor name more visible
 -remove x/6 members to x members , this implys that you need 6 members
+-remove the auto select for type project as pfe
 
     *LOGIC/CRASH BUGS:
 
@@ -18,32 +19,22 @@
 -the warning pop up needs to be fixed in requests , its only shading a part of the page
 -the refuse final submssion prompt needs to be in the website not the browser pop up , same for the warning in approuving inside the group
 -add each students role next to their name when a supervisor creats a task for a group
-
+-when in a specific group , next to the members name add their role and email
 
     *LOGIC/CRASH BUGS:
--can get a request for supervision , admin adds a supervisor for them before teacher accept , error happens
+-can get a request for supervision , admin adds a supervisor for them before teacher accept , error happens (should be fixed , needs testing)
 ----------------------------------------ADMIN----------------------------------------
     *DESIGN/DISPLAY:
--have the following filters (by level, by tags, by supervisor, show all if none selected)
--groups have 3 tags (active --> approuved --> graded)
--we should add the group level next to the members
--projects graded should be last 
 -better stats
 
     *LOGIC/CRASH BUGS:
--block user not working , toggling dispo for staff not working
--changing user info then going to the profile dosent change it , make it apply the changes without reloading the page
--when archiving all active projects , you need all of them to be graded , no active groups left 
 -date set to stop students from leaving the project / auto confirm all groups
 
 ----------------------------------------ADDITIONS----------------------------------------
     *DESIGN/DISPLAY:
--archive filters (by level)
--when clicking on a user profile , you can see a little card with info on him with a way to click his email to open gmail
 
     *LOGIC/CRASH BUGS:
 -quit group check so students dosent leave a group in the middle of the year
-
 
 ----------------------------------------NEW FEATURES----------------------------------------
 -meeting attendance

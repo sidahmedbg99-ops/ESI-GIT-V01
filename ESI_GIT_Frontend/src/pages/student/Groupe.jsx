@@ -24,6 +24,7 @@ import { usersApi } from '../../api/users';
 import { groupApi } from '../../api/groups';
 import { ROLE_OPTIONS } from '../../constants';
 import { toast } from 'react-hot-toast';
+import UserPopover from '../../components/ui/UserPopover';
 
 const ROLE_MAP = Object.fromEntries(ROLE_OPTIONS.map(r => [r.value, r]));
 
@@ -148,6 +149,7 @@ export default function Groupe() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showKickModal, setShowKickModal] = useState(false);
   const [memberToKick, setMemberToKick] = useState(null);
+  const [popover, setPopover] = useState(null);
   const [isKicking, setIsKicking] = useState(false);
 
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -486,9 +488,15 @@ export default function Groupe() {
                   )}
                 </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                  {t('Supervisor')} : {team.supervisorRequest?.status === 'rejected' 
+                  {t('Supervisor')} :{' '}
+                  {team.supervisorRequest?.status === 'rejected'
                     ? <span style={{ color: '#FECACA' }}>{team.supervisorRequest.teacher_name} (Refusé)</span>
-                    : (team.encadreur || '—')}
+                    : team.encadreur
+                      ? <span
+                          onClick={e => setPopover({ user: { name: team.encadreur, email: team.encadreur_email || team.teacher_email }, anchor: { x: e.clientX, y: e.clientY } })}
+                          style={{ cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' }}
+                        >{team.encadreur}</span>
+                      : '—'}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -1228,6 +1236,7 @@ export default function Groupe() {
           </div>
         </div>
       </Modal>
+      {popover && <UserPopover user={popover.user} anchor={popover.anchor} onClose={() => setPopover(null)}/>}
     </DashboardLayout>
   );
 }
