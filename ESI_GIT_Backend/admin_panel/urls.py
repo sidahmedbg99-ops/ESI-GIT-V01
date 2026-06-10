@@ -29,7 +29,9 @@ from admin_panel.views import (
     PlatformSettingsAPI,
     dashboard_analytics,
     AdvancedAnalyticsAPI,
-    AdvanceAcademicYearAPI
+    AdvanceAcademicYearAPI,
+    # Resources
+    ResourceListCreateView, ResourceDetailView,
 )
 
 urlpatterns = [
@@ -78,4 +80,12 @@ urlpatterns = [
     path("dashboard/analytics/", dashboard_analytics),
     path("advance-year/", AdvanceAcademicYearAPI.as_view()),
 
+]
+
+# ── Resources (any authenticated user) ────────────────────────────────────────
+# Imported by ESI_GIT/urls.py under path("api/resources/", include("admin_panel.urls"))
+# These are NOT under /api/admin/ — they live at /api/resources/
+resource_urlpatterns = [
+    path('', ResourceListCreateView.as_view(), name='resource-list-create'),
+    path('<int:pk>/', ResourceDetailView.as_view(), name='resource-detail'),
 ]

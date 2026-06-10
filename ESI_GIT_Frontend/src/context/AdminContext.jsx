@@ -345,6 +345,23 @@ export function AdminProvider({ children }) {
     }
   }, [groups, pushActivity]);
 
+  const archiveAllGroups = useCallback(async (level = null, dryRun = false) => {
+    const body = { dry_run: dryRun };
+    if (level !== null && level !== 'all') body.level = level;
+    try {
+      const { data } = await client.post(ENDPOINTS.groups.archiveAll, body);
+      if (!dryRun) {
+        pushActivity({ type: 'bulk_archive', action: 'Archivage groupé', desc: `${data.archived} projet(s) archivé(s)`, color: '#6B7280' });
+        toast.success(`${data.archived} projet(s) archivé(s)`);
+      }
+      return data;
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de l\'archivage');
+      throw e;
+    }
+  }, [pushActivity]);
+
   const assignJury = useCallback(async (groupId, slots) => {
     // slots = { teacher1: id, teacher2: id, teacher3: id }
     try {
@@ -626,18 +643,18 @@ export function AdminProvider({ children }) {
   const { request: fetchAnalytics, data: analytics } = useApi(async () => {
     const { data } = await client.get(ENDPOINTS.admin.dashboard);
     return {
-      totalStudents:    data.Student        ?? 0,
-      totalTeachers:    data.teachers       ?? 0,
-      activeGroups:     data.projects?.approved  ?? 0,
-      pendingGroups:    data.projects?.pending   ?? 0,
-      archivedProjects: data.projects?.archived  ?? 0,
-      totalProjects:    data.projects?.total     ?? 0,
-      pendingMeetings:  data.defense?.scheduled  ?? 0,
-      juriesAssigned:   data.defense?.juries_assigned ?? 0,
-      gradedProjects:   data.defense?.graded     ?? 0,
-      completionRate:   data.projects?.total > 0
-        ? Math.round((data.projects.archived / data.projects.total) * 100)
-        : 0,
+      totalStudents:       data.Student              ?? 0,
+      totalTeachers:       data.teachers             ?? 0,
+      studentsWithoutGroup:data.students_without_group ?? 0,
+      activeGroups:        data.projects?.approved   ?? 0,
+      pendingGroups:       data.projects?.pending    ?? 0,
+      archivedProjects:    data.projects?.archived   ?? 0,
+      totalProjects:       data.projects?.total      ?? 0,
+      defensesScheduled:   data.defense?.scheduled   ?? 0,
+      juriesAssigned:      data.defense?.juries_assigned ?? 0,
+      gradedProjects:      data.defense?.graded      ?? 0,
+      readyToArchive:      data.defense?.ready_to_archive ?? 0,
+      levelFunnel:         data.level_funnel         ?? [],
     };
   });
 
@@ -678,7 +695,7 @@ export function AdminProvider({ children }) {
     stats: currentStats, analytics,
     usersLoading, groupsLoading, archiveLoading,
     addUser, updateUser, removeUser, blockUser, unblockUser,
-    addGroup, updateGroup, archiveGroup, restoreGroup, deleteGroup, deleteArchiveProject, toggleProjectVisibility,
+    addGroup, updateGroup, archiveGroup, archiveAllGroups, restoreGroup, deleteGroup, deleteArchiveProject, toggleProjectVisibility,
     updatePlatformSettings, fetchAdvancedAnalytics,
     assignJury,
     editJury,

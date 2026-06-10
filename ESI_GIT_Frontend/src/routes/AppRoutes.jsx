@@ -27,13 +27,15 @@ import TeacherJury       from '../pages/teacher/TeacherJury';
 import TeacherArchive    from '../pages/teacher/TeacherArchive';
 import TeacherRequests   from '../pages/teacher/TeacherRequests';
 
-import AdminDashboard from '../pages/admin/Dashboard';
-import AdminUsers     from '../pages/admin/Users';
-import AdminGroupes   from '../pages/admin/AdminGroupes';
-import AdminArchive   from '../pages/admin/AdminArchive';
-import AdminProfil    from '../pages/admin/AdminProfil';
-import AdminStudents  from '../pages/admin/AdminStudents';
+import AdminDashboard       from '../pages/admin/Dashboard';
+import AdminUsers            from '../pages/admin/Users';
+import AdminGroupes          from '../pages/admin/AdminGroupes';
+import AdminArchive          from '../pages/admin/AdminArchive';
+import AdminProfil           from '../pages/admin/AdminProfil';
+import AdminStudents         from '../pages/admin/AdminStudents';
+import AdminNotifications    from '../pages/admin/AdminNotifications';
 import { AdminAnalytics, AdminSettings } from '../pages/admin/AdminPages';
+import Resources from '../pages/shared/Resources';
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -87,6 +89,7 @@ export default function AppRoutes() {
         <Route path="/student/archive"        element={<Archive/>}/>
         <Route path="/student/profil"         element={<Profil/>}/>
         <Route path="/student/encadreur"      element={<Supervisor/>}/>
+        <Route path="/student/resources"      element={<Resources/>}/>
       </Route>
 
       {/* ── Teacher ── */}
@@ -99,6 +102,7 @@ export default function AppRoutes() {
         <Route path="/teacher/archive"        element={<TeacherArchive/>}/>
         <Route path="/teacher/profil"         element={<TeacherProfil/>}/>
         <Route path="/teacher/requests"       element={<TeacherRequests/>}/>
+        <Route path="/teacher/resources"      element={<Resources/>}/>
       </Route>
 
       {/* ── Admin ── */}
@@ -112,6 +116,8 @@ export default function AppRoutes() {
         <Route path="/admin/settings"         element={<AdminSettings/>}/>
         <Route path="/admin/profil"           element={<AdminProfil/>}/>
         <Route path="/admin/students"         element={<AdminStudents/>}/>
+        <Route path="/admin/notifications"    element={<AdminNotifications/>}/>
+        <Route path="/admin/resources"        element={<Resources/>}/>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace/>}/>

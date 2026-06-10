@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   IoGridOutline, IoPeopleOutline, IoCalendarOutline,
@@ -6,7 +6,7 @@ import {
   IoLogOutOutline, IoBookOutline, IoSettingsOutline,
   IoBarChartOutline, IoRibbonOutline, IoLanguageOutline,
   IoSwapHorizontalOutline, IoPersonOutline, IoNotificationsOutline,
-  IoArrowUpOutline
+  IoArrowUpOutline, IoLibraryOutline,
 } from 'react-icons/io5';
 import Logo from '../ui/Logo';
 import { useAuth } from '../../context/AuthContext';
@@ -23,6 +23,7 @@ const navByRole = {
     { path: '/student/reunions', labelKey: 'Meetings', icon: <IoCalendarOutline /> },
     { path: '/student/taches', labelKey: 'Tasks', icon: <IoCheckboxOutline /> },
     { path: '/student/archive', labelKey: 'Archive', icon: <IoArchiveOutline /> },
+    { path: '/student/resources', labelKey: 'Resources', icon: <IoLibraryOutline /> },
   ],
   teacher: [
     { path: '/teacher/dashboard', labelKey: 'Dashboard', icon: <IoGridOutline /> },
@@ -31,14 +32,17 @@ const navByRole = {
     { path: '/teacher/requests', labelKey: 'Requests', icon: <IoNotificationsOutline /> },
     { path: '/teacher/jury', labelKey: 'Juries', icon: <IoRibbonOutline /> },
     { path: '/teacher/archive', labelKey: 'Archive', icon: <IoArchiveOutline /> },
+    { path: '/teacher/resources', labelKey: 'Resources', icon: <IoLibraryOutline /> },
   ],
   admin: [
-    { path: '/admin/dashboard', labelKey: 'Dashboard', icon: <IoGridOutline /> },
-    { path: '/admin/users', labelKey: 'Users', icon: <IoPeopleOutline /> },
-    { path: '/admin/groupes', labelKey: 'Groups', icon: <IoBookOutline /> },
-    { path: '/admin/analytics', labelKey: 'Projects', icon: <IoBarChartOutline /> },
-    { path: '/admin/archive', labelKey: 'Archive', icon: <IoArchiveOutline /> },
-    { path: '/admin/settings', labelKey: 'Settings', icon: <IoSettingsOutline /> },
+    { path: '/admin/dashboard',       labelKey: 'Dashboard',      icon: <IoGridOutline /> },
+    { path: '/admin/users',           labelKey: 'Users',           icon: <IoPeopleOutline /> },
+    { path: '/admin/groupes',         labelKey: 'Groups',          icon: <IoBookOutline /> },
+    { path: '/admin/analytics',       labelKey: 'Projects',        icon: <IoBarChartOutline /> },
+    { path: '/admin/archive',         labelKey: 'Archive',         icon: <IoArchiveOutline /> },
+    { path: '/admin/notifications',   labelKey: 'Notifications',   icon: <IoNotificationsOutline /> },
+    { path: '/admin/resources',       labelKey: 'Resources',       icon: <IoLibraryOutline /> },
+    { path: '/admin/settings',        labelKey: 'Settings',        icon: <IoSettingsOutline /> },
   ]
 };
 
@@ -55,26 +59,50 @@ export default function Navbar() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [lastScrollTop, setLastScrollTop] = useState(0);
 
-  // Notifications logic — fetch from real backend
+  // Notifications — optimized polling: cheap count every 10s, full list only on change
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [lastSeenCount, setLastSeenCount] = useState(0);
+  const pollInFlight = useRef(false);
   const unseenCount = notifications.filter(n => !n.is_read && !n.IsRead).length;
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchNotifs = () => {
-    const endpoint = user.role === 'student'
+  const fetchFullList = useCallback(() => {
+    const endpoint = user?.role === 'student'
       ? ENDPOINTS.notifications.list
       : ENDPOINTS.notifications.staffList;
     client.get(endpoint)
-      .then(res => setNotifications(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setNotifications([]));
-  };
-
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30000); // 30s polling
-    return () => clearInterval(interval);
+      .then(res => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setNotifications(list);
+        const unread = list.filter(n => !n.is_read && !n.IsRead).length;
+        setLastSeenCount(unread);
+      })
+      .catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchFullList();
+
+    const countEndpoint = user.role === 'student'
+      ? ENDPOINTS.notifications.unreadCount
+      : ENDPOINTS.notifications.staffUnreadCount;
+
+    const pollCount = () => {
+      if (pollInFlight.current) return;
+      pollInFlight.current = true;
+      client.get(countEndpoint)
+        .then(res => {
+          const fresh = res.data?.unread ?? 0;
+          if (fresh > lastSeenCount) fetchFullList();
+        })
+        .catch(() => {})
+        .finally(() => { pollInFlight.current = false; });
+    };
+
+    const interval = setInterval(pollCount, 10000);
+    return () => clearInterval(interval);
+  }, [user, lastSeenCount, fetchFullList]);
 
   const handleLogout = () => { logout(); navigate('/login'); };
   const goToProfile = () => navigate(`/${user?.role || 'student'}/profil`);
@@ -97,6 +125,7 @@ export default function Navbar() {
         : (id) => ENDPOINTS.notifications.staffMarkRead(id);
       await Promise.all(unread.map(n => client.patch(markReadEndpoint(n.id || n.NID))));
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true, IsRead: true })));
+      setLastSeenCount(0);
     } catch (err) {
       console.error('Failed to mark as read', err);
     }
@@ -237,20 +266,26 @@ export default function Navbar() {
           <button
             onClick={toggleLanguage}
             style={{
-              width: '40px',
               height: '40px',
+              padding: '0 12px',
               borderRadius: '12px',
-              background: 'transparent',
-              color: 'var(--text-primary)',
+              background: 'var(--primary-subtle)',
+              border: '1px solid var(--border)',
+              color: 'var(--primary)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s'
+              gap: '5px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              fontWeight: 700,
+              fontSize: '12px',
+              letterSpacing: '0.04em',
             }}
             className="nav-utility-btn"
             title={lang === 'fr' ? 'Switch to English' : 'Passer au Français'}
           >
-            <IoLanguageOutline size={20} />
+            <IoLanguageOutline size={15} />
+            {lang.toUpperCase()}
           </button>
 
           {/* Theme Toggle */}
@@ -274,13 +309,12 @@ export default function Navbar() {
           </button>
 
           {/* Notifications */}
-          {user?.role !== 'admin' && (
-            <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative' }}>
               <button
                 onClick={() => {
                   const newState = !showNotifs;
                   setShowNotifs(newState);
-                  if (newState) markAllAsRead();
+                  if (newState) { fetchFullList(); markAllAsRead(); }
                 }}
                 style={{
                   width: '40px',
@@ -328,7 +362,15 @@ export default function Navbar() {
                     ) : (
                       notifications.map(n => (
                         <div key={n.id || n.NID} style={{ padding: '10px', background: (n.is_read || n.IsRead) ? 'transparent' : 'var(--primary-subtle)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                          <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.4 }}>{n.message || n.Message}</p>
+                          {(n.title || n.Title) && (
+                            <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 2px', lineHeight: 1.3 }}>{n.title || n.Title}</p>
+                          )}
+                          {(n.message || n.Message) && (
+                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{n.message || n.Message}</p>
+                          )}
+                          {!(n.title || n.Title) && !(n.message || n.Message) && (
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, fontStyle: 'italic' }}>Notification sans contenu</p>
+                          )}
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>{new Date(n.created_at || n.CreatedAt).toLocaleDateString()}</span>
                         </div>
                       ))
@@ -337,7 +379,6 @@ export default function Navbar() {
                 </div>
               )}
             </div>
-          )}
 
           {/* Profile */}
           <button
@@ -433,7 +474,7 @@ export default function Navbar() {
         }
         .scroll-top-btn:hover {
           transform: scale(1.1);
-          background: #fff;
+          background: var(--bg-card);
           box-shadow: 0 6px 16px rgba(0,0,0,0.15);
         }
       `}</style>

@@ -47,10 +47,10 @@ export default function Profil() {
                   { label: t('Email'),   value: user?.email || '—', icon: <IoMailOutline size={16}/> },
                   { label: t('Year'),    value: (['1 CPI', '2 CPI', '1 CS', '2 CS', '3 CS'][Number(user?.level) - 1]) || (user?.level ? `Niveau ${user.level}` : '—'), icon: <IoSchoolOutline size={16}/> },
                   user?.specialty ? { label: t('Specialty'), value: user.specialty, icon: <IoSchoolOutline size={16}/> } : null,
-                  { 
-                    label: 'Département', 
-                    value: user?.department === 'PREP' ? 'Cycle Préparatoire' : (user?.department === 'SUP' ? 'Cycle Supérieur' : (user?.department || '—')), 
-                    icon: <IoSchoolOutline size={16}/> 
+                  {
+                    label: t('Department'),
+                    value: user?.department === 'PREP' ? t('CyclePrepa') : (user?.department === 'SUP' ? t('CycleSuperieur') : (user?.department || '—')),
+                    icon: <IoSchoolOutline size={16}/>
                   },
                   { label: t('Promotion'), value: user?.academic_year || '—', icon: <IoCalendarOutline size={16}/> },
                 ].filter(Boolean).map((field, i) => (

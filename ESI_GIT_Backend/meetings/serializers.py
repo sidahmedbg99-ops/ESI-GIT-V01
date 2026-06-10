@@ -2,6 +2,15 @@ from rest_framework import serializers
 from .models import Meeting, MeetingAttendance
 
 
+class AttendanceSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='CID.full_name', read_only=True)
+    cid = serializers.IntegerField(source='CID.CID', read_only=True)
+
+    class Meta:
+        model = MeetingAttendance
+        fields = ['cid', 'student_name', 'attended']
+
+
 class MeetingSerializer(serializers.ModelSerializer):
     created_by = serializers.SerializerMethodField()
     # SerializerMethodField lets you write custom logic to build a field value

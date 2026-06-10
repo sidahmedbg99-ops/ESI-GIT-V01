@@ -11,6 +11,7 @@ from .views import (
     admin_dashboard_stats,
     archived_projects,
     archive_project,
+    archive_all_projects,
     restore_project,
     archived_projects_visibility,
     AdminAssignStudentView,
@@ -23,8 +24,10 @@ from .views import (
     MyProjectView,
     LeaderActionsView,
     LeaveProjectView,
+    ConfirmGroupView,
     SupervisorRequestView,
     AvailableSupervisorsView,
+    student_dashboard,
 )
 
 from .views import AttachmentView, ProjectAttachmentsReadView
@@ -36,6 +39,7 @@ urlpatterns = [
     path("admin/projects/", AdminProjectListCreateView.as_view()),
     path("admin/projects/<int:pk>/", AdminProjectDetailView.as_view()),
     path("admin/projects/<int:pk>/archive/", archive_project),
+    path("admin/projects/archive-all/", archive_all_projects),
     path("admin/projects/<int:pk>/restore/", restore_project),
     # ================= ADMIN GROUP MANAGEMENT =================
     path("admin/students-without-group/", Students_without_group),
@@ -57,6 +61,7 @@ urlpatterns = [
     path("my-project/", MyProjectView.as_view(), name="my-project"),
     path("leader/", LeaderActionsView.as_view(), name="leader-actions"),
     path("leave/", LeaveProjectView.as_view(), name="leave-project"),
+    path("confirm/", ConfirmGroupView.as_view(), name="confirm-group"),
     path(
         "supervisor-request/",
         SupervisorRequestView.as_view(),
@@ -71,5 +76,6 @@ urlpatterns = [
     path("attachments/<int:pid>/", ProjectAttachmentsReadView.as_view(), name="project-attachments-read"),
     path("projects/group-status/", StudentGroupStatusView.as_view()),
     path("public-settings/", PublicSettingsView.as_view()),
+    path("student-dashboard/", student_dashboard, name="student-dashboard"),
 ]
 

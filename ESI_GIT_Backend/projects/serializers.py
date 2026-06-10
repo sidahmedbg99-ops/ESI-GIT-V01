@@ -528,6 +528,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     schedule      = serializers.SerializerMethodField()
     grades        = serializers.SerializerMethodField()
     supervisor_request = serializers.SerializerMethodField()
+    is_locked     = serializers.SerializerMethodField()
 
     class Meta:
         model = Projects
@@ -550,6 +551,10 @@ class ProjectSerializer(serializers.ModelSerializer):
             "submitted_to_supervisor",
             "supervisor_feedback",
             "final_submission_approved",
+            # group lock
+            "is_confirmed",
+            "confirmed_at",
+            "is_locked",
             # relations
             "members",
             "teacher_name",
@@ -559,6 +564,9 @@ class ProjectSerializer(serializers.ModelSerializer):
             "schedule",
             "grades",
         ]
+
+    def get_is_locked(self, obj):
+        return obj.is_locked
 
     def get_teacher_name(self, obj):
         return obj.TID.full_name if obj.TID else None

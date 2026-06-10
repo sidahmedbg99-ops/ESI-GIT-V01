@@ -37,7 +37,7 @@ export default function AssignStudentModal({ isOpen, onClose }) {
       setUnassignedStudents(studentsRes.data || []);
       setGroups(groupsRes.data || []);
     } catch (err) {
-      setError(err?.message || 'Erreur lors du chargement des données');
+      setError(err?.message || t('DataLoadError'));
     } finally {
       setLoading(false);
     }
@@ -117,7 +117,7 @@ export default function AssignStudentModal({ isOpen, onClose }) {
 
         {unassignedStudents.length === 0 && !loading ? (
           <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-            <p style={{ fontSize: '14px' }}>Aucun étudiant non assigné</p>
+            <p style={{ fontSize: '14px' }}>{t('NoUnassignedStudents')}</p>
           </div>
         ) : (
           <>
@@ -203,7 +203,7 @@ export default function AssignStudentModal({ isOpen, onClose }) {
                       color: '#92400E',
                       fontSize: '13px',
                     }}>
-                      Tous les groupes sont complets (6 membres max). L'étudiant doit créer son propre groupe.
+                      {t('AllGroupsFull')}
                     </div>
                   ) : (
                     <select
@@ -223,7 +223,7 @@ export default function AssignStudentModal({ isOpen, onClose }) {
                         cursor: 'pointer',
                       }}
                     >
-                      <option value="">-- Sélectionner un groupe --</option>
+                      <option value="">{t('SelectGroupPlaceholder')}</option>
                       {groups.filter(g => (g.members?.length || g.studentIds?.length || 0) < 6).map(group => (
                         <option key={group._id} value={group._id}>
                           {group.title} ({group.groupCode})
@@ -242,7 +242,7 @@ export default function AssignStudentModal({ isOpen, onClose }) {
                     marginBottom: '8px',
                     color: 'var(--text-primary)',
                   }}>
-                    Rôle
+                    {t('Role')}
                   </label>
                   <select
                     value={selectedRole}

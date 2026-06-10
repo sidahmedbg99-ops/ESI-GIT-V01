@@ -1,16 +1,34 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
 export default function AttachmentsPopover({ attachments = [], label = null }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [popPos, setPopPos] = useState({ top: 0, left: 0, openUp: false });
+  const btnRef = useRef(null);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    if (!open) return;
+    const handler = (e) => {
+      if (btnRef.current && !btnRef.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [open]);
+
+  const handleToggle = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const popoverH = Math.min(attachments.length * 44 + 64, 320);
+      const popoverW = 288;
+      const openUp = rect.bottom + popoverH + 12 > window.innerHeight && rect.top > popoverH + 12;
+      const top = openUp ? rect.top - popoverH - 8 : rect.bottom + 8;
+      const left = Math.min(rect.left, window.innerWidth - popoverW - 8);
+      setPopPos({ top, left, openUp });
+    }
+    setOpen(v => !v);
+  };
 
   const downloadAll = async () => {
     if (!attachments.length) return;
@@ -29,9 +47,10 @@ export default function AttachmentsPopover({ attachments = [], label = null }) {
   if (!attachments.length) return null;
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <>
       <button
-        onClick={() => setOpen(v => !v)}
+        ref={btnRef}
+        onClick={handleToggle}
         title={`${attachments.length} livrable(s)`}
         style={{
           background: 'none', border: '1px solid var(--border)', borderRadius: '8px',
@@ -43,22 +62,30 @@ export default function AttachmentsPopover({ attachments = [], label = null }) {
         📎 {label !== null ? label : <span style={{ fontSize: '12px', fontWeight: 600 }}>{attachments.length}</span>}
       </button>
 
-      {open && (
-        <div style={{
-          position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 999,
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          width: '280px', overflow: 'hidden',
-        }}>
+      {open && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: popPos.top,
+            left: popPos.left,
+            zIndex: 99999,
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            boxShadow: 'var(--shadow-xl)',
+            width: '288px',
+            overflow: 'hidden',
+          }}
+        >
           <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
               Livrables ({attachments.length})
             </span>
-            <button onClick={downloadAll} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: '3px 8px', borderRadius: '6px', background: 'var(--primary-subtle)' }}>
+            <button onClick={downloadAll} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-subtle)', border: 'none', cursor: 'pointer', padding: '3px 8px', borderRadius: '6px' }}>
               ⬇ Tout télécharger
             </button>
           </div>
-          <div style={{ maxHeight: '240px', overflowY: 'auto', padding: '8px' }}>
+          <div style={{ maxHeight: '256px', overflowY: 'auto', padding: '8px' }}>
             {attachments.map((a, i) => (
               <a key={a.id ?? i} href={a.file_url} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', borderRadius: '8px', textDecoration: 'none', color: 'inherit', gap: '8px' }}
@@ -72,8 +99,9 @@ export default function AttachmentsPopover({ attachments = [], label = null }) {
               </a>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

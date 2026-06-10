@@ -18,6 +18,8 @@ from django.utils import timezone
 from datetime import timedelta
 from jury.models import ProjectJury, Schedule, Grades
 from admin_panel.models import PlatformSettings
+from meetings.models import Meeting, MeetingAttendance
+from tasks.models import Task
 from users.permissions import IsAdmin, IsStaff, IsStudent
 from .serializers import StudentProjectSerializer
 
@@ -212,6 +214,64 @@ def archive_project(request, pk):
     return Response({"message": "Project archived successfully"})
 
 
+@api_view(["POST"])
+def archive_all_projects(request):
+    """
+    POST /api/projects/admin/projects/archive-all/
+    Body: { "level": <int|null>, "dry_run": <bool> }
+    Archives all non-archived projects, optionally filtered by academic_level.
+    dry_run=true returns counts without making changes.
+    """
+    if not IsAdmin().has_permission(request, None):
+        return Response({"error": "Admin only"}, status=403)
+
+    level    = request.data.get("level")
+    dry_run  = bool(request.data.get("dry_run", False))
+
+    qs = Projects.objects.filter(archived=False)
+    if level is not None:
+        try:
+            qs = qs.filter(academic_level=int(level))
+        except (TypeError, ValueError):
+            return Response({"error": "level must be an integer"}, status=400)
+
+    # Identify projects without grades (warn but still archive)
+    graded_pids    = set(Grades.objects.values_list("project_id", flat=True))
+    ungraded       = [p for p in qs if p.PID not in graded_pids]
+    too_few        = [p for p in qs if SProjects.objects.filter(PID=p).count() < 2]
+    archiveable    = [p for p in qs if SProjects.objects.filter(PID=p).count() >= 2]
+
+    if dry_run:
+        return Response({
+            "total":         qs.count(),
+            "archiveable":   len(archiveable),
+            "ungraded":      len(ungraded),
+            "too_few_members": len(too_few),
+        })
+
+    from notifications.utils import notify
+    archived_count = 0
+    for project in archiveable:
+        project.archived = True
+        project.save()
+        members = SProjects.objects.filter(PID=project).select_related("CID")
+        for m in members:
+            notify(
+                recipient_type="student",
+                recipient_id=m.CID.CID,
+                title="Projet archivé",
+                message=f"Votre projet \"{project.name}\" a été archivé.",
+            )
+        archived_count += 1
+
+    return Response({
+        "message":       f"{archived_count} projet(s) archivé(s).",
+        "archived":      archived_count,
+        "skipped":       len(too_few),
+        "ungraded":      len(ungraded),
+    })
+
+
 @api_view(["PATCH"])
 def restore_project(request, pk):
     if not IsAdmin().has_permission(request, None):
@@ -235,33 +295,148 @@ def admin_dashboard_stats(request):
 
     total_Student = Student.objects.count()
     total_teachers = Staff.objects.count()
+    students_without_group = Student.objects.exclude(
+        CID__in=SProjects.objects.values("CID")
+    ).count()
 
     total_projects = Projects.objects.count()
     pending_projects = Projects.objects.filter(status="pending").count()
-    approved_projects = Projects.objects.filter(status="approved").count()
-    archived_projects = Projects.objects.filter(archived=True).count()
+    approved_projects = Projects.objects.filter(status="approved", archived=False).count()
+    archived_projects_count = Projects.objects.filter(archived=True).count()
 
     juries_assigned = ProjectJury.objects.count()
     defenses_scheduled = Schedule.objects.count()
     graded_projects = Grades.objects.count()
+    ready_to_archive = Grades.objects.filter(PID__archived=False).count()
+
+    # Per-level readiness breakdown (active non-archived projects only)
+    LEVEL_LABELS = {2: "2CPI", 3: "1CS", 4: "2CS", 5: "3CS"}
+    level_funnel = []
+    for level, label in LEVEL_LABELS.items():
+        active_in_level = Projects.objects.filter(academic_level=level, archived=False)
+        active_count = active_in_level.count()
+        if active_count == 0:
+            continue
+        graded_count = Grades.objects.filter(PID__in=active_in_level).count()
+        ready_count = graded_count  # graded but not archived = ready to archive
+        level_funnel.append({
+            "level": level,
+            "label": label,
+            "active": active_count,
+            "graded": graded_count,
+            "ready_to_archive": ready_count,
+        })
 
     return Response(
         {
             "Student": total_Student,
             "teachers": total_teachers,
+            "students_without_group": students_without_group,
             "projects": {
                 "total": total_projects,
                 "pending": pending_projects,
                 "approved": approved_projects,
-                "archived": archived_projects,
+                "archived": archived_projects_count,
             },
             "defense": {
                 "juries_assigned": juries_assigned,
                 "scheduled": defenses_scheduled,
                 "graded": graded_projects,
+                "ready_to_archive": ready_to_archive,
             },
+            "level_funnel": level_funnel,
         }
     )
+
+
+@api_view(["GET"])
+def student_dashboard(request):
+    """GET /api/projects/student-dashboard/ — aggregated stats for the logged-in student."""
+    if not IsStudent().has_permission(request, None):
+        return Response({"error": "Student only"}, status=403)
+
+    student = request.user
+    today = timezone.now().date()
+
+    # Find this student's active project membership
+    membership = SProjects.objects.filter(CID=student).select_related("PID").first()
+    if not membership:
+        return Response({
+            "has_group": False,
+            "tasks_done": 0, "tasks_total": 0,
+            "teacher_tasks_done": 0, "teacher_tasks_total": 0,
+            "overdue_tasks": 0,
+            "meetings_upcoming": 0, "next_meeting": None,
+            "attendance_rate": None,
+            "final_grade": None,
+            "submission_status": "no_group",
+        })
+
+    project = membership.PID
+
+    # ── Tasks ─────────────────────────────────────────────────────
+    all_tasks = Task.objects.filter(PID=project)
+    tasks_total = all_tasks.count()
+    tasks_done = all_tasks.filter(state="done").count()
+    overdue_tasks = all_tasks.exclude(state="done").filter(deadline__lt=today).count()
+
+    teacher_tasks = all_tasks.filter(created_by_supervisor=True)
+    teacher_tasks_total = teacher_tasks.count()
+    teacher_tasks_done = teacher_tasks.filter(state="done").count()
+
+    # ── Meetings ──────────────────────────────────────────────────
+    project_meetings = Meeting.objects.filter(PID=project)
+    upcoming = project_meetings.filter(
+        status__in=["approved", "confirmed"], date__gte=today
+    ).order_by("date", "time")
+    meetings_upcoming = upcoming.count()
+    next_meeting = None
+    if upcoming.exists():
+        m = upcoming.first()
+        next_meeting = {"date": str(m.date), "time": str(m.time), "location": m.location, "title": m.title}
+
+    # ── Attendance rate ────────────────────────────────────────────
+    # Past approved/confirmed meetings for this project
+    past_meetings = project_meetings.filter(
+        status__in=["approved", "confirmed"], date__lt=today
+    )
+    attendance_rate = None
+    if past_meetings.exists():
+        total_att = past_meetings.count()
+        attended = MeetingAttendance.objects.filter(
+            meeting_id__in=past_meetings, CID=student, attended=True
+        ).count()
+        attendance_rate = round(attended / total_att * 100)
+
+    # ── Final grade ────────────────────────────────────────────────
+    final_grade = None
+    try:
+        grade_obj = Grades.objects.get(PID=project)
+        final_grade = grade_obj.final_grade
+    except Grades.DoesNotExist:
+        pass
+
+    # ── Submission status ──────────────────────────────────────────
+    if project.final_submission_approved:
+        submission_status = "approved"
+    elif project.submitted_to_supervisor:
+        submission_status = "pending_validation"
+    else:
+        submission_status = "not_submitted"
+
+    return Response({
+        "has_group": True,
+        "tasks_done": tasks_done,
+        "tasks_total": tasks_total,
+        "teacher_tasks_done": teacher_tasks_done,
+        "teacher_tasks_total": teacher_tasks_total,
+        "overdue_tasks": overdue_tasks,
+        "meetings_upcoming": meetings_upcoming,
+        "next_meeting": next_meeting,
+        "attendance_rate": attendance_rate,
+        "final_grade": final_grade,
+        "submission_status": submission_status,
+    })
 
 
 @api_view(["GET", "PATCH"])
@@ -465,6 +640,19 @@ import secrets
 import string
 
 
+def _global_deadline_passed():
+    """Returns True if the admin has set a group_lock_deadline and it has passed."""
+    from admin_panel.models import PlatformSettings
+    from django.utils import timezone
+    settings = PlatformSettings.get_settings()
+    if settings.group_lock_deadline:
+        return timezone.now().date() >= settings.group_lock_deadline
+    return False
+
+
+_LOCK_ERROR = "Groups are locked. Contact the administration for any changes."
+
+
 def generate_invite_code():
     chars = string.ascii_uppercase + string.digits  # consistent with uppercase invite codes
     while True:
@@ -483,6 +671,9 @@ class CreateProjectView(APIView):
     permission_classes = [IsStudent]
 
     def post(self, request):
+        if _global_deadline_passed():
+            return Response({"error": _LOCK_ERROR}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = CreateProjectSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -562,6 +753,10 @@ class JoinProjectView(APIView):
                 {"error": "This project is archived"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # can't join a locked group
+        if project.is_locked:
+            return Response({"error": _LOCK_ERROR}, status=status.HTTP_403_FORBIDDEN)
 
         # check student level matches project level
         if project.academic_level != student.level:
@@ -677,6 +872,10 @@ class LeaderActionsView(APIView):
             )
 
         project = membership.PID
+
+        # membership-mutating actions are blocked when the group is locked
+        if action in ("kick", "promote") and project.is_locked:
+            return Response({"error": _LOCK_ERROR}, status=status.HTTP_403_FORBIDDEN)
 
         # KICK a member
         if action == "kick":
@@ -801,6 +1000,45 @@ class LeaderActionsView(APIView):
             )
 
 
+class ConfirmGroupView(APIView):
+    """
+    POST /api/projects/confirm/
+    Leader confirms the group, locking membership (requires >= 3 members).
+    """
+
+    permission_classes = [IsStudent]
+
+    def post(self, request):
+        student = request.user
+        try:
+            membership = SProjects.objects.get(
+                CID=student, PID__academic_level=student.level, PID__archived=False
+            )
+        except SProjects.DoesNotExist:
+            return Response({"error": "You are not in any project this year"}, status=404)
+
+        if not membership.is_leader:
+            return Response({"error": "Only the leader can confirm the group"}, status=403)
+
+        project = membership.PID
+        if project.is_confirmed:
+            return Response({"error": "This group is already confirmed"}, status=400)
+
+        member_count = SProjects.objects.filter(PID=project).count()
+        if member_count < 3:
+            return Response(
+                {"error": f"Your group needs at least 3 members to confirm (currently {member_count})."},
+                status=400,
+            )
+
+        from django.utils import timezone
+        project.is_confirmed = True
+        project.confirmed_at = timezone.now()
+        project.save(update_fields=['is_confirmed', 'confirmed_at'])
+
+        return Response({"message": "Group confirmed. Membership is now locked."})
+
+
 class LeaveProjectView(APIView):
     """
     POST /api/projects/leave/
@@ -822,6 +1060,10 @@ class LeaveProjectView(APIView):
                 {"error": "You are not in any project this year"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        # locked group: cannot leave
+        if membership.PID.is_locked:
+            return Response({"error": _LOCK_ERROR}, status=status.HTTP_403_FORBIDDEN)
 
         # leader can't leave without promoting someone first
         if membership.is_leader:
@@ -1161,4 +1403,5 @@ class PublicSettingsView(APIView):
             "current_academic_year": settings.current_academic_year,
             "contact_email": settings.contact_email,
             "students_can_see_attachments": settings.students_can_see_attachments,
+            "group_lock_deadline": settings.group_lock_deadline,
         })

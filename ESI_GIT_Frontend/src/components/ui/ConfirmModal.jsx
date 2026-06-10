@@ -2,24 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { IoCloseOutline, IoAlertCircleOutline, IoCheckmarkCircleOutline, IoHelpCircleOutline } from 'react-icons/io5';
 import Button from './Button';
 import Input from './Input';
+import { useLanguage } from '../../context/LanguageContext';
 
-/**
- * ConfirmModal Component
- * A premium replacement for window.confirm and window.prompt
- */
-export default function ConfirmModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title = "Confirmation", 
-  message = "Êtes-vous sûr de vouloir continuer ?",
-  confirmText = "Confirmer",
-  cancelText = "Annuler",
-  type = "warning", // 'warning', 'info', 'success', 'prompt'
+export default function ConfirmModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = "Confirmation",
+  message,
+  confirmText,
+  cancelText,
+  type = "warning",
   initialValue = "",
-  placeholder = "Saisissez votre réponse...",
+  placeholder,
   loading = false
 }) {
+  const { t } = useLanguage();
+  const actualMessage = message ?? t('DefaultConfirmMsg');
+  const actualConfirmText = confirmText ?? t('Confirm');
+  const actualCancelText = cancelText ?? t('Cancel');
+  const actualPlaceholder = placeholder ?? t('DefaultConfirmPlaceholder');
+
   const [inputValue, setInputValue] = useState(initialValue);
 
   useEffect(() => {
@@ -97,38 +100,38 @@ export default function ConfirmModal({
             {title}
           </h3>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            {message}
+            {actualMessage}
           </p>
         </div>
 
         {type === 'prompt' && (
           <div style={{ marginBottom: '24px' }}>
-            <Input 
+            <Input
               autoFocus
-              value={inputValue} 
+              value={inputValue}
               onChange={e => setInputValue(e.target.value)}
-              placeholder={placeholder}
+              placeholder={actualPlaceholder}
             />
           </div>
         )}
 
         <div style={{ display: 'flex', gap: '12px' }}>
-          <Button 
-            variant="outline" 
-            onClick={onClose} 
+          <Button
+            variant="outline"
+            onClick={onClose}
             style={{ flex: 1, borderRadius: '12px' }}
             disabled={loading}
           >
-            {cancelText}
+            {actualCancelText}
           </Button>
-          <Button 
+          <Button
             variant={type === 'warning' ? 'danger' : 'primary'}
             onClick={handleConfirm}
             loading={loading}
             disabled={type === 'prompt' && !inputValue?.trim()}
             style={{ flex: 1, borderRadius: '12px', opacity: (type === 'prompt' && !inputValue?.trim()) ? 0.6 : 1 }}
           >
-            {confirmText}
+            {actualConfirmText}
           </Button>
         </div>
       </div>

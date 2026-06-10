@@ -75,8 +75,8 @@ export function AdminAnalytics() {
         ["Étudiants Actifs", adv.student_stats?.active],
         ["Étudiants Inactifs", adv.student_stats?.inactive],
         ["Étudiants à Risque", adv.student_stats?.at_risk],
-        ["Taux de Réussite", `${adv.performance?.pass_rate}%`],
-        ["Taux d'Achèvement des Tâches", `${adv.operations?.task_completion_rate}%`],
+        [t('SuccessRate'), `${adv.performance?.pass_rate}%`],
+        [t('FailRate'), `${adv.performance?.fail_rate}%`],
       ];
       filename = `rapport_analytique_${new Date().toISOString().split('T')[0]}.csv`;
     } else {
@@ -131,10 +131,10 @@ export function AdminAnalytics() {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: t('Active_Stat'),          value: a.activeGroups || 0, icon: <IoBarChartOutline size={22}/>, color: 'var(--primary)' },
-          { label: t('SuccessRate'),        value: adv.performance?.pass_rate || 0, icon: <IoTrendingUpOutline size={22}/>, color: '#10B981', suffix: '%' },
-          { label: t('OverallProgress'),    value: adv.operations?.task_completion_rate || 0,  icon: <IoGlobeOutline size={22}/>, color: '#F59E0B', suffix: '%' },
-          { label: t('StudentsAtRisk'),      value: adv.student_stats?.at_risk || 0, icon: <IoPeopleOutline size={22}/>, color: '#EF4444' },
+          { label: t('Active_Stat'),     value: a.activeGroups || 0,                icon: <IoBarChartOutline size={22}/>,  color: 'var(--primary)' },
+          { label: t('SuccessRate'),     value: adv.performance?.pass_rate || 0,   icon: <IoTrendingUpOutline size={22}/>, color: '#10B981', suffix: '%' },
+          { label: t('FailRate'),        value: adv.performance?.fail_rate || 0,   icon: <IoGlobeOutline size={22}/>,     color: '#F59E0B', suffix: '%' },
+          { label: t('StudentsAtRisk'), value: adv.student_stats?.at_risk || 0,   icon: <IoPeopleOutline size={22}/>,    color: '#EF4444' },
         ].map((s, i) => <div key={i}><StatCard {...s} /></div>)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -146,7 +146,7 @@ export function AdminAnalytics() {
               <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 20]}/>
               <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
-              <Line type="monotone" dataKey="grade" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)' }} name="Moyenne"/>
+              <Line type="monotone" dataKey="grade" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4, fill: 'var(--primary)' }} name={t('AverageLabel')}/>
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -184,7 +184,7 @@ export function AdminAnalytics() {
               <XAxis type="number" domain={[0, 20]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
               <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={80}/>
               <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
-              <Bar dataKey="grade" fill="var(--accent)" radius={[0, 4, 4, 0]} name="Moyenne donnée"/>
+              <Bar dataKey="grade" fill="var(--accent)" radius={[0, 4, 4, 0]} name={t('AvgGradeGiven')}/>
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -197,7 +197,7 @@ export function AdminAnalytics() {
               <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false}/>
               <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px' }}/>
-              <Bar dataKey="projects" fill="#10B981" radius={[4, 4, 0, 0]} name="Nouveaux Projets"/>
+              <Bar dataKey="projects" fill="#10B981" radius={[4, 4, 0, 0]} name={t('NewProjects')}/>
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -293,9 +293,9 @@ function PanelYears({ onBack }) {
 
   const handleYearChange = () => {
     window.showConfirm({
-      title: "Changer l'année ?",
-      message: "Changer l'année académique va ARCHIVER tous les projets actuels. Cette action est irréversible.",
-      confirmText: "Changer & Archiver",
+      title: t('ChangeYearTitle'),
+      message: t('ChangeYearMsg'),
+      confirmText: t('ChangeAndArchive'),
       type: "warning",
       onConfirm: async () => {
         setLoading(true);
@@ -329,12 +329,12 @@ function PanelYears({ onBack }) {
         </div>
 
         <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
-          <p style={{ fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>🔁 Clôturer l'année & Avancer</p>
+          <p style={{ fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>🔁 {t('CloseYearAdvance')}</p>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-            Archive tous les projets actifs et passe automatiquement à l'année suivante. Cette action est <strong>irréversible</strong>.
+            {t('CloseYearDesc')}
           </p>
           <Button variant="danger" loading={loading} icon={<IoArrowForwardOutline size={16}/>} onClick={handleAdvanceYear}>
-            Clôturer l'année & Avancer
+            {t('CloseYearAdvance')}
           </Button>
         </div>
 
@@ -363,7 +363,7 @@ function PanelCategories() {
       await client.post(ENDPOINTS.admin.specialties, { name, full_name: full_name || name });
       await loadCats();
       reloadSpecialties();
-      toast.success("Spécialité ajoutée");
+      toast.success(t('SpecialtyAdded'));
     } catch (e) {
     console.error('FULL ERROR:', e?.response?.status, e?.response?.data);
     toast.error(e?.response?.data?.error || "Erreur lors de l'ajout");
@@ -375,7 +375,7 @@ function PanelCategories() {
       await client.delete(ENDPOINTS.admin.specialtyDetail(id));
       await loadCats();
       reloadSpecialties();
-      toast.success("Supprimée");
+      toast.success(t('SpecialtyDeleted'));
     } catch (e) {
     console.error('FULL ERROR:', e?.response?.status, e?.response?.data);
     toast.error(e?.response?.data?.error || "Erreur lors de la suppression");
@@ -400,8 +400,8 @@ function PanelCategories() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <Input id="catInputName" placeholder="Abréviation (ex: ISI)" style={{ flex: 1 }} />
-          <Input id="catInputFull" placeholder="Nom complet (ex: Ing. Systèmes Informatiques)" style={{ flex: 2 }} />
+          <Input id="catInputName" placeholder={t('AbbrevPlaceholder')} style={{ flex: 1 }} />
+          <Input id="catInputFull" placeholder={t('FullNamePlaceholder')} style={{ flex: 2 }} />
           <Button variant="ghost" onClick={() => { 
             const nameEl = document.getElementById('catInputName');
             const fullEl = document.getElementById('catInputFull');
@@ -467,7 +467,7 @@ function PanelVisibility() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
           {[
             { key: 'students_can_see_archived_projects', label: t('ShowArchiveStudents'), desc: t('ShowArchiveStudents_Desc') },
-            { key: 'students_can_see_attachments', label: 'Livrables visibles (étudiants)', desc: 'Les étudiants peuvent voir les livrables des projets archivés' },
+            { key: 'students_can_see_attachments', label: t('DeliverableVisible'), desc: t('DeliverableVisible_Desc') },
             { key: 'jury_page_visible', label: t('JuryPageVisible') || 'Enable jury page for teachers', desc: 'Teachers can access the jury grading page' },
           ].map(s => (
             <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--bg)' }}>
@@ -523,6 +523,56 @@ function PanelVisibility() {
               {t('Save') || 'Enregistrer'}
             </button>
           </div>
+        </div>
+
+        {/* Group lock deadline */}
+        <div style={{ padding: '16px', borderRadius: '12px', border: '1.5px solid #F59E0B', background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)', marginTop: '16px' }}>
+          <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '4px', color: '#92400E' }}>
+            {t('GroupLockDeadline')}
+          </label>
+          <p style={{ fontSize: '12px', color: '#78350F', marginBottom: '12px' }}>
+            {t('GroupLockDeadlineDesc')}
+          </p>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="date"
+              value={local.group_lock_deadline || ''}
+              onChange={(e) => setLocal(prev => ({ ...prev, group_lock_deadline: e.target.value }))}
+              style={{
+                flex: 1,
+                minWidth: '160px',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #F59E0B',
+                background: '#fff',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+            <button
+              onClick={() => updatePlatformSettings({ group_lock_deadline: local.group_lock_deadline || null })}
+              style={{ padding: '10px 16px', borderRadius: '10px', background: '#F59E0B', color: '#fff', border: 'none', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+            >
+              {t('Save')}
+            </button>
+            {local.group_lock_deadline && (
+              <button
+                onClick={() => {
+                  setLocal(prev => ({ ...prev, group_lock_deadline: '' }));
+                  updatePlatformSettings({ group_lock_deadline: null });
+                }}
+                style={{ padding: '10px 14px', borderRadius: '10px', background: 'transparent', color: '#92400E', border: '1px solid #F59E0B', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}
+              >
+                {t('Delete')}
+              </button>
+            )}
+          </div>
+          {local.group_lock_deadline && (
+            <p style={{ fontSize: '11px', color: '#92400E', marginTop: '8px', fontWeight: 600 }}>
+              {t('LockActiveFrom')} {new Date(local.group_lock_deadline + 'T00:00:00').toLocaleDateString('fr-DZ')}
+            </p>
+          )}
         </div>
       </div>
     </Card>
@@ -741,15 +791,14 @@ function PanelGradingFormula() {
 
 const PANELS = { years: PanelYears, categories: PanelCategories, grading: PanelGradingFormula, visibility: PanelVisibility };
 
-const MENUS = [
-  { id: 'years',       title: '🎓 Années académiques',      desc: 'Gérer les années et promotions actives',    icon: <IoSchoolOutline size={22}/> },
-  { id: 'categories',  title: '📂 Spécialités & Thèmes',    desc: 'Gérer les spécialités académiques',         icon: <IoFolderOutline size={22}/> },
-  { id: 'grading',     title: '📊 Formule de calcul',       desc: 'Définir la formule de calcul des moyennes', icon: <IoBarChartOutline size={22}/> },
-  { id: 'visibility',  title: '👁️ Visibilité',              desc: 'Contrôler l\'affichage des archives et jurys', icon: <IoSettingsOutline size={22}/> },
-];
-
 export function AdminSettings() {
   const { t } = useLanguage();
+  const MENUS = [
+    { id: 'years',       label: t('AcademicYears'),      icon: <IoSchoolOutline size={22}/> },
+    { id: 'categories',  label: t('SpecialtiesThemes'),  icon: <IoFolderOutline size={22}/> },
+    { id: 'grading',     label: t('GradingFormula'),     icon: <IoBarChartOutline size={22}/> },
+    { id: 'visibility',  label: t('VisibilityAccess'),   icon: <IoSettingsOutline size={22}/> },
+  ];
   const [activeMenu, setActiveMenu] = useState('years');
   const [modal, setModal] = useState({ isOpen: false, type: 'warning', title: '', message: '', onConfirm: () => {}, initialValue: '' });
 
@@ -788,22 +837,22 @@ export function AdminSettings() {
         <aside style={{ position: 'sticky', top: '20px' }}>
           <div style={{ marginBottom: '24px' }}>
             <h1 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '4px' }}>{t('Settings')}</h1>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Configuration plateforme</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('PlatformConfig')}</p>
           </div>
           
           <nav>
             {MENUS.map(m => (
               <button key={m.id} onClick={() => setActiveMenu(m.id)} style={menuStyle(m.id)}>
                 <span style={{ display: 'flex', opacity: activeMenu === m.id ? 1 : 0.7 }}>{m.icon}</span>
-                {m.title.split(' ').slice(1).join(' ')}
+                {m.label}
               </button>
             ))}
           </nav>
 
           <div style={{ marginTop: '40px', padding: '16px', borderRadius: '16px', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)' }}>
-            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px', textTransform: 'uppercase' }}>Besoin d'aide ?</p>
+            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary)', marginBottom: '4px', textTransform: 'uppercase' }}>{t('NeedHelp')}</p>
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Consultez la documentation pour configurer les paramètres avancés de la plateforme.
+              {t('HelpDesc')}
             </p>
           </div>
         </aside>

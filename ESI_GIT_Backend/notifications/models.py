@@ -36,3 +36,20 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.title} -> {self.recipient_type}"
+
+
+class NotificationRead(models.Model):
+    """
+    Per-user read tracking for broadcast notifications.
+    Personal notifications (recipient_id IS NOT NULL) use is_read on the Notification row.
+    Broadcast notifications (recipient_id IS NULL) use this table.
+    """
+    notification = models.ForeignKey(
+        Notification, on_delete=models.CASCADE, related_name='reads'
+    )
+    recipient_type = models.CharField(max_length=10)  # 'student' or 'staff'
+    recipient_id   = models.BigIntegerField()
+
+    class Meta:
+        db_table = 'notification_reads'
+        unique_together = ['notification', 'recipient_type', 'recipient_id']

@@ -274,12 +274,26 @@ export function TeacherProvider({ children }) {
   // ── Analytics: real backend dashboard ─────────────────────────────
   const { request: fetchDashboard, data: backendAnalytics } = useApi(async () => {
     const { data } = await client.get(ENDPOINTS.teacher.dashboard);
+    const gp = data.groups_progress ?? [];
     return {
-      totalGroups: data.groups_encadres ?? 0, activeGroups: data.groups_actifs ?? 0,
-      avgProgress: data.avancement_moyen ?? 0, completionRate: data.taux_completion ?? 0,
-      pendingMeetings: data.reunions_en_attente ?? 0, pendingEvals: data.evaluations_en_attente ?? 0,
-      totalTasks: data.task_stats?.total ?? 0, doneTasks: data.task_stats?.done ?? 0,
-      tasksByPriority: { high: data.task_stats?.high_priority ?? 0, medium: data.task_stats?.medium_priority ?? 0, low: data.task_stats?.low_priority ?? 0 },
+      totalGroups: data.groups_encadres ?? 0,
+      activeGroups: data.groups_actifs ?? 0,
+      tasksDone: data.tasks_done ?? 0,
+      tasksTotal: data.tasks_total ?? 0,
+      pendingRequests: data.pending_supervisor_requests ?? 0,
+      pendingMeetings: data.reunions_en_attente ?? 0,
+      pendingEvals: data.evaluations_en_attente ?? 0,
+      todoTasks: data.task_stats?.todo ?? 0,
+      inProgressTasks: data.task_stats?.in_progress ?? 0,
+      doneTasks: data.task_stats?.done ?? 0,
+      atRiskGroups: data.at_risk_groups ?? [],
+      groupBreakdown: gp.map(g => ({
+        name: g.group,
+        tasks_done: g.tasks_done,
+        tasks_total: g.tasks_total,
+        health: g.health,
+        overdue: g.overdue,
+      })),
       ...data,
     };
   });

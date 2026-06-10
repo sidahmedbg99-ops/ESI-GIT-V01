@@ -44,6 +44,22 @@ class Projects(models.Model):
     # added: archive visibility
     is_public      = models.BooleanField(default=True)
 
+    # group formation lock — leader confirmed, freezes membership
+    is_confirmed   = models.BooleanField(default=False)
+    confirmed_at   = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_locked(self):
+        """True if leader confirmed OR the global deadline has passed."""
+        if self.is_confirmed:
+            return True
+        from admin_panel.models import PlatformSettings
+        from django.utils import timezone
+        settings = PlatformSettings.get_settings()
+        if settings.group_lock_deadline:
+            return timezone.now().date() >= settings.group_lock_deadline
+        return False
+
 
 class SProjects(models.Model):
 

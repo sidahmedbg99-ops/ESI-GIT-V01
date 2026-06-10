@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import UserPopover from '../../components/ui/UserPopover';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -73,6 +74,11 @@ export default function TeacherGroups() {
   const [taskDeadline,    setTaskDeadline]    = useState('');
   const [taskAssigneeIds, setTaskAssigneeIds] = useState([]);
   const [taskSubmitting,  setTaskSubmitting]  = useState(false);
+
+  // Reject / approve final submission modals
+  const [tgRejectModal,  setTgRejectModal]  = useState(null); // { teamId }
+  const [tgRejectReason, setTgRejectReason] = useState('');
+  const [tgApproveModal, setTgApproveModal] = useState(null); // { teamId, hasAttachments, count }
 
   // Schedule meeting modal state
   const [meetModal,      setMeetModal]      = useState(false);
@@ -198,7 +204,7 @@ export default function TeacherGroups() {
           <Badge style={{ background: team.supervisorApproved ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)', color: '#fff', border: 'none' }}>
             {team.final_submission_approved ? `✓ ${t('Approve')}` : team.submitted_to_supervisor ? `📋 ${t('ValidationRequest')}` : `⏳ ${t('InProgress')}`}
           </Badge>
-          <Badge style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>{(team.members||[]).length} membre(s)</Badge>
+          <Badge style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>{(team.members||[]).length} {t('GroupMembers')}</Badge>
         </div>
       </div>
 
@@ -215,22 +221,10 @@ export default function TeacherGroups() {
               }
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <Button variant="outline" onClick={() => {
-                const reason = prompt(t('Reject') + " :");
-                if (reason) updateGroup(team._id, { final_submission_approved: false, supervisor_feedback: reason });
-              }} style={{ borderColor: '#EF4444', color: '#EF4444' }}>{t('Reject')}</Button>
-              <Button onClick={async () => {
+              <Button variant="outline" onClick={() => { setTgRejectModal({ teamId: team._id }); setTgRejectReason(''); }} style={{ borderColor: '#EF4444', color: '#EF4444' }}>{t('Reject')}</Button>
+              <Button onClick={() => {
                 const hasAttachments = (team.attachments || []).length > 0;
-                const confirmed = window.confirm(
-                  (hasAttachments
-                    ? `📎 ${team.attachments.length} document(s) joint(s).\n\n`
-                    : '⚠️ Aucun document projet joint.\n\n') +
-                  'En approuvant cette soumission finale :\n• La création de tâches sera désactivée\n• Les réunions resteront accessibles\n\nConfirmer l\'approbation ?'
-                );
-                if (!confirmed) return;
-                try {
-                  await updateGroup(team._id, { final_submission_approved: true });
-                } catch (e) { /* toast handled in context */ }
+                setTgApproveModal({ teamId: team._id, hasAttachments, count: (team.attachments || []).length });
               }} style={{ background: '#10B981', borderColor: '#10B981' }}>
                 {t('Approve')}
               </Button>
@@ -243,7 +237,7 @@ export default function TeacherGroups() {
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {team?.final_submission_approved ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', borderRadius: '10px', background: '#FEF9C3', border: '1px solid #FDE047', color: '#A16207', fontWeight: 600, fontSize: '13px' }}>
-            🔒 {t('AssignTask')} — {t('ProjectApproved') || 'Projet approuvé'}
+            🔒 {t('AssignTask')} — {t('ProjectApproved')}
           </div>
         ) : (
           <button onClick={() => setTaskModal(true)}
@@ -277,7 +271,7 @@ export default function TeacherGroups() {
               </>
             ) : (
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', padding: '9px 0' }}>
-                Aucun dépôt renseigné par le groupe.
+                {t('NoRepo')}
               </p>
             )}
             {repoUrl && (
@@ -361,7 +355,7 @@ export default function TeacherGroups() {
                 target="_blank"
                 style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--primary-subtle)', color: 'var(--primary)', border: 'none', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
               >
-                ⬇ Tout télécharger
+                {t('DownloadAllDocs')}
               </button>
             )}
           </div>
@@ -382,7 +376,7 @@ export default function TeacherGroups() {
                     <div style={{ display: 'flex', gap: '6px' }}>
                       <a href={a.file} target="_blank" rel="noopener noreferrer"
                         style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
-                        Ouvrir
+                        {t('Open')}
                       </a>
                       <a href={a.file} target="_blank" download={a.filename || a.title || 'attachment'}
                         style={{ padding: '6px 12px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}>
@@ -390,7 +384,7 @@ export default function TeacherGroups() {
                       </a>
                     </div>
                   ) : (
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Non disponible</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('NotAvailable')}</span>
                   )}
                 </div>
               ))}
@@ -414,7 +408,10 @@ export default function TeacherGroups() {
                   </div>
                   <div>
                     <p style={{ fontSize: '13px', fontWeight: 600 }}>{m.name}</p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.CID}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {roleInfo.icon ? `${roleInfo.icon} ` : ''}{roleInfo.label || m.role || '—'}
+                      {m.CID && <span style={{ marginLeft: '6px', opacity: 0.55 }}>· {m.CID}</span>}
+                    </p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -459,13 +456,21 @@ export default function TeacherGroups() {
           <div>
             <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>{t('AssignTo')}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {(team.members || []).map(m => (
-                <label key={m.CID} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
-                  <input type="checkbox" checked={taskAssigneeIds.includes(m.CID)}
-                    onChange={e => setTaskAssigneeIds(prev => e.target.checked ? [...prev, m.CID] : prev.filter(id => id !== m.CID))}/>
-                  <span style={{ fontWeight: 500 }}>{m.name}</span>
-                </label>
-              ))}
+              {(team.members || []).map(m => {
+                const mRoleInfo = ROLE_MAP[m.role] || {};
+                return (
+                  <label key={m.CID} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', padding: '6px 8px', borderRadius: '8px', background: taskAssigneeIds.includes(m.CID) ? 'var(--primary-subtle)' : 'transparent' }}>
+                    <input type="checkbox" checked={taskAssigneeIds.includes(m.CID)}
+                      onChange={e => setTaskAssigneeIds(prev => e.target.checked ? [...prev, m.CID] : prev.filter(id => id !== m.CID))}/>
+                    <span style={{ fontWeight: 600, flex: 1 }}>{m.name}</span>
+                    {m.role && (
+                      <span style={{ fontSize: '11px', color: mRoleInfo.color || 'var(--text-muted)', background: (mRoleInfo.color || '#6B7280') + '18', border: `1px solid ${(mRoleInfo.color || '#6B7280')}30`, borderRadius: '5px', padding: '1px 7px', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        {mRoleInfo.icon ? `${mRoleInfo.icon} ` : ''}{mRoleInfo.label || m.role}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>{t('IfNoneSelected')}</p>
           </div>
@@ -525,6 +530,67 @@ export default function TeacherGroups() {
         </div>
       </Modal>
       {popover && <UserPopover user={popover.user} anchor={popover.anchor} onClose={() => setPopover(null)}/>}
+
+      {/* Reject final submission modal */}
+      {tgRejectModal && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '28px', maxWidth: '440px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '12px', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>❌</div>
+            <h3 style={{ fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>Refuser la soumission</h3>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
+              Précisez la raison du refus. Le groupe verra ce feedback et pourra soumettre à nouveau.
+            </p>
+            <textarea
+              value={tgRejectReason}
+              onChange={e => setTgRejectReason(e.target.value)}
+              placeholder="Ex : Le rapport final est incomplet, merci de revoir la section méthodologie..."
+              rows={4}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: `1.5px solid ${tgRejectReason.trim() ? 'var(--border)' : '#EF4444'}`, background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button onClick={() => { setTgRejectModal(null); setTgRejectReason(''); }} style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Annuler</button>
+              <button
+                disabled={!tgRejectReason.trim()}
+                onClick={async () => {
+                  try { await updateGroup(tgRejectModal.teamId, { final_submission_approved: false, supervisor_feedback: tgRejectReason.trim() }); }
+                  catch (e) { /* toast handled in context */ }
+                  setTgRejectModal(null); setTgRejectReason('');
+                }}
+                style={{ padding: '10px 20px', borderRadius: '10px', background: tgRejectReason.trim() ? '#EF4444' : '#94A3B8', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: tgRejectReason.trim() ? 'pointer' : 'not-allowed' }}
+              >Confirmer le refus</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Approve final submission modal */}
+      {tgApproveModal && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '28px', maxWidth: '440px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '12px', background: '#FEF9C3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>⚠️</div>
+            <h3 style={{ fontSize: '17px', fontWeight: 800, marginBottom: '8px' }}>Approuver la soumission finale</h3>
+            <div style={{ marginBottom: '16px', padding: '12px 14px', borderRadius: '10px', background: tgApproveModal.hasAttachments ? '#F0FDF4' : '#FEF2F2', border: `1px solid ${tgApproveModal.hasAttachments ? '#86EFAC' : '#FCA5A5'}`, fontSize: '13px', color: tgApproveModal.hasAttachments ? '#166534' : '#991B1B', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {tgApproveModal.hasAttachments ? `📎 ${tgApproveModal.count} document(s) joint(s).` : '⚠️ Aucun document projet joint.'}
+            </div>
+            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>
+              En approuvant cette soumission finale, <strong>la création de tâches sera désactivée</strong> pour ce groupe. Les réunions resteront accessibles. Cette action est <strong>définitive</strong>.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setTgApproveModal(null)} style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Annuler</button>
+              <button
+                onClick={async () => {
+                  try { await updateGroup(tgApproveModal.teamId, { final_submission_approved: true }); }
+                  catch (e) { /* toast handled in context */ }
+                  setTgApproveModal(null);
+                }}
+                style={{ padding: '10px 20px', borderRadius: '10px', background: '#10B981', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+              >Oui, approuver</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </DashboardLayout>
   );
 }

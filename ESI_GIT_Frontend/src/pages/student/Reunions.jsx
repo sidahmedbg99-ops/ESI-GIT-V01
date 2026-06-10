@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   IoAddOutline, IoCalendarOutline, IoTimeOutline,
   IoCheckmarkCircleOutline, IoCloseCircleOutline, IoHourglassOutline,
   IoVideocamOutline, IoPersonOutline,
 } from 'react-icons/io5';
+import client from '../../api/client';
+import { ENDPOINTS } from '../../api/config';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -17,12 +19,14 @@ import toast from 'react-hot-toast';
 import UserPopover from '../../components/ui/UserPopover';
 
 /* ─── status display config ──────────────────────────────────── */
-const STATUS_CONFIG = {
-  pending:   { label: 'En attente', variant: 'warning', icon: <IoHourglassOutline size={14} /> },
-  approved:  { label: 'Acceptée',   variant: 'success', icon: <IoCheckmarkCircleOutline size={14} /> },
-  rejected:  { label: 'Refusée',    variant: 'danger',  icon: <IoCloseCircleOutline size={14} /> },
-  cancelled: { label: 'Annulée',    variant: 'default', icon: <IoCloseCircleOutline size={14} /> },
-};
+function makeStatusConfig(t) {
+  return {
+    pending:   { label: t('MeetingStatusPending'),   variant: 'warning', icon: <IoHourglassOutline size={14} /> },
+    approved:  { label: t('MeetingStatusAccepted'),  variant: 'success', icon: <IoCheckmarkCircleOutline size={14} /> },
+    rejected:  { label: t('MeetingStatusRejected'),  variant: 'danger',  icon: <IoCloseCircleOutline size={14} /> },
+    cancelled: { label: t('MeetingStatusCancelled'), variant: 'default', icon: <IoCloseCircleOutline size={14} /> },
+  };
+}
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -38,10 +42,10 @@ function MiniCalendar({ meetings }) {
     (meetings ?? [])
       .filter(m => {
         if (!m.date) return false;
-        const d = new Date(m.date);
+        const d = new Date(m.date + 'T00:00:00');
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       })
-      .map(m => new Date(m.date).getDate())
+      .map(m => new Date(m.date + 'T00:00:00').getDate())
   );
 
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
@@ -85,12 +89,23 @@ export default function Reunions() {
   // ── Context ──────────────────────────────────────────────────
   const { meetings, addMeeting, group } = useStudent();
   const { t, lang } = useLanguage();
+  const STATUS_CONFIG = makeStatusConfig(t);
 
   // ── Local UI state ───────────────────────────────────────────
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [popover, setPopover] = useState(null);
+  // attendance: { [meetingId]: [{ cid, student_name, attended }] }
+  const [attendanceCache, setAttendanceCache] = useState({});
+
+  const fetchAttendance = useCallback(async (meetingId) => {
+    if (attendanceCache[meetingId]) return;
+    try {
+      const res = await client.get(ENDPOINTS.meetings.attendance(meetingId));
+      setAttendanceCache(prev => ({ ...prev, [meetingId]: Array.isArray(res.data) ? res.data : [] }));
+    } catch { /* silently skip */ }
+  }, [attendanceCache]);
 
   const encadreurName = group?.encadreur ?? group?.supervisorName ?? '—';
 
@@ -118,15 +133,15 @@ export default function Reunions() {
     setError('');
 
     // Date validation
-    if (!formData.date) { setError('Veuillez choisir une date.'); return; }
-    const selectedDate = new Date(formData.date);
+    if (!formData.date) { setError(t('DateRequired')); return; }
+    const selectedDate = new Date(formData.date + 'T00:00:00');
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) { setError('La date ne peut pas être dans le passé.'); return; }
+    if (selectedDate < today) { setError(t('DatePastError')); return; }
     // Limit meetings to within ~1 year ahead
     const maxDate = new Date(); maxDate.setFullYear(maxDate.getFullYear() + 1);
-    if (selectedDate > maxDate) { setError('La date est trop éloignée. Veuillez choisir une date dans l\'année académique.'); return; }
-    if (!formData.time) { setError('Veuillez choisir une heure.'); return; }
-    if (!formData.title.trim()) { setError('Veuillez saisir un objet pour la réunion.'); return; }
+    if (selectedDate > maxDate) { setError(t('DateTooFarError')); return; }
+    if (!formData.time) { setError(t('TimeRequired')); return; }
+    if (!formData.title.trim()) { setError(t('TitleRequired')); return; }
 
     try {
       await meetingsApi.createMeeting({
@@ -135,7 +150,7 @@ export default function Reunions() {
         time:     formData.time || '00:00',
         location: formData.desc || 'À définir',
       });
-      toast.success('Demande de réunion envoyée');
+      toast.success(t('MeetingRequest'));
       setModalOpen(false);
       setFormData(EMPTY_FORM);
       fetchMeetings();
@@ -145,12 +160,23 @@ export default function Reunions() {
     }
   };
 
-  /* ── split into upcoming vs history ─────────────────────────── */
+  /* ── split into upcoming vs history by real date/time ───────── */
   const list = liveMeetings;
-  const upcoming = list.filter(m => m.status !== 'rejected' && m.status !== 'cancelled').slice(0, 2);
-  const history = list.filter(m => m.status !== 'rejected' && m.status !== 'cancelled').length > 2
-    ? list.filter(m => m.status !== 'rejected' && m.status !== 'cancelled').slice(2)
-    : list.filter(m => m.status === 'rejected' || m.status === 'cancelled');
+  const _parseDate = m => new Date(`${m.date}T${m.time || '00:00:00'}`);
+  const _now = new Date();
+  const upcoming = list
+    .filter(m => {
+      if (m.status === 'rejected' || m.status === 'cancelled') return false;
+      if (m.status === 'approved') return _parseDate(m) >= _now;
+      return true; // pending stays in upcoming regardless of date
+    })
+    .sort((a, b) => _parseDate(a) - _parseDate(b));
+  const history = list
+    .filter(m => {
+      if (m.status === 'approved') return _parseDate(m) < _now;
+      return m.status === 'rejected' || m.status === 'cancelled';
+    })
+    .sort((a, b) => _parseDate(b) - _parseDate(a));
 
 
 
@@ -163,7 +189,7 @@ export default function Reunions() {
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>{t('Meetings')}</h2>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: '24px' }}>
-            Vous devez rejoindre ou créer un groupe avant de pouvoir planifier des réunions.
+            {t('MustJoinGroup')}
           </p>
         </div>
       </DashboardLayout>
@@ -178,16 +204,15 @@ export default function Reunions() {
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)', border: '2px solid #F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
             <IoPersonOutline size={36} style={{ color: '#D97706' }} />
           </div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '10px', color: 'var(--text-primary)' }}>Aucun encadreur assigné</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '10px', color: 'var(--text-primary)' }}>{t('NoSupervisorMeetings')}</h2>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '460px', marginBottom: '28px', lineHeight: 1.7 }}>
-            Vous ne pouvez pas planifier de réunions tant que votre groupe n'a pas d'encadreur approuvé.
-            Rendez-vous sur la page <strong>Groupe</strong> pour soumettre une demande d'encadrement.
+            {t('NoSupervisorMeetingsDesc')}
           </p>
           <a
             href="/student/groupe"
             style={{ padding: '12px 28px', borderRadius: '12px', background: 'var(--primary)', color: '#fff', fontWeight: 700, fontSize: '14px', textDecoration: 'none', boxShadow: '0 4px 12px rgba(79,70,229,0.25)' }}
           >
-            Aller sur la page Groupe
+            {t('GoToGroupPage')}
           </a>
         </div>
       </DashboardLayout>
@@ -202,7 +227,7 @@ export default function Reunions() {
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('ScheduleMeeting')}</p>
         </div>
         <Button icon={<IoAddOutline size={18} />} onClick={() => setModalOpen(true)}>
-          {t('NewTask').split(' ')[0]} {t('Meetings').toLowerCase().slice(0, -1)}
+          {t('NewMeeting')}
         </Button>
       </div>
 
@@ -218,15 +243,18 @@ export default function Reunions() {
 
           {/* Upcoming */}
           <h2 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            À venir
+            {t('UpcomingSection')}
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
             {upcoming.length === 0 ? (
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '24px 0' }}>
-                Aucune réunion planifiée
+                {t('NoUpcomingMeetings')}
               </p>
             ) : upcoming.map((m) => {
-              const d = m.date ? new Date(m.date) : null;
+              const d = m.date ? new Date(m.date + 'T00:00:00') : null;
+              const timeStr = m.time ? m.time.slice(0, 5) : null;
+              const att = attendanceCache[m.id];
+              const isApproved = m.status === 'approved';
               return (
                 <Card key={m.id} hover style={{ padding: '18px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
@@ -237,21 +265,48 @@ export default function Reunions() {
                           {d ? MONTHS[d.getMonth()].slice(0, 3) : ''}
                         </span>
                       </div>
-                      <div>
+                      <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                           <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{m.title}</h3>
                           {m.createdBy && m.createdBy.startsWith('T') && (
                             <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', borderRadius: '4px', background: '#EEF2FF', color: 'var(--primary)' }}>
-                              👨‍🏫 Planifiée par l'encadreur
+                              👨‍🏫 {t('ScheduledByTeacher')}
                             </span>
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                          {d && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoTimeOutline size={13} /> {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                          {timeStr && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoTimeOutline size={13} /> {timeStr}</span>}
                           {encadreurName !== '—' && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoPersonOutline size={13} /> {encadreurName}</span>}
                           {m.type && <span style={{ fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}><IoVideocamOutline size={13} /> {m.type}</span>}
                         </div>
                         {m.desc && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px' }}>{m.desc}</p>}
+                        {/* Attendance (read-only) for approved upcoming meetings */}
+                        {isApproved && (
+                          <div style={{ marginTop: 8 }}>
+                            {att ? (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {att.map(r => (
+                                  <span key={r.cid} style={{
+                                    fontSize: 11, padding: '2px 7px', borderRadius: 4, fontWeight: 500,
+                                    background: r.attended ? '#DCFCE7' : '#FEE2E2',
+                                    color: r.attended ? '#16A34A' : '#DC2626',
+                                    display: 'flex', alignItems: 'center', gap: 3,
+                                  }}>
+                                    {r.attended ? <IoCheckmarkCircleOutline size={11}/> : <IoCloseCircleOutline size={11}/>}
+                                    {r.student_name}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => fetchAttendance(m.id)}
+                                style={{ fontSize: 11, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                              >
+                                {t('ViewAttendance')}
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <Badge variant={STATUS_CONFIG[m.status]?.variant ?? 'default'}>
@@ -267,19 +322,49 @@ export default function Reunions() {
           {history.length > 0 && (
             <>
               <h2 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Historique
+                {t('HistorySection')}
               </h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {history.map((m) => {
-                  const d = m.date ? new Date(m.date) : null;
+                  const d = m.date ? new Date(m.date + 'T00:00:00') : null;
+                  const timeStr = m.time ? m.time.slice(0, 5) : null;
+                  const att = attendanceCache[m.id];
+                  const isApproved = m.status === 'approved';
                   return (
                     <Card key={m.id} style={{ padding: '14px 18px', opacity: m.status === 'rejected' ? 0.7 : 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                        <div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                        <div style={{ flex: 1 }}>
                           <p style={{ fontSize: '14px', fontWeight: 600 }}>{m.title}</p>
                           <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            {d ? d.toLocaleDateString() : '—'}{d ? ` · ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}{encadreurName !== '—' ? ` · ${encadreurName}` : ''}
+                            {d ? d.toLocaleDateString() : '—'}{timeStr ? ` · ${timeStr}` : ''}{encadreurName !== '—' ? ` · ${encadreurName}` : ''}
                           </p>
+                          {/* Attendance badges for approved meetings */}
+                          {isApproved && (
+                            <div style={{ marginTop: 6 }}>
+                              {att ? (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                  {att.map(r => (
+                                    <span key={r.cid} style={{
+                                      fontSize: 11, padding: '2px 7px', borderRadius: 4, fontWeight: 500,
+                                      background: r.attended ? '#DCFCE7' : '#FEE2E2',
+                                      color: r.attended ? '#16A34A' : '#DC2626',
+                                      display: 'flex', alignItems: 'center', gap: 3,
+                                    }}>
+                                      {r.attended ? <IoCheckmarkCircleOutline size={11}/> : <IoCloseCircleOutline size={11}/>}
+                                      {r.student_name}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => fetchAttendance(m.id)}
+                                  style={{ fontSize: 11, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                                >
+                                  {t('ViewAttendance')}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <Badge variant={STATUS_CONFIG[m.status]?.variant ?? 'default'}>{STATUS_CONFIG[m.status]?.label ?? m.status}</Badge>
                       </div>
@@ -295,7 +380,7 @@ export default function Reunions() {
         <div>
           <MiniCalendar meetings={liveMeetings} />
           <Card style={{ marginTop: '16px' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px' }}>Encadreur</h4>
+            <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px' }}>{t('Encadreur')}</h4>
             {group?.encadreur || group?.supervisorName ? (
               <div
                 onClick={e => setPopover({ user: { name: encadreurName, email: group?.encadreur_email || group?.teacher_email || group?.supervisor_email || group?.encadreurEmail || group?.teacherEmail || null }, anchor: { x: e.clientX, y: e.clientY } })}
@@ -305,18 +390,18 @@ export default function Reunions() {
                 </div>
                 <div>
                   <p style={{ fontSize: '14px', fontWeight: 600 }}>{encadreurName}</p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Encadreur</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{t('Encadreur')}</p>
                 </div>
               </div>
             ) : (
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Aucun encadreur assigné</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('NoSupervisorMeetings')}</p>
             )}
           </Card>
         </div>
       </div>
 
       {/* Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Planifier une réunion" size="md">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={t('NewMeeting')} size="md">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <Input label="Objet de la réunion" value={formData.title} onChange={e => setFormData(f => ({ ...f, title: e.target.value }))} placeholder="Ex: Revue d'avancement sprint 3" required />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -336,8 +421,8 @@ export default function Reunions() {
             <textarea value={formData.desc} onChange={e => setFormData(f => ({ ...f, desc: e.target.value }))} placeholder="Décrivez l'objectif de cette réunion..." rows={4} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'vertical' }} />
           </div>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <Button variant="outline" onClick={() => setModalOpen(false)} type="button">Annuler</Button>
-            <Button type="submit">Envoyer la demande</Button>
+            <Button variant="outline" onClick={() => setModalOpen(false)} type="button">{t('Cancel')}</Button>
+            <Button type="submit">{t('MeetingRequest')}</Button>
           </div>
         </form>
       </Modal>

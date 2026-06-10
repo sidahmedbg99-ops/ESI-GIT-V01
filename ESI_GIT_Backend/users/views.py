@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
 
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -41,19 +40,36 @@ class LoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = authenticate(request, email=email, password=password)
+        # Look up user directly so we can distinguish wrong-password vs blocked
+        user = None
+        try:
+            user = Student.objects.get(email=email)
+        except Student.DoesNotExist:
+            try:
+                user = Staff.objects.get(email=email)
+            except Staff.DoesNotExist:
+                pass
+
         user = cast(Union[Student, Staff, None], user)
 
-        if user is None:
+        if user is None or not user.check_password(password):
             return Response(
-                {"error": "Invalid email or password"},
+                {"error": "Email ou mot de passe incorrect."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        # Check blocked before is_active — admin block sets both flags,
+        # so blocked must be surfaced as a distinct error.
         if user.is_blocked:
             return Response(
-                {"error": "Your account has been blocked. Contact admin."},
+                {"error": "Votre compte est bloqué. Veuillez contacter l'administration."},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if not user.is_active:
+            return Response(
+                {"error": "Email ou mot de passe incorrect."},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         if isinstance(user, Student):

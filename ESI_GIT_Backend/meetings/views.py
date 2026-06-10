@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from users.permissions import IsStudent
+from users.permissions import IsStudent, IsStaff
 from projects.models import SProjects
 from .models import Meeting, MeetingAttendance
 from .serializers import MeetingSerializer, CreateMeetingSerializer
@@ -160,3 +160,117 @@ class MeetingDetailView(APIView):
 
         meeting.delete()
         return Response({"message": "Meeting deleted successfully."})
+
+
+# ─────────────────────────────────────────
+# ATTENDANCE
+# ─────────────────────────────────────────
+
+class MeetingAttendanceView(APIView):
+    """
+    Supervisor:
+      GET  /api/teacher/meetings/<meeting_id>/attendance/ → roster with attended flags
+      PUT  /api/teacher/meetings/<meeting_id>/attendance/ → save attendance
+
+    Student (read-only):
+      GET  /api/meetings/<meeting_id>/attendance/ → same roster, no editing
+    """
+
+    def _get_meeting(self, meeting_id):
+        try:
+            return Meeting.objects.select_related('PID').get(id=meeting_id)
+        except Meeting.DoesNotExist:
+            return None
+
+    def _build_roster(self, meeting):
+        """Return attendance rows for every current project member, creating missing rows."""
+        members = SProjects.objects.filter(PID=meeting.PID).select_related('CID')
+        rows = []
+        for m in members:
+            row, _ = MeetingAttendance.objects.get_or_create(
+                meeting_id=meeting,
+                CID=m.CID,
+                defaults={'attended': False},
+            )
+            rows.append(row)
+        return rows
+
+    def _get_as_teacher(self, request, meeting_id):
+        """Verify the requesting teacher supervises this meeting's project."""
+        if not IsStaff().has_permission(request, None):
+            return None, Response({"error": "Staff only"}, status=403)
+        meeting = self._get_meeting(meeting_id)
+        if not meeting:
+            return None, Response({"error": "Meeting not found"}, status=404)
+        if meeting.PID.TID != request.user:
+            return None, Response({"error": "Not your project"}, status=403)
+        return meeting, None
+
+    def get_teacher(self, request, meeting_id):
+        meeting, err = self._get_as_teacher(request, meeting_id)
+        if err:
+            return err
+        from .serializers import AttendanceSerializer
+        rows = self._build_roster(meeting)
+        return Response(AttendanceSerializer(rows, many=True).data)
+
+    def put_teacher(self, request, meeting_id):
+        meeting, err = self._get_as_teacher(request, meeting_id)
+        if err:
+            return err
+        if meeting.status not in ('approved', 'confirmed'):
+            return Response({"error": "Can only record attendance for approved meetings"}, status=400)
+
+        items = request.data if isinstance(request.data, list) else []
+        if not items:
+            return Response({"error": "Expected a list of {cid, attended} objects"}, status=400)
+
+        updated = []
+        for item in items:
+            cid_val = item.get('cid')
+            attended = item.get('attended', False)
+            try:
+                member = SProjects.objects.get(PID=meeting.PID, CID__CID=cid_val)
+            except SProjects.DoesNotExist:
+                continue
+            row, _ = MeetingAttendance.objects.get_or_create(
+                meeting_id=meeting, CID=member.CID, defaults={'attended': False}
+            )
+            row.attended = bool(attended)
+            row.save(update_fields=['attended'])
+            updated.append(row)
+
+        from .serializers import AttendanceSerializer
+        return Response(AttendanceSerializer(updated, many=True).data)
+
+    def get_student(self, request, meeting_id):
+        """Student read-only: must be a member of the meeting's project."""
+        if not IsStudent().has_permission(request, None):
+            return Response({"error": "Student only"}, status=403)
+        meeting = self._get_meeting(meeting_id)
+        if not meeting:
+            return Response({"error": "Meeting not found"}, status=404)
+        if not SProjects.objects.filter(PID=meeting.PID, CID=request.user).exists():
+            return Response({"error": "Not your project"}, status=403)
+        from .serializers import AttendanceSerializer
+        rows = self._build_roster(meeting)
+        return Response(AttendanceSerializer(rows, many=True).data)
+
+
+class TeacherAttendanceView(APIView):
+    """Adapter: GET/PUT /api/teacher/meetings/<id>/attendance/ (IsStaff)"""
+    permission_classes = [IsStaff]
+
+    def get(self, request, meeting_id):
+        return MeetingAttendanceView().get_teacher(request, meeting_id)
+
+    def put(self, request, meeting_id):
+        return MeetingAttendanceView().put_teacher(request, meeting_id)
+
+
+class StudentAttendanceView(APIView):
+    """Adapter: GET /api/meetings/<id>/attendance/ (IsStudent, read-only)"""
+    permission_classes = [IsStudent]
+
+    def get(self, request, meeting_id):
+        return MeetingAttendanceView().get_student(request, meeting_id)

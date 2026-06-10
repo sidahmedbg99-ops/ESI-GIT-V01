@@ -79,15 +79,15 @@ export default function AdminStudents() {
     },
     {
       key: 'hasGroup', label: t('Status'),
-      render: v => <Badge variant={v ? 'success' : 'danger'}>{v ? t('Assigned') : t('NotAssigned') || 'Non assigné'}</Badge>
+      render: v => <Badge variant={v ? 'success' : 'danger'}>{v ? t('Assigned') : t('NotAssigned')}</Badge>
     }
   ];
 
   return (
     <DashboardLayout>
       <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>{t('StudentAssignments') || 'Affectations des Étudiants'}</h1>
-        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('StudentAssignmentsSub') || "Visualisez et gérez le statut d'adhésion des étudiants aux groupes."}</p>
+        <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '4px' }}>{t('StudentAssignments')}</h1>
+        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('StudentAssignmentsSub')}</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
@@ -96,11 +96,11 @@ export default function AdminStudents() {
           <p style={{ fontSize: '24px', fontWeight: 800 }}>{students.length}</p>
         </Card>
         <Card style={{ borderLeft: '4px solid #10B981' }}>
-          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('WithGroup') || 'Avec Groupe'}</p>
+          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('WithGroup')}</p>
           <p style={{ fontSize: '24px', fontWeight: 800, color: '#10B981' }}>{data.filter(d => d.hasGroup).length}</p>
         </Card>
         <Card style={{ borderLeft: '4px solid #EF4444' }}>
-          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('WithoutGroup') || 'Sans Groupe'}</p>
+          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>{t('WithoutGroup')}</p>
           <p style={{ fontSize: '24px', fontWeight: 800, color: '#EF4444' }}>{data.filter(d => !d.hasGroup).length}</p>
         </Card>
       </div>
@@ -114,7 +114,7 @@ export default function AdminStudents() {
             {[
               { id: 'all', label: t('All') },
               { id: 'with_group', label: t('Assigned') },
-              { id: 'without_group', label: t('NotAssigned') || 'Non assignés' },
+              { id: 'without_group', label: t('NotAssigned') },
             ].map(f => (
               <button 
                 key={f.id} 
@@ -138,13 +138,13 @@ export default function AdminStudents() {
             {t('Displaying')} {filtered.length === 0 ? 0 : (validCurrentPage - 1) * itemsPerPage + 1} {t('To')} {Math.min(validCurrentPage * itemsPerPage, filtered.length)} {t('Of')} {filtered.length} {t('Students').toLowerCase()}
           </span>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={validCurrentPage === 1} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', cursor: validCurrentPage === 1 ? 'not-allowed' : 'pointer', opacity: validCurrentPage === 1 ? 0.5 : 1 }}>{t('Previous') || 'Précédent'}</button>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={validCurrentPage === 1} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', cursor: validCurrentPage === 1 ? 'not-allowed' : 'pointer', opacity: validCurrentPage === 1 ? 0.5 : 1 }}>{t('Previous')}</button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button key={page} onClick={() => setCurrentPage(page)} style={{ width: 34, height: 34, borderRadius: '8px', border: validCurrentPage === page ? '1px solid var(--primary)' : '1px solid var(--border)', background: validCurrentPage === page ? 'var(--primary)' : 'var(--bg)', color: validCurrentPage === page ? '#fff' : 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', outline: 'none' }}>
                 {page}
               </button>
             ))}
-            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={validCurrentPage === totalPages || totalPages === 0} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', cursor: (validCurrentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', opacity: (validCurrentPage === totalPages || totalPages === 0) ? 0.5 : 1 }}>{t('Next') || 'Suivant'}</button>
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={validCurrentPage === totalPages || totalPages === 0} style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', cursor: (validCurrentPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', opacity: (validCurrentPage === totalPages || totalPages === 0) ? 0.5 : 1 }}>{t('Next')}</button>
           </div>
         </div>
       </Card>

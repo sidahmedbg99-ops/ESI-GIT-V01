@@ -3,6 +3,8 @@ import {
   IoTrendingUpOutline, IoTimeOutline,
   IoGitBranchOutline, IoPeopleOutline,
   IoDocumentOutline, IoAddCircleOutline,
+  IoRibbonOutline, IoAlertCircleOutline,
+  IoCheckmarkCircleOutline, IoPersonOutline,
 } from 'react-icons/io5';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
@@ -51,35 +53,52 @@ function Milestones({ tasks }) {
   ));
 }
 
+const SUBMISSION_CONFIG = {
+  approved:           { label: 'Soumission approuvée', color: '#10B981', icon: <IoCheckmarkCircleOutline size={16}/>, variant: 'success' },
+  pending_validation: { label: 'En attente de validation', color: '#F59E0B', icon: <IoTimeOutline size={16}/>, variant: 'warning' },
+  not_submitted:      { label: 'Non soumis', color: '#6B7280', icon: <IoDocumentOutline size={16}/>, variant: 'default' },
+  no_group:           { label: 'Pas de groupe', color: '#6B7280', icon: <IoPeopleOutline size={16}/>, variant: 'default' },
+};
+
 export default function StudentDashboard() {
   const { user } = useAuth();
-  const { stats, analytics, tasks, meetings, group, recentActivity, upcomingDeadlines } = useStudent();
+  const { stats, dashboardStats, tasks, meetings, group, recentActivity, upcomingDeadlines } = useStudent();
   const { t } = useLanguage();
+
+  const ds = dashboardStats || {};
+
+  // Prefer backend counts (accurate); fall back to local state while loading
+  const tasksDone  = ds.tasks_done  ?? stats.tasksCompleted;
+  const tasksTotal = ds.tasks_total ?? stats.tasksTotal;
+  const teacherDone  = ds.teacher_tasks_done  ?? stats.teacherTasksCompleted;
+  const teacherTotal = ds.teacher_tasks_total ?? stats.teacherTasksCount;
+
+  const submissionCfg = SUBMISSION_CONFIG[ds.submission_status || (group ? 'not_submitted' : 'no_group')];
 
   /* ── stat cards ──────────────────────────────────────────────── */
   const statCards = [
     {
-      label: t('TasksCompleted'),
-      value: stats.tasksTotal > 0 ? `${stats.tasksCompleted}/${stats.tasksTotal}` : '0/0',
+      label: t('TasksDone'),
+      value: `${tasksDone}/${tasksTotal}`,
       icon: <IoCheckboxOutline size={22}/>,
       color: 'var(--primary)',
     },
     {
       label: t('PlannedMeetings'),
-      value: stats.meetingsCount,
+      value: ds.meetings_upcoming ?? stats.meetingsCount,
       icon: <IoCalendarOutline size={22}/>,
       color: 'var(--accent)',
     },
     {
-      label: t('OverallProgress'),
-      value: stats.tasksTotal > 0 ? `${stats.globalProgress}%` : '0%',
-      icon: <IoTrendingUpOutline size={22}/>,
-      color: '#10B981',
+      label: ds.overdue_tasks > 0 ? `${ds.overdue_tasks} ${t('OverdueTasks')}` : t('NoOverdue'),
+      value: ds.overdue_tasks ?? 0,
+      icon: <IoAlertCircleOutline size={22}/>,
+      color: (ds.overdue_tasks ?? 0) > 0 ? '#EF4444' : '#10B981',
     },
     {
-      label: t('TeacherTasks') || 'Tâches Encadreur',
-      value: stats.teacherTasksCount > 0 ? `${stats.teacherTasksCompleted}/${stats.teacherTasksCount}` : '0/0',
-      icon: <IoAddCircleOutline size={22}/>,
+      label: t('TeacherTasks'),
+      value: `${teacherDone}/${teacherTotal}`,
+      icon: <IoPersonOutline size={22}/>,
       color: '#8B5CF6',
     },
   ];
@@ -100,31 +119,31 @@ export default function StudentDashboard() {
       {/* Main row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', marginBottom: '20px' }}>
 
-        {/* Project progress */}
+        {/* Task board summary */}
         <Card style={{ minHeight: '280px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{t('ProjectProgress')}</h3>
-            <Badge variant={stats.globalProgress > 0 ? 'success' : 'default'}>
-              {stats.globalProgress > 0 ? t('InProgress') : t('NotStarted')}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{t('TaskProgress')}</h3>
+            <Badge variant={submissionCfg.variant} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+              {submissionCfg.icon} {submissionCfg.label}
             </Badge>
           </div>
 
-          {/* Big % */}
-          <div style={{ marginBottom: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '10px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{t('TasksCompleted')}</span>
-              <span style={{ fontSize: '32px', fontWeight: 800, fontFamily: 'Syne', color: 'var(--primary)', letterSpacing: '-0.02em' }}>
-                {stats.tasksTotal > 0 ? `${stats.globalProgress}%` : '—'}
+          {/* Honest tasks done X/Y */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{t('TasksDone')}</span>
+              <span style={{ fontSize: '30px', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em' }}>
+                {tasksDone}<span style={{ fontSize: '16px', color: 'var(--text-muted)', fontWeight: 500 }}>/{tasksTotal}</span>
               </span>
             </div>
-            <div style={{ height: 10, borderRadius: 5, background: 'var(--border)', overflow: 'hidden' }}>
-              <div style={{ width: `${stats.globalProgress}%`, height: '100%', borderRadius: 5, background: 'linear-gradient(90deg, var(--primary), var(--primary-light))' }}/>
+            <div style={{ height: 8, borderRadius: 4, background: 'var(--border)', overflow: 'hidden' }}>
+              <div style={{ width: tasksTotal > 0 ? `${Math.round(tasksDone/tasksTotal*100)}%` : '0%', height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, var(--primary), var(--primary-light))', transition: 'width 0.4s' }}/>
             </div>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-              {stats.tasksTotal > 0
-                ? `${stats.tasksCompleted} sur ${stats.tasksTotal} tâches`
-                : 'Aucune tâche créée'}
-            </p>
+            {(ds.overdue_tasks ?? 0) > 0 && (
+              <p style={{ fontSize: '12px', color: '#EF4444', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <IoAlertCircleOutline size={13}/> {ds.overdue_tasks} {t('OverdueTasks')}
+              </p>
+            )}
           </div>
 
           <Milestones tasks={tasks}/>
@@ -234,56 +253,66 @@ export default function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Analytics row — FIX 4: real computed data */}
-      {analytics && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginTop: '20px' }}>
+      {/* Academic info row — backend-driven */}
+      {ds.has_group && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '20px' }}>
 
-          {/* Task origin */}
+          {/* Submission status */}
           <Card style={{ padding: '18px' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>{t('TaskOrigin')}</h4>
-            {[
-              { label: 'Créées par vous', value: analytics.studentTasks ?? 0,  color: 'var(--accent)' },
-              { label: 'Assignées par l\'encadreur', value: analytics.teacherTasks ?? 0, color: 'var(--primary)' },
-            ].map((item, i) => (
-              <div key={i} style={{ marginBottom: i === 0 ? '10px' : 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
-                  <span style={{ fontWeight: 700, color: item.color }}>{item.value}</span>
-                </div>
-                <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
-                  <div style={{ width: analytics.totalTasks > 0 ? `${Math.round((item.value / analytics.totalTasks) * 100)}%` : '0%', height: '100%', borderRadius: 3, background: item.color }}/>
-                </div>
+            <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>{t('FinalSubmission')}</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '10px', background: submissionCfg.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', color: submissionCfg.color, fontSize: '20px' }}>
+                {submissionCfg.icon}
               </div>
-            ))}
-          </Card>
-
-          {/* Task status breakdown */}
-          <Card style={{ padding: '18px' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>{t('TaskStatus')}</h4>
-            {(analytics.tasksByStatus ?? []).map((item, i) => (
-              <div key={i} style={{ marginBottom: i < 2 ? '10px' : 0 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{item.name}</span>
-                  <span style={{ fontWeight: 700, color: item.color }}>{item.value}</span>
-                </div>
-                <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
-                  <div style={{ width: analytics.totalTasks > 0 ? `${Math.round((item.value / analytics.totalTasks) * 100)}%` : '0%', height: '100%', borderRadius: 3, background: item.color }}/>
-                </div>
-              </div>
-            ))}
-          </Card>
-
-          {/* Livrables */}
-          <Card style={{ padding: '18px' }}>
-            <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '14px' }}>{t('Deliverables')}</h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Soumis</span>
-              <span style={{ fontSize: '20px', fontWeight: 800, color: '#8B5CF6' }}>{analytics.totalLivrables ?? 0}</span>
-            </div>
-            <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden', marginTop: '6px' }}>
-              <div style={{ width: analytics.totalLivrables > 0 ? '100%' : '0%', height: '100%', borderRadius: 3, background: '#8B5CF6' }} />
+              <span style={{ fontSize: '14px', fontWeight: 600, color: submissionCfg.color }}>{submissionCfg.label}</span>
             </div>
           </Card>
+
+          {/* Attendance rate */}
+          {ds.attendance_rate !== null && ds.attendance_rate !== undefined && (
+            <Card style={{ padding: '18px' }}>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>{t('AttendanceRate')}</h4>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '30px', fontWeight: 800, color: ds.attendance_rate >= 75 ? '#10B981' : ds.attendance_rate >= 50 ? '#F59E0B' : '#EF4444', letterSpacing: '-0.02em' }}>{ds.attendance_rate}%</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>{t('Meetings_label')}</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
+                <div style={{ width: `${ds.attendance_rate}%`, height: '100%', borderRadius: 3, background: ds.attendance_rate >= 75 ? '#10B981' : ds.attendance_rate >= 50 ? '#F59E0B' : '#EF4444', transition: 'width 0.4s' }}/>
+              </div>
+            </Card>
+          )}
+
+          {/* Final grade — shown only once graded */}
+          {ds.final_grade !== null && ds.final_grade !== undefined && (
+            <Card style={{ padding: '18px' }}>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>{t('FinalGrade')}</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+                  <IoRibbonOutline size={22}/>
+                </div>
+                <div>
+                  <span style={{ fontSize: '26px', fontWeight: 800, color: ds.final_grade >= 10 ? '#10B981' : '#EF4444', letterSpacing: '-0.02em' }}>{parseFloat(ds.final_grade).toFixed(2)}</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginLeft: '4px' }}>/20</span>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Next meeting */}
+          {ds.next_meeting && (
+            <Card style={{ padding: '18px' }}>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>{t('NextMeeting')}</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(46,196,182,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                  <IoCalendarOutline size={20}/>
+                </div>
+                <div>
+                  <p style={{ fontSize: '13px', fontWeight: 600 }}>{ds.next_meeting.title}</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{ds.next_meeting.date} à {ds.next_meeting.time}</p>
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
       )}
     </DashboardLayout>

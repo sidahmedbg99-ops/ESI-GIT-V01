@@ -8,6 +8,7 @@ import {
   IoTimeOutline, IoPersonOutline, IoCheckmarkOutline,
   IoAlertCircleOutline, IoSendOutline, IoLogoGithub, IoCopyOutline,
   IoWarningOutline, IoLogOutOutline, IoSearchOutline, IoAddOutline, IoRocketOutline,
+  IoLockClosedOutline,
 } from 'react-icons/io5';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import Card from '../../components/ui/Card';
@@ -90,9 +91,7 @@ export default function Groupe() {
   const [editTech, setEditTech] = useState('');
   const [editType, setEditType] = useState('');
   const [publicSettings, setPublicSettings] = useState(null);
-  // Auto-detect project type: level 5 (M2 / 3CS final year) = PFE, else Web
-  const autoProjectType = Number(user?.level) >= 5 ? 'PFE' : 'Web';
-  const [projectType, setProjectType] = useState(autoProjectType);
+  const [projectType, setProjectType] = useState('');
   const [customProjectType, setCustomProjectType] = useState(''); // F9: free-text when "Autre" selected
   const [customEditType, setCustomEditType] = useState('');       // F9: free-text for edit modal
 
@@ -101,15 +100,7 @@ export default function Groupe() {
 
   useEffect(() => {
     groupApi.getPublicSettings()
-      .then(res => {
-        setPublicSettings(res);
-        if (res.project_types) {
-          const types = res.project_types.split(',');
-          if (types.length > 0) {
-            setProjectType(types[0]);
-          }
-        }
-      })
+      .then(res => setPublicSettings(res))
       .catch(e => console.error("Error loading public settings:", e));
   }, []);
 
@@ -155,6 +146,8 @@ export default function Groupe() {
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const [showSupervisorConfirmModal, setShowSupervisorConfirmModal] = useState(false);
+  const [showGroupConfirmModal, setShowGroupConfirmModal] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [teacherSearch, setTeacherSearch] = useState('');
   const [teacherPage, setTeacherPage] = useState(1);
   const teachersPerPage = 10;
@@ -168,6 +161,30 @@ export default function Groupe() {
     setRequestStatus('approved'); // Fake approval for UI flow if needed
     setCreateStep(2);
     setShowConfirmModal(false);
+  };
+
+  const isLocked = Boolean(team?.is_locked);
+  const isLeader = Boolean(team?.members?.find(m => m.isMe)?.isChef);
+  const globalLocked = (() => {
+    if (!publicSettings?.group_lock_deadline) return false;
+    const deadline = new Date(publicSettings.group_lock_deadline + 'T00:00:00');
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return today >= deadline;
+  })();
+
+  const handleConfirmGroup = async () => {
+    setIsConfirming(true);
+    try {
+      await groupApi.confirmGroup();
+      updateGroup({ ...team, is_confirmed: true, is_locked: true });
+      toast.success('Groupe confirmé ! La composition est maintenant verrouillée.');
+      setShowGroupConfirmModal(false);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.response?.data?.detail || 'Erreur lors de la confirmation';
+      toast.error(msg);
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   const handleLeaveGroup = async () => {
@@ -237,11 +254,11 @@ export default function Groupe() {
         fetch(`https://api.github.com/repos/${owner}/${repo}`),
         fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`),
       ]);
-      if (!rRes.ok) throw new Error(rRes.status === 404 ? 'Dépôt introuvable ou privé' : 'Erreur GitHub API');
+      if (!rRes.ok) throw new Error(rRes.status === 404 ? t('GithubRepoNotFound') : 'Erreur GitHub API');
       const [rData, cData] = await Promise.all([rRes.json(), cRes.ok ? cRes.json() : []]);
       setGhData({ repo: rData, commits: Array.isArray(cData) ? cData : [] });
     } catch (e) {
-      setGhError(e.message || 'Erreur de connexion à GitHub');
+      setGhError(e.message || t('GithubConnError'));
     } finally {
       setGhLoading(false);
     }
@@ -249,11 +266,12 @@ export default function Groupe() {
 
   const handleCreate = async () => {
     try {
+      const resolvedType = projectType === 'Autre' ? customProjectType.trim() || 'Autre' : projectType;
       const res = await groupApi.createGroup({
-        name: projectTitle || 'Projet PFE',
+        name: projectTitle || 'Projet',
         title: projectTitle,
         description: projectDescription,
-        type: projectType === 'Autre' ? customProjectType.trim() || 'Autre' : projectType,
+        type: resolvedType,
         role: creatorRole,
       });
 
@@ -266,7 +284,7 @@ export default function Groupe() {
       if (selectedTeacher) {
         try {
           const teacherId = selectedTeacher._id || selectedTeacher.TID || selectedTeacher.id;
-          await groupApi.sendSupervisorRequest(teacherId, "Demande d'encadrement initiale lors de la création du groupe.");
+          await groupApi.sendSupervisorRequest(teacherId, t('SupervInitialMsg') || "Demande d'encadrement initiale lors de la création du groupe.");
           toast.success('Demande envoyée à l\'encadreur');
         } catch (e) {
           console.error("Failed to send initial supervisor request:", e);
@@ -283,7 +301,7 @@ export default function Groupe() {
   };
 
   const handleJoin = async () => {
-    if (!joinRole) { setError('Veuillez choisir un rôle.'); return; }
+    if (!joinRole) { setError(t('ChooseRoleFirst')); return; }
     try {
       const code = joinCode.trim().toUpperCase();
       console.log('Joining with code:', code);
@@ -437,27 +455,27 @@ export default function Groupe() {
   return (
     <DashboardLayout>
       {/* ── Supervisor Request Confirmation Modal ── */}
-      <Modal isOpen={showSupervisorConfirmModal} onClose={() => setShowSupervisorConfirmModal(false)} title="⚠️ Confirmation de la demande" size="sm">
+      <Modal isOpen={showSupervisorConfirmModal} onClose={() => setShowSupervisorConfirmModal(false)} title={t('ConfirmSupervReqTitle')} size="sm">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ padding: '16px', borderRadius: '12px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', border: '1.5px solid #F59E0B' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <IoWarningOutline size={22} style={{ color: '#fff' }} />
               </div>
-              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#92400E' }}>Action importante</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#92400E' }}>{t('ImportantAction')}</h3>
             </div>
             <p style={{ fontSize: '14px', color: '#78350F', lineHeight: 1.6 }}>
-              Vous allez envoyer une demande d'encadrement à <strong>{selectedTeacher?.name || selectedTeacher?.full_name || 'cet encadreur'}</strong>.
+              {t('ConfirmSupervMsg')} <strong>{selectedTeacher?.name || selectedTeacher?.full_name || t('Encadreur').toLowerCase()}</strong>.
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-            <button onClick={() => setShowSupervisorConfirmModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
+            <button onClick={() => setShowSupervisorConfirmModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>{t('Cancel')}</button>
             <button
               onClick={handleSendSupervisorRequest}
               style={{ flex: 2, padding: '12px', borderRadius: '10px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(31, 58, 95, 0.2)' }}
             >
-              Confirmer l'envoi
+              {t('ConfirmSend')}
             </button>
           </div>
         </div>
@@ -479,7 +497,7 @@ export default function Groupe() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                   <div>
                     <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>{team.title || team.Name || team.name}</h2>
-                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>{t('Group')}: {team.Name || team.name}</p>
+                    {team.description && <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', fontStyle: 'italic', marginTop: '2px', maxWidth: '420px', lineHeight: 1.4 }}>{team.description}</p>}
                   </div>
                   {team.members?.find(m => m.isMe)?.isChef && (
                     <Button variant="outline" size="sm" onClick={() => setShowEditModal(true)} style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} icon={<IoRocketOutline size={14}/>}>
@@ -487,17 +505,16 @@ export default function Groupe() {
                     </Button>
                   )}
                 </div>
-                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>
-                  {t('Supervisor')} :{' '}
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.65)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>{t('Supervisor')} :</span>
                   {team.supervisorRequest?.status === 'rejected'
-                    ? <span style={{ color: '#FECACA' }}>{team.supervisorRequest.teacher_name} (Refusé)</span>
+                    ? <span style={{ color: '#FECACA', fontWeight: 600 }}>{team.supervisorRequest.teacher_name} ({t('Rejected_label')})</span>
                     : team.encadreur
                       ? <span
-                          
-                          onClick={e =>setPopover({ user: { name: team.encadreur, email: team.encadreur_email || team.teacher_email || team.supervisor_email || team.encadreurEmail || team.teacherEmail || null }, anchor: { x: e.clientX, y: e.clientY } })}
-                          style={{ cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' }}
+                          onClick={e => setPopover({ user: { name: team.encadreur, email: team.encadreur_email || team.teacher_email || team.supervisor_email || team.encadreurEmail || team.teacherEmail || null }, anchor: { x: e.clientX, y: e.clientY } })}
+                          style={{ cursor: 'pointer', color: '#fff', fontWeight: 700, textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px', fontSize: '14px' }}
                         >{team.encadreur}</span>
-                      : '—'}
+                      : <span style={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>—</span>}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -515,13 +532,24 @@ export default function Groupe() {
             </div>
           </Card>
           
+          {/* Lock banner */}
+          {isLocked && (
+            <div style={{ marginBottom: '16px', padding: '14px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', border: '1.5px solid #EF4444', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '22px', flexShrink: 0 }}>🔒</span>
+              <div>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#991B1B', marginBottom: '2px' }}>{t('GroupLockedTitle')}</p>
+                <p style={{ fontSize: '12px', color: '#B91C1C' }}>{t('GroupLockedDesc')}</p>
+              </div>
+            </div>
+          )}
+
           {/* Min 3 members warning */}
           {(team.members || []).length < 3 && (
             <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '12px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', border: '1.5px solid #F59E0B', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '20px' }}>⚠️</span>
               <div>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>Équipe incomplète</p>
-                <p style={{ fontSize: '12px', color: '#78350F' }}>Votre groupe a {(team.members || []).length} membre(s). Le minimum requis est <strong>3 membres</strong> pour soumettre un projet.</p>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: '#92400E', marginBottom: '2px' }}>{t('IncompleteGroupTitle')}</p>
+                <p style={{ fontSize: '12px', color: '#78350F' }}>{t('MyGroup')} — {(team.members || []).length} {t('Members').toLowerCase()}. Min. 3.</p>
               </div>
             </div>
           )}
@@ -535,15 +563,15 @@ export default function Groupe() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 700 }}>
-                    {team.supervisorRequest?.status === 'rejected' ? '❌ Demande refusée' : 
-                     team.supervisorRequest?.status === 'pending' ? '⏳ Demande en attente' : '🔍 Trouver un encadreur'}
+                    {team.supervisorRequest?.status === 'rejected' ? `❌ ${t('Rejected_label')}` :
+                     team.supervisorRequest?.status === 'pending' ? `⏳ ${t('PendingRequest')}` : `🔍 ${t('RequestNewSupervisor')}`}
                   </h3>
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    {team.supervisorRequest?.status === 'rejected' 
-                      ? `${team.supervisorRequest.teacher_name} a refusé votre demande. Vous devez solliciter un autre enseignant. (⚠️ Vous ne pourrez pas planifier de réunions tant que vous n'aurez pas d'encadreur.)`
+                    {team.supervisorRequest?.status === 'rejected'
+                      ? `${team.supervisorRequest.teacher_name} ${t('ReqRejectedFull')} ${t('MeetingNeedsSupervWarn')}`
                       : team.supervisorRequest?.status === 'pending'
-                        ? `Votre demande est en cours de révision par ${team.supervisorRequest.teacher_name}. (⚠️ Vous ne pourrez pas planifier de réunions tant que vous n'aurez pas d'encadreur.)`
-                        : "Votre groupe n'a pas encore d'encadreur. Recherchez un enseignant disponible. (⚠️ Vous ne pourrez pas planifier de réunions tant que vous n'aurez pas d'encadreur.)"}
+                        ? `${t('ReqPendingFull')} ${team.supervisorRequest.teacher_name}. ${t('MeetingNeedsSupervWarn')}`
+                        : `${t('NoSupervisorWarning')} ${t('MeetingNeedsSupervWarn')}`}
                   </p>
                 </div>
               </div>
@@ -581,16 +609,18 @@ export default function Groupe() {
             </Card>
           )}
 
-          {/* Invite code */}
-          <Card style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{t('InviteCode')}</p>
-                <p style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'monospace', color: 'var(--primary)', letterSpacing: '0.12em' }}>{team.InviteCode || team.joinCode}</p>
+          {/* Invite code — hidden once group is locked (no new members can join) */}
+          {!isLocked && (
+            <Card style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>{t('InviteCode')}</p>
+                  <p style={{ fontSize: '16px', fontWeight: 700, fontFamily: 'monospace', color: 'var(--primary)', letterSpacing: '0.12em' }}>{team.InviteCode || team.joinCode}</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(team.InviteCode || team.joinCode)}>{t('Copy')}</Button>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(team.InviteCode || team.joinCode)}>{t('Copy')}</Button>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* GitHub Viewer */}
           <Card style={{ marginBottom: '20px' }}>
@@ -700,7 +730,7 @@ export default function Groupe() {
             <div style={{ marginBottom: '12px' }}>
               <input type="file" id="docUpload" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e, false)} multiple />
               <label htmlFor="docUpload" style={{ padding: '9px 16px', borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'inline-block' }}>
-                Sélectionner documents
+                {t('SelectDocs')}
               </label>
               <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '10px' }}>
                 {documentFiles.length > 0 ? `${documentFiles.length} fichier(s)` : t('NoFile')}
@@ -753,22 +783,22 @@ export default function Groupe() {
                   </h3>
                   <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                     {team.final_submission_approved
-                      ? '✨ Votre projet a été officiellement approuvé pour la soutenance !'
+                      ? t('SubmissionApprovedMsg')
                       : team.submitted_to_supervisor
-                        ? '⏳ Projet soumis à l\'encadreur. En attente de validation finale...'
+                        ? t('SubmissionPendingMsg')
                         : team.supervisor_feedback
-                          ? '❌ Votre soumission a été refusée. Lisez le feedback ci-dessous et soumettez à nouveau.'
-                          : 'Soumettez votre projet final pour obtenir l\'autorisation de soutenance.'}
+                          ? t('SubmissionRejectedMsg')
+                          : t('SubmitProjectToSup')}
                   </p>
                   {!isFinalUploaded && !team.submitted_to_supervisor && !team.final_submission_approved && (
                     <p style={{ fontSize: '11px', color: '#EF4444', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <IoAlertCircleOutline size={14} /> Vous devez déposer au moins un document avant de soumettre.
+                      <IoAlertCircleOutline size={14} /> {t('DeliverableRequired')}
                     </p>
                   )}
                   {/* Supervisor rejection feedback — always visible when present and not approved */}
                   {team.supervisor_feedback && !team.final_submission_approved && (
                     <div style={{ marginTop: '12px', padding: '14px 16px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '10px' }}>
-                      <p style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>📢 Feedback de l'encadreur :</p>
+                      <p style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>{t('SupervFeedbackLabel')}</p>
                       <p style={{ fontSize: '13px', color: '#B91C1C', fontStyle: 'italic', lineHeight: 1.6 }}>«{team.supervisor_feedback}»</p>
                     </div>
                   )}
@@ -888,7 +918,7 @@ export default function Groupe() {
                         {ri.label}
                       </div>
                     </div>
-                    {(m.isMe || team.members.find(x => x.isMe)?.isChef) && (
+                    {!isLocked && (m.isMe || team.members.find(x => x.isMe)?.isChef) && (
                       <div style={{ position: 'relative', flexShrink: 0 }}>
                         {editingRole === i && (
                           <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 10, minWidth: '180px', overflow: 'hidden' }}>
@@ -902,7 +932,7 @@ export default function Groupe() {
                         <button onClick={() => setEditingRole(editingRole === i ? null : i)} style={{ padding: '6px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '12px', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 500 }}>{t('ChangeRole')}</button>
                       </div>
                     )}
-                    {team.members?.find(x => x.isMe)?.isChef && !m.isMe && (
+                    {!isLocked && team.members?.find(x => x.isMe)?.isChef && !m.isMe && (
                       <button
                         onClick={() => {
                           console.log('X clicked for member:', m.name);
@@ -922,10 +952,48 @@ export default function Groupe() {
             </div>
           </Card>
 
-          <div style={{ marginTop: '16px', textAlign: 'right' }}>
-            <Button variant="ghost" size="sm" onClick={() => setShowLeaveModal(true)} style={{ color: 'var(--danger)' }}>Quitter le groupe</Button>
+          {/* Bottom action row: confirm (leader) + leave */}
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              {isLeader && !isLocked && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<IoShieldCheckmarkOutline size={15} />}
+                  onClick={() => setShowGroupConfirmModal(true)}
+                  disabled={(team.members || []).length < 3}
+                  style={{ color: '#059669', borderColor: '#10B981' }}
+                >
+                  {(team.members || []).length < 3
+                    ? `Confirmer le groupe (${(team.members || []).length}/3 membres requis)`
+                    : 'Confirmer la composition du groupe'}
+                </Button>
+              )}
+            </div>
+            <div>
+              {!isLocked && (
+                <Button variant="ghost" size="sm" onClick={() => setShowLeaveModal(true)} style={{ color: 'var(--danger)' }}>Quitter le groupe</Button>
+              )}
+            </div>
           </div>
         </>
+      ) : globalLocked ? (
+        /* ── Group formation closed (global deadline passed, no group) ── */
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', color: 'var(--text-muted)' }}>
+            <IoLockClosedOutline size={32} />
+          </div>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Inscription aux groupes fermée</h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: '24px' }}>
+            La période de formation des groupes est terminée. Si vous n'avez pas encore de groupe, veuillez contacter l'administration pour être affecté à un groupe.
+          </p>
+          <div style={{ padding: '12px 20px', borderRadius: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '380px' }}>
+            <IoAlertCircleOutline size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Contactez l'administration ou votre encadreur pour toute demande de rattachement à un groupe.
+            </p>
+          </div>
+        </div>
       ) : (
         <>
           <div style={{ marginBottom: '40px', textAlign: 'center' }}>
@@ -982,21 +1050,16 @@ export default function Groupe() {
                     </div>
                     <div>
                       <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Type de projet</label>
-                      {Number(user?.level) >= 5 ? (
-                        <div style={{ padding: '11px 14px', background: 'var(--primary-subtle)', border: '1.5px solid var(--primary)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          🎓 PFE — <span style={{ fontWeight: 400, fontSize: '12px', color: 'var(--text-secondary)' }}>Détecté automatiquement (niveau M2 / 3CS)</span>
-                        </div>
-                      ) : (
-                        <select value={projectType} onChange={e => setProjectType(e.target.value)} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
-                          <option value="Web">Web</option>
-                          <option value="Mobile App">Mobile App</option>
-                          <option value="Desktop App">Desktop App</option>
-                          <option value="AI / ML">AI / ML</option>
-                          <option value="IoT / Embedded">IoT / Embedded</option>
-                          <option value="Cybersecurity">Cybersecurity</option>
-                          <option value="Autre">Autre</option>
-                        </select>
-                      )}
+                      <select value={projectType} onChange={e => setProjectType(e.target.value)} style={{ width: '100%', padding: '11px 14px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: '14px', color: 'var(--text-primary)', outline: 'none' }}>
+                        <option value="" disabled>-- Choisir un type --</option>
+                        <option value="Web">Web</option>
+                        <option value="Mobile App">Mobile App</option>
+                        <option value="Desktop App">Desktop App</option>
+                        <option value="AI / ML">AI / ML</option>
+                        <option value="IoT / Embedded">IoT / Embedded</option>
+                        <option value="Cybersecurity">Cybersecurity</option>
+                        <option value="Autre">Autre</option>
+                      </select>
                     </div>
                     <div>
                       <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{t('Role')}</label>
@@ -1007,7 +1070,7 @@ export default function Groupe() {
                       </select>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                      <Button icon={<IoArrowForwardOutline size={16} />} onClick={() => { if (!projectTitle.trim() || !projectDescription.trim() || !creatorRole) { setError('Veuillez remplir le titre, la description et le rôle.'); return; } setError(''); setCreateStep(1); }}>Suivant : Récapitulatif</Button>
+                      <Button icon={<IoArrowForwardOutline size={16} />} onClick={() => { if (!projectTitle.trim() || !projectDescription.trim() || !creatorRole || !projectType) { setError('Veuillez remplir le titre, la description, le type de projet et le rôle.'); return; } setError(''); setCreateStep(1); }}>Suivant : Récapitulatif</Button>
                     </div>
                   </div>
                 </Card>
@@ -1165,7 +1228,7 @@ export default function Groupe() {
                     <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>{t('Role')} souhaité</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       {availableRoles.map(r => (
-                        <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', cursor: 'pointer', border: joinRole === r.value ? '2px solid var(--primary)' : '1px solid var(--border)', background: joinRole === r.value ? '#fff' : 'var(--bg)', boxShadow: joinRole === r.value ? '0 4px 12px rgba(79,70,229,0.1)' : 'none', transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}>
+                        <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '14px', cursor: 'pointer', border: joinRole === r.value ? '2px solid var(--primary)' : '1px solid var(--border)', background: joinRole === r.value ? 'var(--primary-subtle)' : 'var(--bg)', boxShadow: joinRole === r.value ? '0 4px 12px rgba(79,70,229,0.1)' : 'none', transition: 'all 0.2s', position: 'relative', overflow: 'hidden' }}>
                           {joinRole === r.value && <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--primary)' }} />}
                           <input type="radio" name="joinRole" value={r.value} checked={joinRole === r.value} onChange={() => setJoinRole(r.value)} style={{ display: 'none' }} />
                           <span style={{ fontSize: '18px', color: joinRole === r.value ? 'var(--primary)' : 'var(--text-muted)' }}>{r.icon}</span>
@@ -1181,6 +1244,44 @@ export default function Groupe() {
           )}
         </>
       )}
+
+      {/* ── Confirm group modal ── */}
+      <Modal isOpen={showGroupConfirmModal} onClose={() => setShowGroupConfirmModal(false)} title="Confirmer la composition du groupe" size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ padding: '16px', borderRadius: '12px', background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)', border: '1.5px solid #F59E0B' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <IoWarningOutline size={22} style={{ color: '#fff' }} />
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#92400E' }}>Action irréversible</h3>
+            </div>
+            <p style={{ fontSize: '14px', color: '#78350F', lineHeight: 1.6 }}>
+              En confirmant, la composition de votre groupe sera <strong>définitivement verrouillée</strong>. Plus aucun membre ne pourra rejoindre, quitter, ou être retiré. Pour toute modification ultérieure, vous devrez contacter l'administration.
+            </p>
+          </div>
+          <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>Membres actuels ({(team?.members || []).length})</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {(team?.members || []).map((m, i) => (
+                <p key={i} style={{ fontSize: '13px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', color: m.isChef ? '#F59E0B' : 'var(--text-muted)' }}>{m.isChef ? '⭐' : '•'}</span>
+                  {m.name} {m.isMe && <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '3px', background: 'var(--primary)', color: '#fff' }}>Vous</span>}
+                </p>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+            <button onClick={() => setShowGroupConfirmModal(false)} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-secondary)', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
+            <button
+              onClick={handleConfirmGroup}
+              disabled={isConfirming}
+              style={{ flex: 2, padding: '12px', borderRadius: '10px', border: 'none', background: '#10B981', color: '#fff', fontWeight: 700, cursor: isConfirming ? 'wait' : 'pointer', opacity: isConfirming ? 0.7 : 1 }}
+            >
+              {isConfirming ? 'Confirmation...' : '🔒 Confirmer et verrouiller'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── Unified Modals ── */}
       <Modal isOpen={showLeaveModal} onClose={() => setShowLeaveModal(false)} title="Quitter le groupe">

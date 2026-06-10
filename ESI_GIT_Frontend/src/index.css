@@ -15,22 +15,22 @@
   --danger: #EF4444;
   --info: #3B82F6;
 
-  --bg: #F8FAFC;
+  --bg: #E4EDF6;
   --bg-card: #FFFFFF;
-  --bg-sidebar: #FFFFFF;
-  --bg-nav: rgba(255,255,255,0.8);
-  --border: #E2E8F0;
-  --border-subtle: #F1F5F9;
+  --bg-sidebar: #F0F5FB;
+  --bg-nav: rgba(255,255,255,0.95);
+  --border: #B8CDE0;
+  --border-subtle: #D0DEED;
 
   --text-primary: #0F172A;
   --text-secondary: #475569;
   --text-muted: #94A3B8;
   --text-inverse: #FFFFFF;
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 3px rgba(31,58,95,0.10), 0 4px 12px rgba(31,58,95,0.07);
+  --shadow-md: 0 4px 16px rgba(31,58,95,0.13), 0 1px 4px rgba(31,58,95,0.08);
+  --shadow-lg: 0 10px 28px rgba(31,58,95,0.14), 0 2px 8px rgba(31,58,95,0.08);
+  --shadow-xl: 0 20px 40px rgba(31,58,95,0.16), 0 4px 12px rgba(31,58,95,0.08);
   --shadow-primary: 0 10px 15px -3px rgba(31, 58, 95, 0.3);
 
   --radius-sm: 6px;

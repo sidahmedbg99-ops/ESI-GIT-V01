@@ -1,7 +1,7 @@
 import {
   IoPeopleOutline, IoSchoolOutline,
-  IoBarChartOutline, IoTrendingUpOutline, IoCalendarOutline,
-  IoDocumentOutline,
+  IoBarChartOutline, IoDocumentOutline,
+  IoAlertCircleOutline, IoPersonOutline,
 } from 'react-icons/io5';
 import {
   PieChart, Pie, Cell, Tooltip, BarChart, Bar,
@@ -25,14 +25,18 @@ export default function AdminDashboard() {
 
   // ── Basic stats from projects dashboard ────────────────────
   const a = analytics ?? {};
-  const totalStudents  = a.totalStudents   ?? safeUsers.filter(u => u.role === 'student').length;
-  const totalTeachers  = a.totalTeachers   ?? safeUsers.filter(u => u.role === 'teacher' || u.type === 'staff').length;
-  const activeGroups   = a.activeGroups    ?? 0;
-  const archivedProj   = a.archivedProjects ?? 0;
-  const pendingGroups  = a.pendingGroups   ?? 0;
-  const pendingMtgs    = a.pendingMeetings  ?? 0;
-  const completionRate = a.completionRate  ?? 0;
-  const totalProjects  = a.totalProjects   ?? 0;
+  const totalStudents        = a.totalStudents        ?? safeUsers.filter(u => u.role === 'student').length;
+  const totalTeachers        = a.totalTeachers        ?? safeUsers.filter(u => u.role === 'teacher' || u.type === 'staff').length;
+  const activeGroups         = a.activeGroups         ?? 0;
+  const archivedProj         = a.archivedProjects     ?? 0;
+  const pendingGroups        = a.pendingGroups        ?? 0;
+  const studentsWithoutGroup = a.studentsWithoutGroup ?? 0;
+  const totalProjects        = a.totalProjects        ?? 0;
+  const gradedProjects       = a.gradedProjects       ?? 0;
+  const readyToArchive       = a.readyToArchive       ?? 0;
+  const juriesAssigned       = a.juriesAssigned       ?? 0;
+  const defensesScheduled    = a.defensesScheduled    ?? 0;
+  const levelFunnel          = a.levelFunnel          ?? [];
 
   // ── Advanced analytics (charts) ────────────────────────────
   const adv = advancedAnalytics ?? {};
@@ -62,20 +66,20 @@ export default function AdminDashboard() {
     { name: t('Admins'),   value: safeUsers.filter(u => u.role === 'admin').length },
   ];
   const projPieData = [
-    { name: 'En attente', value: pendingGroups },
-    { name: 'Approuvés',  value: activeGroups  },
-    { name: 'Archivés',   value: archivedProj  },
+    { name: t('Pending_label'), value: pendingGroups },
+    { name: t('Approved_label'), value: activeGroups  },
+    { name: t('Archived_label'), value: archivedProj  },
   ];
   const hasUsers = userPieData.some(p => p.value > 0);
 
-  // Stat cards
+  // Stat cards — admin-appropriate platform metrics only
   const statCards = [
-    { label: t('TotalStudents_Stat'),   value: totalStudents,          icon: <IoSchoolOutline size={22}/>,      color: 'var(--primary)' },
-    { label: t('Teachers'),             value: totalTeachers,          icon: <IoPeopleOutline size={22}/>,      color: 'var(--accent)'  },
-    { label: t('ActiveGroups_Stat'),    value: activeGroups,           icon: <IoBarChartOutline size={22}/>,    color: '#10B981'        },
-    { label: t('CompletionRate_Stat'),  value: `${completionRate}%`,   icon: <IoTrendingUpOutline size={22}/>,  color: '#8B5CF6'        },
-    { label: t('PendingMeetings_Stat'), value: pendingMtgs,            icon: <IoCalendarOutline size={22}/>,   color: '#F59E0B'        },
-    { label: t('ArchivedProjects_Stat'),value: archivedProj,           icon: <IoDocumentOutline size={22}/>,   color: '#EF4444'        },
+    { label: t('TotalStudents_Stat'),    value: totalStudents,         icon: <IoSchoolOutline size={22}/>,          color: 'var(--primary)' },
+    { label: t('Teachers'),              value: totalTeachers,         icon: <IoPeopleOutline size={22}/>,          color: 'var(--accent)'  },
+    { label: t('ActiveGroups_Stat'),     value: activeGroups,          icon: <IoBarChartOutline size={22}/>,        color: '#10B981'        },
+    { label: t('NoGroup_Stat'),          value: studentsWithoutGroup,  icon: <IoAlertCircleOutline size={22}/>,     color: studentsWithoutGroup > 0 ? '#F59E0B' : '#6B7280' },
+    { label: t('PendingApprovals_Stat'), value: pendingGroups,         icon: <IoPersonOutline size={22}/>,          color: pendingGroups > 0 ? '#8B5CF6' : '#6B7280' },
+    { label: t('ArchivedProjects_Stat'), value: archivedProj,          icon: <IoDocumentOutline size={22}/>,        color: '#EF4444'        },
   ];
 
   return (
@@ -94,25 +98,22 @@ export default function AdminDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
 
         <Card style={{ minHeight: '280px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>Notes moyennes — Enseignants</h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-            Taux d'achèvement des tâches : <strong style={{ color: 'var(--primary)' }}>{ops.task_completion_rate ?? 0}%</strong>
-          </p>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>{t('AvgNotesByTeacher')}</h3>
           {teacherBarData.length > 0 ? (
             <ResponsiveContainer width="100%" height={190}>
               <BarChart data={teacherBarData} barSize={28}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false}/>
                 <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} domain={[0, 20]}/>
-                <Tooltip formatter={v => [`${v}/20`, 'Note moy.']}
+                <Tooltip formatter={v => [`${v}/20`, t('AvgGrade')]}
                   contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '13px' }}/>
                 <Legend wrapperStyle={{ fontSize: '12px' }}/>
-                <Bar dataKey="note" fill="var(--primary)" radius={[6,6,0,0]} name="Note moy. (/20)"/>
+                <Bar dataKey="note" fill="var(--primary)" radius={[6,6,0,0]} name={`${t('AvgGrade')} (/20)`}/>
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 190, color: 'var(--text-muted)', fontSize: 13 }}>
-              Aucune note enregistrée
+              {t('NoGradesYet')}
             </div>
           )}
         </Card>
@@ -142,28 +143,53 @@ export default function AdminDashboard() {
             </>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 190, color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
-              Aucun utilisateur pour l'instant.
+              {t('NoUsersYet')}
             </div>
           )}
         </Card>
       </div>
 
-      {/* ── Row 2: tasks + specialite + project state ── */}
+      {/* ── Row 2: readiness funnel + specialite + project state ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '20px' }}>
 
+        {/* Defense & archival readiness funnel */}
         <Card>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('Tasks')}</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '4px' }}>{t('DefenseReadiness')}</h3>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>{t('DefenseSubtitle')}</p>
           {[
-            { label: 'Total tâches',         value: ops.total_tasks ?? 0,                                                              color: '#6B7280' },
-            { label: 'Tâches terminées',     value: Math.round(((ops.task_completion_rate ?? 0) / 100) * (ops.total_tasks ?? 0)),      color: '#10B981' },
-            { label: 'Tâches en retard',     value: ops.late_tasks  ?? 0,                                                              color: '#EF4444' },
-            { label: 'Étudiants inactifs',   value: stu.inactive    ?? 0,   color: '#F59E0B' },
-          ].map((item, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < 3 ? '1px solid var(--border)' : 'none' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.label}</span>
-              <span style={{ fontSize: '15px', fontWeight: 700, color: item.color }}>{item.value}</span>
+            { label: t('ActiveProjects_label'),     value: activeGroups,      color: 'var(--primary)', pct: 100 },
+            { label: t('JuriesAssigned_label'),     value: juriesAssigned,    color: '#8B5CF6',         pct: activeGroups > 0 ? Math.round(juriesAssigned / activeGroups * 100) : 0 },
+            { label: t('DefensesScheduled_label'),  value: defensesScheduled, color: '#F59E0B',         pct: activeGroups > 0 ? Math.round(defensesScheduled / activeGroups * 100) : 0 },
+            { label: t('Graded_label'),             value: gradedProjects,    color: '#10B981',         pct: activeGroups > 0 ? Math.round(gradedProjects / activeGroups * 100) : 0 },
+            { label: t('ReadyToArchive_label'),     value: readyToArchive,    color: '#EF4444',         pct: activeGroups > 0 ? Math.round(readyToArchive / activeGroups * 100) : 0 },
+          ].map((step, i) => (
+            <div key={i} style={{ marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{step.label}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: step.color }}>{step.value}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
+                <div style={{ width: `${step.pct}%`, height: '100%', borderRadius: 3, background: step.color, transition: 'width 0.4s' }}/>
+              </div>
             </div>
           ))}
+
+          {/* Per-level breakdown */}
+          {levelFunnel.length > 0 && (
+            <>
+              <div style={{ height: 1, background: 'var(--border)', margin: '12px 0' }}/>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>{t('ByLevel')}</p>
+              {levelFunnel.map((lf, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: 'var(--primary-subtle)', color: 'var(--primary)', flexShrink: 0, minWidth: 34, textAlign: 'center' }}>{lf.label}</span>
+                  <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
+                    <div style={{ width: lf.active > 0 ? `${Math.round(lf.graded / lf.active * 100)}%` : '0%', height: '100%', borderRadius: 3, background: '#10B981' }}/>
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>{lf.graded}/{lf.active} {t('Graded_count')}</span>
+                </div>
+              ))}
+            </>
+          )}
         </Card>
 
         <Card>
@@ -174,12 +200,12 @@ export default function AdminDashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false}/>
                 <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false}/>
                 <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', fontSize: '13px' }}/>
-                <Bar dataKey="value" fill="#8B5CF6" radius={[6,6,0,0]} name="Étudiants"/>
+                <Bar dataKey="value" fill="#8B5CF6" radius={[6,6,0,0]} name={t('Students')}/>
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', paddingTop: 40 }}>
-              {safeUsers.length === 0 ? 'Chargement...' : t('NoGroups')}
+              {safeUsers.length === 0 ? t('Loading') : t('NoGroups')}
             </p>
           )}
         </Card>

@@ -36,6 +36,7 @@ export const ENDPOINTS = {
     editJury:   (id) => `jury/admin/jury/edit/${id}/`,            // PATCH
     schedule: 'jury/admin/schedule/create/',                      // POST
     archive: (id) => `projects/admin/projects/${id}/archive/`,    // PATCH
+    archiveAll: 'projects/admin/projects/archive-all/',            // POST
     restore: (id) => `projects/admin/projects/${id}/restore/`,    // PATCH
     archived: 'projects/projects/archived/',                      // GET (role-based)
     delete: (id) => `projects/admin/projects/${id}/`,             // DELETE
@@ -46,10 +47,12 @@ export const ENDPOINTS = {
     changeSupervisor: (id) => `projects/admin/groups/${id}/change-supervisor/`, // PATCH
     
     // Student
+    dashboard: 'projects/student-dashboard/',      // GET → aggregated student stats
     myProject: 'projects/my-project/',             // GET
     create: 'projects/create/',                    // POST
     join: 'projects/join/',                        // POST { invite_code, role }
     leave: 'projects/leave/',                      // POST
+    confirm: 'projects/confirm/',                  // POST (leader, ≥3 members → locks group)
     leader: 'projects/leader/',                    // PATCH { action, target_cid }
     supervisorRequest: 'projects/supervisor-request/', // GET/POST
     availableSupervisors: 'projects/available-supervisors/', // GET → filtered: available=True, not blocked
@@ -78,19 +81,23 @@ export const ENDPOINTS = {
     create: 'meetings/',                           // POST
     update: (id) => `meetings/${id}/`,             // PUT
     delete: (id) => `meetings/${id}/`,             // DELETE
+    attendance: (id) => `meetings/${id}/attendance/`, // GET (student read-only)
     // Teacher
     teacherAll: 'teacher/meetings/',               // GET/POST
     teacherAction: (id) => `teacher/meetings/${id}/`, // PATCH
+    teacherAttendance: (id) => `teacher/meetings/${id}/attendance/`, // GET/PUT
   },
 
   // ── Notifications ─────────────────────────────────────────────────
   notifications: {
-    list: 'notifications/',                        // GET (student, IsStudent)
-    markRead: (id) => `notifications/${id}/read/`, // PATCH
-    staffList: 'notifications/staff/',             // GET (teacher/admin, IsStaff)
+    list: 'notifications/',                              // GET (student, IsStudent)
+    unreadCount: 'notifications/unread-count/',          // GET → { unread: int }
+    markRead: (id) => `notifications/${id}/read/`,       // PATCH
+    staffList: 'notifications/staff/',                   // GET (teacher/admin, IsStaff)
+    staffUnreadCount: 'notifications/staff/unread-count/', // GET → { unread: int }
     staffMarkRead: (id) => `notifications/staff/${id}/read/`, // PATCH
-    adminSend: 'notifications/admin/send/',        // POST (admin)
-    adminList: 'notifications/admin/list/',        // GET (admin)
+    adminSend: 'notifications/admin/send/',              // POST (admin)
+    adminList: 'notifications/admin/list/',              // GET (admin)
     adminDelete: (id) => `notifications/admin/${id}/delete/`, // DELETE (admin)
   },
 
@@ -154,6 +161,13 @@ export const ENDPOINTS = {
     studentsWithoutGroup: 'projects/admin/students-without-group/',
     archivedVisibility: 'projects/admin/archived-projects-visibility/',
     advanceYear: 'admin/advance-year/',
+  },
+
+  // ── Resources ─────────────────────────────────────────────────
+  resources: {
+    list: 'resources/',                      // GET ?type=file|link&role=staff|student
+    create: 'resources/',                    // POST (multipart or json)
+    detail: (id) => `resources/${id}/`,      // PATCH (admin) | DELETE (owner or admin)
   },
 
   // ── Archive ───────────────────────────────────────────────────────

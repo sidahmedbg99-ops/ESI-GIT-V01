@@ -12,7 +12,6 @@ Endpoints covered:
 """
 
 from typing import Any, Dict, cast
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -150,50 +149,61 @@ class TeacherDashboardView(APIView):
             "done": tasks.filter(state="done").count(),
         }
 
-        # average progress across supervised groups
-        avg_progress = 0
+        today = timezone.now().date()
+
+        # average task count (honest: done/total, not labeled "progress")
+        avg_tasks_done = 0
+        avg_tasks_total = 0
         if supervised.exists():
-            total = 0
             for p in supervised:
                 t = Task.objects.filter(PID=p)
-                done = t.filter(state="done").count()
-                count = t.count()
-                total += (done / count * 100) if count else 0
-            avg_progress = round(total / supervised.count())
+                avg_tasks_done += t.filter(state="done").count()
+                avg_tasks_total += t.count()
 
-        # completion rate: groups where all tasks are done / total supervised
-        completion_rate = 0
-        if supervised.exists():
-            completed = sum(
-                1
-                for p in supervised
-                if Task.objects.filter(PID=p).exists()
-                and not Task.objects.filter(PID=p).exclude(state="done").exists()
-            )
-            completion_rate = round(completed / supervised.count() * 100)
-
-        # average livrable grade
-        avg_livrable = ProjectAttachment.objects.filter(
-            PID__in=supervised, is_final=True
-        ).aggregate(avg=Avg("file_size"))
-        # (file_size is the only numeric field on attachments; replace with a grade
-        #  field if you add one later)
-
-        # per-group progress for the bar chart
+        # per-group data: task counts + health signals (no volatile % label)
         groups_progress = []
+        at_risk_groups = []
         for p in supervised:
             t = Task.objects.filter(PID=p)
             done = t.filter(state="done").count()
-            count = t.count()
-            pct = round(done / count * 100) if count else 0
-            groups_progress.append({"group": p.invite_code, "progress": pct})
+            total_t = t.count()
+            overdue = t.exclude(state="done").filter(deadline__lt=today).count()
+            has_upcoming = Meeting.objects.filter(
+                PID=p, status__in=["approved", "confirmed"], date__gte=today
+            ).exists()
 
-        # task priority breakdown
-        task_priority = {
-            "high": tasks.filter(priority=3).count(),
-            "medium": tasks.filter(priority=2).count(),
-            "low": tasks.filter(priority=1).count(),
-        }
+            # health: at_risk > watch > on_track
+            if overdue > 0:
+                health = "at_risk"
+            elif not has_upcoming and not p.submitted_to_supervisor:
+                health = "watch"
+            else:
+                health = "on_track"
+
+            groups_progress.append({
+                "group": p.name or p.invite_code,
+                "invite_code": p.invite_code,
+                "tasks_done": done,
+                "tasks_total": total_t,
+                "overdue": overdue,
+                "submitted": p.submitted_to_supervisor,
+                "approved": p.final_submission_approved,
+                "has_upcoming_meeting": has_upcoming,
+                "health": health,
+            })
+            if health in ("at_risk", "watch"):
+                reasons = []
+                if overdue > 0:
+                    reasons.append(f"{overdue} tâche(s) en retard")
+                if not has_upcoming:
+                    reasons.append("aucune réunion planifiée")
+                if p.submitted_to_supervisor and not p.final_submission_approved:
+                    reasons.append("soumission en attente de validation")
+                at_risk_groups.append({
+                    "group": p.name or p.invite_code,
+                    "health": health,
+                    "reasons": reasons,
+                })
 
         # livrables average note (from Grades model)
         grades_qs = Grades.objects.filter(PID__in=supervised)
@@ -211,13 +221,14 @@ class TeacherDashboardView(APIView):
             {
                 "groups_encadres": supervised.count(),
                 "groups_actifs": active.count(),
-                "avancement_moyen": avg_progress,
-                "taux_completion": completion_rate,
+                "tasks_done": avg_tasks_done,
+                "tasks_total": avg_tasks_total,
+                "pending_supervisor_requests": pending_requests,
                 "reunions_en_attente": pending_meetings,
                 "evaluations_en_attente": jury_pending_count,
                 "task_stats": task_stats,
-                "task_priority": task_priority,
                 "groups_progress": groups_progress,
+                "at_risk_groups": at_risk_groups,
                 "note_moyenne_livrables": avg_note,
                 "pending_meetings": list(pending_meeting_list),
             }

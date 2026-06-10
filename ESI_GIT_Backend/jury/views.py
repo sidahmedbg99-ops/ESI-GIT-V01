@@ -6,7 +6,77 @@ from users.permissions import IsAdmin, IsStaff
 from .models import ProjectJury, Schedule, Grades, GradingFormula
 from .serializers import ProjectJurySerializer, ScheduleSerializer, GradesSerializer
 from notifications.utils import notify
-from projects.models import SProjects
+from projects.models import SProjects, Projects
+from users.models import Staff
+
+
+LEVEL_LABELS = {2: '2CPI', 3: '1CS', 4: '2CS', 5: '3CS'}
+
+
+def _check_and_notify_grading_completion(graded_project):
+    """
+    After a project is graded, check if all active projects in its level —
+    and possibly all levels — are now graded. Notify admins accordingly.
+    De-duplicated via PlatformSettings.graded_notified_levels and all_graded_notified.
+    """
+    from admin_panel.models import PlatformSettings
+
+    settings = PlatformSettings.get_settings()
+    level = graded_project.academic_level
+    year = graded_project.year
+
+    if not level or not year:
+        return
+
+    # Active project levels we care about (2-5)
+    active_levels = list(
+        Projects.objects.filter(archived=False, year=year, academic_level__in=LEVEL_LABELS.keys())
+        .values_list('academic_level', flat=True)
+        .distinct()
+    )
+    if not active_levels:
+        return
+
+    already_notified = settings.graded_notified_levels or []
+    admins = list(Staff.objects.filter(is_admin=True))
+
+    # Per-level check
+    if level not in already_notified:
+        level_projects = Projects.objects.filter(archived=False, year=year, academic_level=level)
+        total = level_projects.count()
+        graded = Grades.objects.filter(PID__in=level_projects).count()
+        if total > 0 and graded >= total:
+            label = LEVEL_LABELS.get(level, f'Level {level}')
+            for admin in admins:
+                notify(
+                    recipient_type="staff",
+                    recipient_id=admin.TID,
+                    title=f"All {label} projects graded",
+                    message=f"All {label} projects for {year} have been graded and are ready to archive.",
+                )
+            already_notified = list(set(already_notified + [level]))
+            settings.graded_notified_levels = already_notified
+            settings.save(update_fields=['graded_notified_levels'])
+
+    # All-levels check
+    if not settings.all_graded_notified:
+        all_done = all(
+            Grades.objects.filter(
+                PID__in=Projects.objects.filter(archived=False, year=year, academic_level=lvl)
+            ).count()
+            >= Projects.objects.filter(archived=False, year=year, academic_level=lvl).count() > 0
+            for lvl in active_levels
+        )
+        if all_done:
+            for admin in admins:
+                notify(
+                    recipient_type="staff",
+                    recipient_id=admin.TID,
+                    title="All active projects graded",
+                    message=f"All active projects for {year} have been graded. You can now proceed with archiving.",
+                )
+            settings.all_graded_notified = True
+            settings.save(update_fields=['all_graded_notified'])
 
 
 # ─────────────────────────────────────────
@@ -380,6 +450,9 @@ class TeacherSubmitGradeView(APIView):
                 title="Project graded",
                 message=f'Your project "{project.name}" has been graded. Final grade: {grade.final_grade}/20.',
             )
+
+        # notify admins when a level / all levels are fully graded
+        _check_and_notify_grading_completion(project)
 
         return Response({
             "message": "Grades submitted successfully",

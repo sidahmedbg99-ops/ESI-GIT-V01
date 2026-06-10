@@ -33,5 +33,6 @@ urlpatterns = [
     path("api/meetings/", include("meetings.urls")),
     path("api/notifications/", include("notifications.urls")),
     path("api/teacher/", include("teacher.urls")),
+    path("api/resources/", include("admin_panel.resource_urls")),  # kept for compatibility
     path("api/token/refresh/", TokenRefreshView.as_view(serializer_class=CustomTokenRefreshSerializer), name="token_refresh"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

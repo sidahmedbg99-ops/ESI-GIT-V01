@@ -17,6 +17,7 @@ from .views import (
     TeacherJuryListView,
     TeacherJuryEvaluateView,
 )
+from meetings.views import TeacherAttendanceView
 
 urlpatterns = [
     # ── Profile ──────────────────────────────────────
@@ -54,6 +55,13 @@ urlpatterns = [
         "meetings/<int:meeting_id>/",
         TeacherMeetingActionView.as_view(),
         name="teacher-meeting-action",
+    ),
+
+    # GET/PUT /api/teacher/meetings/<meeting_id>/attendance/ → record attendance
+    path(
+        "meetings/<int:meeting_id>/attendance/",
+        TeacherAttendanceView.as_view(),
+        name="teacher-meeting-attendance",
     ),
 
     # ── Tasks ────────────────────────────────────────

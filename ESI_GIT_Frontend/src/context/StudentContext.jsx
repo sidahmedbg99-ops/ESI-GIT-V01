@@ -28,6 +28,7 @@ export function StudentProvider({ children }) {
   const [livrables,      setLivrables]      = useState([]);
   const [messages,       setMessages]       = useState({});
   const [recentActivity, setRecentActivity] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState(null);
 
   const { request: fetchAllGroups, loading: groupLoading      } = useApi(groupApi.getAll);
   const { request: loadTasks,      loading: tasksLoading      } = useApi(tasksApi.getGroupTasks);
@@ -108,6 +109,7 @@ export function StudentProvider({ children }) {
 
       loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(console.error);
       loadLivrables(normalizedGroup._id).then(setLivrables).catch(console.error);
+      groupApi.getStudentDashboard().then(setDashboardStats).catch(console.error);
     }).catch(() => {
       setGroup(null);
     });
@@ -312,7 +314,7 @@ export function StudentProvider({ children }) {
 
   const value = {
     group, tasks, meetings, livrables, messages, recentActivity,
-    stats, upcomingDeadlines,
+    stats, upcomingDeadlines, dashboardStats,
     groupLoading, tasksLoading, meetingsLoading, livrablesLoading,
     addTaskObject, moveTask, deleteTask,
     addMeeting, updateMeetingStatus,

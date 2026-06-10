@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   IoPeopleOutline, IoSearchOutline, IoAddOutline, IoEyeOutline,
   IoTrashOutline, IoCheckmarkCircleOutline, IoCloseCircleOutline,
@@ -13,6 +14,7 @@ import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import { useAdmin } from '../../context/AdminContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
 import AttachmentsPopover from '../../components/ui/AttachmentsPopover';
 import { IoPersonAddOutline, IoSwapHorizontalOutline } from 'react-icons/io5';
 
@@ -98,7 +100,8 @@ function JuryScheduleModal({ group, users, onClose, onAssign, onSchedule }) {
     }
   };
 
-  const inputStyle = { width: '100%', padding: '9px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box' };
+  const { theme } = useTheme();
+  const inputStyle = { width: '100%', padding: '9px 10px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', outline: 'none', color: 'var(--text-primary)', boxSizing: 'border-box', colorScheme: theme === 'dark' ? 'dark' : 'light' };
 
   return (
     <Modal isOpen onClose={onClose} title={`${isEdit ? 'Modifier' : 'Assigner'} jury & soutenance — ${group?.title || group?.groupCode}`} size="md">
@@ -108,7 +111,7 @@ function JuryScheduleModal({ group, users, onClose, onAssign, onSchedule }) {
         {/* ── Jury section ── */}
         <div>
           <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '8px' }}>
-            Jury — {selected.length}/3 sélectionnés
+            Jury — {selected.length}/3 {t('JurySelected')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
             {allTeachers.map(tVal => {
@@ -135,9 +138,9 @@ function JuryScheduleModal({ group, users, onClose, onAssign, onSchedule }) {
                   {isSelected && (
                     <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0 }}>
                       <select value={sel.role} onChange={e => changeRole(e, id)}
-                        style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '12px', border: '1px solid var(--border)', background: '#fff', outline: 'none' }}>
-                        <option value="president">Président</option>
-                        <option value="examiner">Examinateur</option>
+                        style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '12px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', outline: 'none' }}>
+                        <option value="president">{t('JuryRoles.president')}</option>
+                        <option value="examiner">{t('JuryRoles.examiner')}</option>
                       </select>
                     </div>
                   )}
@@ -147,12 +150,12 @@ function JuryScheduleModal({ group, users, onClose, onAssign, onSchedule }) {
           </div>
           {selected.length === 3 && !supervisorIncluded && (
             <div style={{ padding: '8px 12px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
-              ⚠️ L'encadreur doit faire partie du jury.
+              {t('SupervisorMustBeInJury')}
             </div>
           )}
           {selected.length === 3 && presidentCount !== 1 && (
             <div style={{ padding: '8px 12px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
-              ⚠️ Exactement 1 président requis.
+              {t('ExactlyOnePresident')}
             </div>
           )}
         </div>
@@ -160,36 +163,36 @@ function JuryScheduleModal({ group, users, onClose, onAssign, onSchedule }) {
         {/* ── Schedule section ── */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
           <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', marginBottom: '10px' }}>
-            Soutenance <span style={{ fontWeight: 400, textTransform: 'none', fontSize: '11px' }}>(optionnel — peut être complété plus tard)</span>
+            {t('DefenseTitle')} <span style={{ fontWeight: 400, textTransform: 'none', fontSize: '11px' }}>({t('DefenseOptional')})</span>
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Date</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>{t('Date')}</label>
               <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)} style={inputStyle}/>
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Heure</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>{t('Time')}</label>
               <input type="time" value={time} onChange={e => setTime(e.target.value)} style={inputStyle}/>
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Salle</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>{t('Room')}</label>
               <input type="text" value={room} onChange={e => setRoom(e.target.value)} placeholder="ex: Salle A1" style={inputStyle}/>
             </div>
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Département</label>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>{t('Department')}</label>
               <select value={dept} onChange={e => setDept(e.target.value)} style={inputStyle}>
-                <option value="">— Sélectionner —</option>
+                <option value="">{t('SelectPlaceholder')}</option>
                 <option value="PREP">PREP</option>
                 <option value="SUP">SUP</option>
               </select>
             </div>
           </div>
-          {date && date < today && <p style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>La date ne peut pas être dans le passé.</p>}
+          {date && date < today && <p style={{ fontSize: '11px', color: '#DC2626', marginTop: '4px' }}>{t('PastDateError')}</p>}
         </div>
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '12px', color: juryValid ? 'var(--success)' : 'var(--text-muted)' }}>
-            {juryValid ? `✅ Jury complet${scheduleValid ? ' · Soutenance planifiée' : ''}` : `${selected.length}/3 membres jury`}
+            {juryValid ? `${t('JuryComplete')}${scheduleValid ? ` · ${t('DefenseScheduled')}` : ''}` : `${selected.length}/3 ${t('JuryMembersCount')}`}
           </span>
           <div style={{ display: 'flex', gap: '10px' }}>
             <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
@@ -224,9 +227,9 @@ function GroupDetailModal({ g, users, onClose }) {
       return { name: user?.name || id, role: t(`JuryRoles.${roleKey}`) || roleKey };
     });
   } else if (g.jury && typeof g.jury === 'object') {
-    if (g.jury.president) juryMembers.push({ name: g.jury.president, role: 'Président', grade: g.grades?.grade1 });
-    if (g.jury.examiner1) juryMembers.push({ name: g.jury.examiner1, role: 'Examinateur', grade: g.grades?.grade2 });
-    if (g.jury.examiner2) juryMembers.push({ name: g.jury.examiner2, role: 'Examinateur', grade: g.grades?.grade3 });
+    if (g.jury.president) juryMembers.push({ name: g.jury.president, role: t('JuryRoles.president'), grade: g.grades?.grade1 });
+    if (g.jury.examiner1) juryMembers.push({ name: g.jury.examiner1, role: t('JuryRoles.examiner'), grade: g.grades?.grade2 });
+    if (g.jury.examiner2) juryMembers.push({ name: g.jury.examiner2, role: t('JuryRoles.examiner'), grade: g.grades?.grade3 });
   }
 
   return (
@@ -323,7 +326,7 @@ function GroupDetailModal({ g, users, onClose }) {
 
         {/* ── Soutenance ── */}
         <div style={{ padding: '14px', borderRadius: '10px', background: g.schedule ? 'var(--primary-subtle)' : 'var(--bg)', border: `1px solid ${g.schedule ? '#10B981' : 'var(--border)'}` }}>
-          <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Soutenance</p>
+          <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>{t('DefenseTitle')}</p>
           {g.schedule ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <p style={{ fontSize: '13px', fontWeight: 700 }}>
@@ -334,7 +337,7 @@ function GroupDetailModal({ g, users, onClose }) {
               </p>
             </div>
           ) : (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Non planifiée</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('NotScheduled')}</p>
           )}
         </div>
 
@@ -342,7 +345,7 @@ function GroupDetailModal({ g, users, onClose }) {
         <div style={{ padding: '14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              Livrables {attachments.length > 0 && `(${attachments.length})`}
+              {t('Deliverables_title')} {attachments.length > 0 && `(${attachments.length})`}
             </p>
             {attachments.length > 0 && (
               <button
@@ -358,12 +361,12 @@ function GroupDetailModal({ g, users, onClose }) {
                 }}
                 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-subtle)', border: 'none', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer' }}
               >
-                ⬇ Tout télécharger
+                {t('DownloadAll')}
               </button>
             )}
           </div>
           {attachments.length === 0 ? (
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Aucun livrable soumis.</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('NoDeliverable')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '168px', overflowY: 'auto' }}>
               {attachments.map(a => (
@@ -469,7 +472,7 @@ function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRem
                       disabled={saving}
                       style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
                     >
-                      Retirer
+                      {t('RemoveMember')}
                     </button>
                   )}
                 </div>
@@ -481,16 +484,16 @@ function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRem
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <select value={newMemberCid} onChange={e => setNewMemberCid(e.target.value)}
               style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
-              <option value="">— Ajouter un étudiant {groupLevel ? `(${levelMapInv[groupLevel]})` : ''} —</option>
+              <option value="">— {t('AddStudent')} {groupLevel ? `(${levelMapInv[groupLevel]})` : ''} —</option>
               {availableStudents.map(u => (
                 <option key={u._id} value={u._id}>{u.name} — {u.specialite || ''}</option>
               ))}
             </select>
-            <Button onClick={handleAdd} disabled={!newMemberCid || saving}>Ajouter</Button>
+            <Button onClick={handleAdd} disabled={!newMemberCid || saving}>{t('Add')}</Button>
           </div>
           {availableStudents.length === 0 && (
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-              Aucun étudiant sans groupe disponible pour ce niveau.
+              {t('NoStudentAvailable')}
             </p>
           )}
         </div>
@@ -498,7 +501,7 @@ function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRem
         {/* Supervisor section */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
           <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px', letterSpacing: '0.06em' }}>
-            Encadreur
+            {t('SupervisorSection')}
           </p>
           {currentSupervisor && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '10px', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', marginBottom: '10px' }}>
@@ -514,7 +517,7 @@ function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRem
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <select value={newSupId} onChange={e => setNewSupId(e.target.value)}
               style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
-              <option value="">— Changer l'encadreur —</option>
+              <option value="">— {t('ChangeSupervisor')} —</option>
               {teachers.map(u => (
                 <option key={u._id} value={u._id}>
                   {u.name} {u.available === false ? '(Indisponible)' : ''}
@@ -532,7 +535,7 @@ function EditGroupModal({ g, withoutGroup, allUsers, onClose, onAddMember, onRem
               onClick={async () => { await onArchive(g._id ?? g.PID); onClose(); }}
               icon={<IoArchiveOutline size={16}/>}
             >
-              Archiver
+              {t('ArchiveGroup')}
             </Button>
           )}
           <div style={{ marginLeft: 'auto' }}>
@@ -616,7 +619,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
 
         {/* Project title defaults to temp — notice only */}
         <div style={{ padding: '10px 14px', borderRadius: '10px', background: 'var(--primary-subtle)', border: '1px solid var(--primary-border)', fontSize: '13px', color: 'var(--primary)', fontWeight: 600 }}>
-          📌 Le titre du projet sera <strong>"temp"</strong> par défaut. Le <strong>chef de groupe</strong> pourra modifier le nom et le type du projet après création.
+          {t('TitleDefaultNote')}
         </div>
 
         <div>
@@ -702,7 +705,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
                           <input type="radio" name="leader" checked={leaderId === s._id} onChange={() => setLeaderId(s._id)} style={{ margin: 0 }}/>
                           CHEF
                         </label>
-                        <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '11px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)', background: '#fff' }}>
+                        <select value={sel.role} onChange={e => updateRole(s._id, e.target.value)} style={{ fontSize: '11px', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)' }}>
                           <option value="fullstack">Fullstack</option>
                           <option value="frontend">Frontend</option>
                           <option value="backend">Backend</option>
@@ -730,7 +733,7 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
 // ── Main page ──────────────────────────────────────────────────────
 export default function AdminGroupes() {
   const { t } = useLanguage();
-  const { groups, users, archive, departments, updateGroup, addGroup, assignJury, editJury, scheduleDefense, reloadGroups, archiveGroup, addMember, removeMember, changeSupervisor } = useAdmin();
+  const { groups, users, archive, departments, updateGroup, addGroup, assignJury, editJury, scheduleDefense, reloadGroups, archiveGroup, archiveAllGroups, addMember, removeMember, changeSupervisor } = useAdmin();
 
   const safeGroups = groups || [];
   const safeUsers  = users  || [];
@@ -745,7 +748,8 @@ export default function AdminGroupes() {
   const [detailGrp,    setDetailGrp]    = useState(null);
   const [editGrp,      setEditGrp]      = useState(null);
   const [jurySchedGrp, setJurySchedGrp] = useState(null);
-  const [createGrp,    setCreateGrp]    = useState(false);
+  const [createGrp,      setCreateGrp]      = useState(false);
+  const [archiveAllOpen, setArchiveAllOpen] = useState(false);
 
   useEffect(() => { reloadGroups(); }, []);
 
@@ -837,15 +841,15 @@ export default function AdminGroupes() {
               {/* Tag filter */}
               <select value={filterTag} onChange={e => setFilterTag(e.target.value)}
                 style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
-                <option value="">Tous les tags</option>
-                <option value="active">Actif</option>
-                <option value="approved">Approuvé</option>
-                <option value="graded">Noté</option>
+                <option value="">{t('AllTags')}</option>
+                <option value="active">{t('ActiveTag')}</option>
+                <option value="approved">{t('ApprovedTag')}</option>
+                <option value="graded">{t('GradedTag')}</option>
               </select>
               {/* Level filter — 2CPI/1CS/2CS/3CS only */}
               <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)}
                 style={{ padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
-                <option value="">Tous les niveaux</option>
+                <option value="">{t('AllLevels')}</option>
                 <option value="2">2CPI</option>
                 <option value="3">1CS</option>
                 <option value="4">2CS</option>
@@ -857,7 +861,7 @@ export default function AdminGroupes() {
                   onClick={() => setSupOpen(v => !v)}>
                   <IoPersonOutline size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
                   <span style={{ flex: 1, color: filterSup ? 'var(--text-primary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {filterSup ? (teachers.find(u => String(u._id) === filterSup)?.name || 'Encadreur') : 'Tous les encadreurs'}
+                    {filterSup ? (teachers.find(u => String(u._id) === filterSup)?.name || t('Encadreur')) : t('AllSupervisors')}
                   </span>
                   {filterSup && (
                     <span onClick={e => { e.stopPropagation(); setFilterSup(''); setSupSearch(''); setSupOpen(false); }}
@@ -888,7 +892,15 @@ export default function AdminGroupes() {
                   </div>
                 )}
               </div>
-              <Button onClick={() => setCreateGrp(true)} icon={<IoAddOutline size={16}/>} style={{ marginLeft: 'auto' }}>{t('CreateGroup')}</Button>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setArchiveAllOpen(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', background: '#FEF3C7', border: '1px solid #F59E0B', color: '#D97706', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <IoArchiveOutline size={15}/> {t('ArchiveAll')}
+                </button>
+                <Button onClick={() => setCreateGrp(true)} icon={<IoAddOutline size={16}/>}>{t('CreateGroup')}</Button>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gap: '16px' }}>
@@ -941,7 +953,7 @@ export default function AdminGroupes() {
                           return (
                             <button
                               onClick={() => !isGraded && setJurySchedGrp(g)}
-                              title={isGraded ? 'Projet noté — modification désactivée' : fullySet ? 'Modifier jury & soutenance' : 'Assigner jury & soutenance'}
+                              title={isGraded ? t('JuryModificationDisabled') : fullySet ? t('EditJuryDefense') : t('AssignJuryDefense')}
                               style={{ width: 34, height: 34, borderRadius: '10px',
                                 background: fullySet ? 'var(--primary-subtle)' : 'var(--bg)',
                                 border: `1px solid ${fullySet ? 'var(--primary)' : 'var(--border)'}`,
@@ -979,22 +991,22 @@ export default function AdminGroupes() {
                         const hasSched  = !!g.schedule?.presentation_date;
                         if (isGraded) return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent, #7C3AED)', fontSize: '12px', fontWeight: 700, marginLeft: 'auto' }}>
-                            ⭐ Noté — {g.grades.final_grade}/20
+                            ⭐ {t('GradedScore')} {g.grades.final_grade}/20
                           </div>
                         );
                         if (hasJury && hasSched) return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--success)', fontSize: '12px', fontWeight: 700, marginLeft: 'auto' }}>
-                            <IoCheckmarkCircleOutline size={13}/> Prêt pour la soutenance
+                            <IoCheckmarkCircleOutline size={13}/> {t('ReadyForDefense')}
                           </div>
                         );
                         if (hasJury) return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#F59E0B', fontSize: '12px', fontWeight: 600, marginLeft: 'auto' }}>
-                            ⏳ Jury ✓ — Date manquante
+                            {t('JuryOkDateMissing')}
                           </div>
                         );
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#F59E0B', fontSize: '12px', fontWeight: 600, marginLeft: 'auto' }}>
-                            ⏳ Jury requis
+                            {t('JuryRequired')}
                           </div>
                         );
                       })()}
@@ -1017,6 +1029,276 @@ export default function AdminGroupes() {
       {editGrp && <EditGroupModal g={editGrp} withoutGroup={withoutGroup} allUsers={safeUsers} onClose={() => setEditGrp(null)} onAddMember={addMember} onRemoveMember={removeMember} onChangeSupervisor={changeSupervisor} onArchive={archiveGroup} onDone={reloadGroups}/>}
       {jurySchedGrp && <JuryScheduleModal group={jurySchedGrp} users={safeUsers} onClose={() => { setJurySchedGrp(null); reloadGroups(); }} onAssign={handleAssignJury} onSchedule={handleSchedule}/>}
       {createGrp && <CreateGroupModal withoutGroup={withoutGroup} onClose={() => setCreateGrp(false)} onSubmit={addGroup}/>}
+      {archiveAllOpen && (
+        <ArchiveAllModal
+          groups={realGroups}
+          onClose={() => setArchiveAllOpen(false)}
+          onArchiveSelected={async (ids) => {
+            for (const id of ids) await archiveGroup(id);
+            await reloadGroups();
+            setArchiveAllOpen(false);
+          }}
+        />
+      )}
     </DashboardLayout>
+  );
+}
+
+const LEVEL_OPTIONS = [
+  { value: 'all', label: 'Tous' },
+  { value: '2',   label: '2CPI' },
+  { value: '3',   label: '1CS' },
+  { value: '4',   label: '2CS' },
+  { value: '5',   label: '3CS' },
+];
+const LEVEL_LABELS = { 2: '2CPI', 3: '1CS', 4: '2CS', 5: '3CS' };
+
+function ArchiveAllModal({ groups, onClose, onArchiveSelected }) {
+  const { t } = useLanguage();
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [selected, setSelected]       = useState(new Set()); // set of group IDs (graded ones, pre-selected)
+  const [step, setStep]               = useState(1);
+  const [archiving, setArchiving]     = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+
+  const nonArchived = groups.filter(g => !g.archived);
+
+  // Apply level filter
+  const levelInt  = levelFilter === 'all' ? null : parseInt(levelFilter);
+  const inScope   = levelInt !== null
+    ? nonArchived.filter(g => g.academic_level === levelInt)
+    : nonArchived;
+
+  const graded   = inScope.filter(g => g.grades?.final_grade != null);
+  const ungraded = inScope.filter(g => g.grades?.final_grade == null);
+
+  // Pre-select all graded when level changes
+  useEffect(() => {
+    setSelected(new Set(graded.map(g => g._id ?? g.PID)));
+  }, [levelFilter, groups]);
+
+  const toggleGroup = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    const ids = graded.map(g => g._id ?? g.PID);
+    if (ids.every(id => selected.has(id))) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(ids));
+    }
+  };
+
+  const selectedList = graded.filter(g => selected.has(g._id ?? g.PID));
+  const confirmValid = confirmText.trim().toUpperCase() === 'ARCHIVER';
+
+  const handleConfirm = async () => {
+    setArchiving(true);
+    try {
+      const ids = selectedList.map(g => g._id ?? g.PID);
+      await onArchiveSelected(ids);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const chipStyle = (active) => ({
+    padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s',
+    background: active ? 'var(--primary)' : 'transparent',
+    color:      active ? '#fff' : 'var(--text-secondary)',
+    border:     active ? 'none' : '1px solid var(--border)',
+  });
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '16px' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 20, padding: 28, width: 540, maxWidth: '96vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <IoArchiveOutline size={18} color="#D97706"/>
+          </div>
+          <h2 style={{ fontSize: '17px', fontWeight: 800 }}>{t('CloseArchiveProjects')}</h2>
+        </div>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', paddingLeft: '46px' }}>
+          {t('OnlyGradedArchivable')}
+        </p>
+
+        {step === 1 && (
+          <>
+            {/* Level chips */}
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {t('FilterByLevel')}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {LEVEL_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => setLevelFilter(opt.value)} style={chipStyle(levelFilter === opt.value)}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Graded groups — selectable */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {t('GradedProjects')} ({graded.length}) — {t('Archivable')}
+                </p>
+                {graded.length > 0 && (
+                  <button onClick={toggleAll} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                    {graded.every(g => selected.has(g._id ?? g.PID)) ? t('DeselectAll') : t('SelectAll')}
+                  </button>
+                )}
+              </div>
+              {graded.length === 0 ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '12px', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '10px' }}>
+                  {t('UngradedForLevel')}
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+                  {graded.map(g => {
+                    const id = g._id ?? g.PID;
+                    const isSel = selected.has(id);
+                    return (
+                      <label key={id} style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                        borderRadius: '10px', border: `1.5px solid ${isSel ? 'var(--primary)' : 'var(--border)'}`,
+                        background: isSel ? 'var(--primary-subtle)' : 'var(--bg)',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}>
+                        <input type="checkbox" checked={isSel} onChange={() => toggleGroup(id)}
+                          style={{ width: 15, height: 15, accentColor: 'var(--primary)', cursor: 'pointer', flexShrink: 0 }}/>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: '13px', fontWeight: 700 }}>{g.groupCode ?? g.title}</span>
+                          {g.academic_level && (
+                            <span style={{ marginLeft: 6, fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                              {LEVEL_LABELS[g.academic_level] ?? `L${g.academic_level}`}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: 4 }}>{g.title !== g.groupCode ? g.title : ''}</span>
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#7C3AED', flexShrink: 0 }}>⭐ {g.grades.final_grade}/20</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Ungraded groups — informational only */}
+            {ungraded.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                  {t('UngradedProjects')} ({ungraded.length}) — {t('WontBeArchived')}
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '140px', overflowY: 'auto' }}>
+                  {ungraded.map(g => (
+                    <div key={g._id ?? g.PID} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px',
+                      borderRadius: '10px', border: '1.5px solid var(--border)', background: 'var(--bg)',
+                      opacity: 0.5,
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600 }}>{g.groupCode ?? g.title}</span>
+                        {g.academic_level && (
+                          <span style={{ marginLeft: 6, fontSize: '10px', fontWeight: 600, padding: '1px 5px', borderRadius: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                            {LEVEL_LABELS[g.academic_level] ?? `L${g.academic_level}`}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '11px', padding: '2px 7px', borderRadius: '5px', background: '#FEF3C7', color: '#D97706', fontWeight: 700, flexShrink: 0 }}>Non noté</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {ungraded.length > 0 && (
+              <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#FEF3C7', border: '1px solid #F59E0B', marginBottom: '10px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '14px', flexShrink: 0 }}>⚠️</span>
+                <p style={{ fontSize: '12px', color: '#92400E', fontWeight: 600, margin: 0 }}>
+                  {ungraded.length} {t('UngradedProjects')} — {t('UngradedWarn')}.
+                </p>
+              </div>
+            )}
+            <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#FEE2E2', border: '1px solid #FCA5A5', marginBottom: '20px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <span style={{ fontSize: '14px', flexShrink: 0 }}>🔒</span>
+              <p style={{ fontSize: '12px', color: '#991B1B', fontWeight: 600, margin: 0 }}>
+                {t('IrreversibleArchive')}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                Annuler
+              </button>
+              <button
+                onClick={() => setStep(2)}
+                disabled={selectedList.length === 0}
+                style={{ padding: '9px 18px', borderRadius: '10px', background: selectedList.length === 0 ? 'var(--border)' : '#D97706', color: '#fff', border: 'none', fontSize: '13px', fontWeight: 700, cursor: selectedList.length === 0 ? 'not-allowed' : 'pointer', opacity: selectedList.length === 0 ? 0.5 : 1 }}
+              >
+                {t('Continue')} ({selectedList.length} {t('Selected')}) →
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            {/* Summary */}
+            <div style={{ padding: '14px 16px', borderRadius: '12px', background: '#FEF3C7', border: '2px solid #F59E0B', marginBottom: '16px' }}>
+              <p style={{ fontSize: '14px', fontWeight: 800, color: '#92400E', marginBottom: '6px' }}>{t('FinalConfirmation')}</p>
+              <p style={{ fontSize: '13px', color: '#92400E', marginBottom: '8px' }}>
+                {t('ArchiveConfirmMsg').replace('ces projets', `${selectedList.length} projet${selectedList.length > 1 ? 's' : ''}`)}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {selectedList.map(g => (
+                  <div key={g._id ?? g.PID} style={{ fontSize: '12px', color: '#78350F', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ color: '#D97706' }}>▸</span> {g.groupCode ?? g.title}
+                    <span style={{ fontWeight: 600 }}>({LEVEL_LABELS[g.academic_level] ?? ''} · {g.grades?.final_grade}/20)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+              {t('TypeToConfirm')}
+            </p>
+            <input
+              value={confirmText}
+              onChange={e => setConfirmText(e.target.value)}
+              placeholder={t('TypeArchive')}
+              autoFocus
+              style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `2px solid ${confirmValid ? '#16A34A' : 'var(--border)'}`, background: 'var(--bg)', color: 'var(--text-primary)', fontSize: '14px', fontWeight: 700, outline: 'none', marginBottom: '16px', boxSizing: 'border-box', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+              <button onClick={() => setStep(1)} style={{ padding: '9px 16px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer' }}>
+                ← {t('Back')}
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={onClose} style={{ padding: '9px 16px', borderRadius: '10px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  disabled={!confirmValid || archiving}
+                  style={{ padding: '9px 20px', borderRadius: '10px', background: confirmValid && !archiving ? '#DC2626' : 'var(--border)', color: '#fff', border: 'none', fontSize: '13px', fontWeight: 700, cursor: confirmValid && !archiving ? 'pointer' : 'not-allowed' }}
+                >
+                  {archiving ? t('ArchivingInProgress') : t('ArchiveNow')}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
   );
 }

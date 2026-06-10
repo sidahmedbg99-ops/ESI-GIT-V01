@@ -53,7 +53,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       const msg = err.response?.data?.error || err.response?.data?.detail || 'Email ou mot de passe incorrect.';
       setError(msg);
-      return false;
+      return { ok: false, error: msg };
     }
   };
 

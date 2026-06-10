@@ -91,15 +91,15 @@ export default function AdminArchive() {
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '12px', background: canSeeArchived ? '#DCFCE7' : '#FEE2E2', border: `1px solid ${canSeeArchived ? '#16A34A' : '#EF4444'}`, transition: 'all 0.2s' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: canSeeArchived ? '#16A34A' : '#DC2626' }}>
-              {canSeeArchived ? '🔓 Archive visible aux étudiants' : '🔒 Archive masquée aux étudiants'}
+              {canSeeArchived ? `🔓 ${t('ArchiveVisibleStudents')}` : `🔒 ${t('ArchivHiddenStudents')}`}
             </div>
             {hiddenCount > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '10px', background: '#1E293B', color: '#fff', fontSize: '11px', fontWeight: 700 }}>
-                <IoEyeOffOutline size={11}/> {hiddenCount} masqué{hiddenCount > 1 ? 's' : ''}
+                <IoEyeOffOutline size={11}/> {hiddenCount} {t('HiddenBadge')}
               </div>
             )}
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Cette option active/désactive l'onglet Archive pour tous les étudiants.</p>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{t('ArchiveVisibilityNote')}</p>
         </div>
       </div>
 
@@ -156,7 +156,7 @@ export default function AdminArchive() {
               <input
                 value={supervisorSearch}
                 onChange={e => setSupervisorSearch(e.target.value)}
-                placeholder="Rechercher encadreur..."
+                placeholder={t('SearchSupervisor')}
                 style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--text-primary)', width: '100%' }}
               />
               {supervisorSearch && (
@@ -198,7 +198,7 @@ export default function AdminArchive() {
                 {/* ── Mention badge + actions ── */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', alignItems: 'center' }}>
                   {Number(p.grades?.final_grade ?? p.grade ?? p.final_grade ?? 0) >= 12 ? (
-                    <Badge variant="success">🏅 {Number(p.grades?.final_grade ?? p.grade ?? p.final_grade ?? 0) >= 16 ? 'Très Bien' : Number(p.grades?.final_grade ?? p.grade ?? p.final_grade ?? 0) >= 14 ? 'Bien' : 'Assez Bien'}</Badge>
+                    <Badge variant="success">🏅 {Number(p.grades?.final_grade ?? p.grade ?? p.final_grade ?? 0) >= 16 ? t('MentionTresBien') : Number(p.grades?.final_grade ?? p.grade ?? p.final_grade ?? 0) >= 14 ? t('MentionBien') : t('MentionAssezBien')}</Badge>
                   ) : (
                     <Badge variant="info">✓ {t('Approve')}</Badge>
                   )}
@@ -209,7 +209,7 @@ export default function AdminArchive() {
                       variant="outline"
                       onClick={() => toggleProjectVisibility(p._id || p.PID, !p.is_public)}
                       style={{ height: '24px', padding: '0 8px', fontSize: '10px', color: p.is_public === false ? '#DC2626' : '#10B981' }}
-                      title={p.is_public === false ? 'Projet masqué — cliquer pour rendre public' : 'Projet public — cliquer pour masquer'}
+                      title={p.is_public === false ? t('ProjectHiddenTooltip') : t('ProjectPublicTooltip')}
                     >
                       {p.is_public === false ? <IoEyeOffOutline size={12}/> : <IoEyeOutline size={12}/>}
                     </Button>
@@ -222,7 +222,7 @@ export default function AdminArchive() {
                   {p.description ? (
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{p.description}</p>
                   ) : (
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.5 }}>Aucune description disponible.</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.5 }}>{t('NoDescription')}</p>
                   )}
                 </div>
 
@@ -320,12 +320,12 @@ function EditArchiveModal({ isOpen, project, onClose, onSave }) {
           <textarea 
             value={desc} 
             onChange={e => setDesc(e.target.value)} 
-            placeholder="Résumé du projet..."
+            placeholder={t('ProjectSummaryPlaceholder')}
             style={{ width: '100%', minHeight: '100px', padding: '12px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '14px', outline: 'none', resize: 'vertical' }}
           />
         </div>
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>TECHNOLOGIES (séparées par des virgules)</label>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', display: 'block' }}>{t('Technologies')}</label>
           <Input 
             value={tech} 
             onChange={e => setTech(e.target.value)} 
@@ -334,8 +334,8 @@ function EditArchiveModal({ isOpen, project, onClose, onSave }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
           <div>
-            <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>Visibilité du projet</label>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Rendre le projet visible (public) ou le masquer (privé).</p>
+            <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>{t('ProjectVisibility')}</label>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('ProjectVisibilityDesc')}</p>
           </div>
           <button 
             type="button"
@@ -351,7 +351,7 @@ function EditArchiveModal({ isOpen, project, onClose, onSave }) {
               cursor: 'pointer'
             }}
           >
-            {isPublic ? 'Public' : 'Privé'}
+            {isPublic ? t('ProjectPublicTitle') : t('ProjectHidden')}
           </button>
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>

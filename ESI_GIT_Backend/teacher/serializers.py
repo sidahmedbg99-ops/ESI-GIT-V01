@@ -33,7 +33,7 @@ class TeacherGroupListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Projects
         fields = [
-        "PID", "name", "invite_code", "specialty", "year",
+        "PID", "name", "invite_code", "specialty", "academic_level", "year",
         "status", "member_count", "progress", "members",
         "submitted_to_supervisor", "final_submission_approved",
         "supervisor_feedback", "github_url",
@@ -162,15 +162,16 @@ class TeacherSupervisorRequestSerializer(serializers.ModelSerializer):
     """Pending supervisor request shown alongside groups list."""
     project_name = serializers.CharField(source="project_id.name")
     project_pid = serializers.IntegerField(source="project_id.PID")
-    specialty = serializers.CharField(source="project_id.specialty")
+    specialty = serializers.CharField(source="project_id.specialty", allow_null=True)
     year = serializers.CharField(source="project_id.year")
+    academic_level = serializers.IntegerField(source="project_id.academic_level", allow_null=True)
     member_count = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
 
     class Meta:
         model = SupervisorRequest
         fields = [
-            "id", "project_name", "project_pid", "specialty", "year",
+            "id", "project_name", "project_pid", "specialty", "academic_level", "year",
             "member_count", "members", "message", "status", "created_at",
         ]
 
@@ -252,6 +253,7 @@ class TeacherJurySerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source="PID.name")
     group_code = serializers.CharField(source="PID.invite_code")
     specialty = serializers.CharField(source="PID.specialty")
+    academic_level = serializers.IntegerField(source="PID.academic_level", read_only=True)
     supervisor_id = serializers.IntegerField(source="PID.TID_id", read_only=True)
     schedule = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
@@ -266,7 +268,7 @@ class TeacherJurySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectJury
         fields = [
-            "PID_id", "project_name", "group_code", "specialty",
+            "PID_id", "project_name", "group_code", "specialty", "academic_level",
             "schedule", "members", "is_evaluated", "document", "attachments",
             "teacher1_id", "teacher2_id", "teacher3_id", "supervisor_id",
             "president_name", "examiner1_name", "examiner2_name",

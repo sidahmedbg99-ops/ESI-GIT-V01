@@ -376,7 +376,407 @@ export const translations = {
     RowsIgnored: 'ligne(s) ignorée(s)',
     Summary: 'Résumé',
     StudentList: 'Liste des étudiants',
-    Grade: 'Note'
+    Grade: 'Note',
+
+    // Student Dashboard (new)
+    TaskProgress: 'Avancement des tâches',
+    TasksDone: 'Tâches réalisées',
+    NoOverdue: 'Aucun retard',
+    OverdueTasks: 'tâche(s) en retard',
+    FinalSubmission: 'Soumission finale',
+    AttendanceRate: 'Taux de présence',
+    Meetings_label: 'réunions',
+    FinalGrade: 'Note finale',
+    NextMeeting: 'Prochaine réunion',
+
+    // Teacher Dashboard (new)
+    TasksDoneByGroup: 'Tâches réalisées par groupe',
+    PendingRequestsStat: 'Demandes en attente',
+    GroupsToWatch: 'Groupes à surveiller',
+    AllGroupsOnTrack: 'Tous les groupes sont sur la bonne voie',
+    Tasks_label: 'Tâches',
+    Health_label: 'Santé',
+    Health_OnTrack: '🟢 OK',
+    Health_Watch: '🟡 Veille',
+    Health_AtRisk: '🔴 Risque',
+
+    // Admin Dashboard (new)
+    NoGroup_Stat: 'Sans groupe',
+    PendingApprovals_Stat: 'Approbations en attente',
+    DefenseReadiness: 'Préparation soutenances',
+    DefenseSubtitle: 'Entonnoir global · projets actifs',
+    ActiveProjects_label: 'Projets actifs',
+    JuriesAssigned_label: 'Jurys assignés',
+    DefensesScheduled_label: 'Soutenances planif.',
+    Graded_label: 'Notés',
+    ReadyToArchive_label: 'Prêts à archiver',
+    ByLevel: 'Par niveau',
+    Graded_count: 'notés',
+
+    // Admin Analytics (new)
+    FailRate: 'Taux d\'échec',
+
+    // Admin Settings — PanelYears
+    CloseYearAdvance: 'Clôturer l\'année & Avancer',
+    CloseYearDesc: 'Archive tous les projets actifs et passe automatiquement à l\'année suivante. Cette action est irréversible.',
+    ChangeYearTitle: 'Changer l\'année ?',
+    ChangeYearMsg: 'Changer l\'année académique va ARCHIVER tous les projets actuels. Cette action est irréversible.',
+    ChangeAndArchive: 'Changer & Archiver',
+    PlatformConfig: 'Configuration plateforme',
+    NeedHelp: 'Besoin d\'aide ?',
+    HelpDesc: 'Consultez la documentation pour configurer les paramètres avancés de la plateforme.',
+
+    // Admin Settings — PanelCategories
+    SpecialtyAdded: 'Spécialité ajoutée',
+    SpecialtyDeleted: 'Supprimée',
+    AbbrevPlaceholder: 'Abréviation (ex: ISI)',
+    FullNamePlaceholder: 'Nom complet (ex: Ing. Systèmes Informatiques)',
+
+    // Admin Settings — PanelVisibility
+    DeliverableVisible: 'Livrables visibles (étudiants)',
+    DeliverableVisible_Desc: 'Les étudiants peuvent voir les livrables des projets archivés',
+    JuryPageVisible: 'Activer la page jury (enseignants)',
+    JuryPageVisible_Desc: 'Les enseignants peuvent accéder à la page d\'évaluation du jury',
+    SystemEmail: 'Email système',
+    SystemEmailDesc: 'Utilisé comme adresse d\'envoi pour les credentials, réinitialisations de mot de passe et notifications système',
+    GroupLockDeadline: '🔒 Date limite de formation des groupes',
+    GroupLockDeadlineDesc: 'À partir de cette date, tous les groupes seront automatiquement verrouillés (plus de join / leave / kick). Les étudiants sans groupe verront un message d\'accès fermé. Laissez vide pour désactiver le verrou automatique.',
+    LockActiveFrom: '⚠️ Verrou actif à partir du',
+
+    // Admin Settings — PanelGradingFormula
+    Name: 'Nom',
+    Optional: 'optionnel',
+    Components: 'Composantes de la note',
+    Coefficient: 'Coef.',
+    Add: 'Ajouter',
+    Reset: 'Réinitialiser',
+    Active: 'ACTIVE',
+    Activate: 'Activer',
+    SavedFormulas: 'Formules enregistrées',
+    NoFormulas: 'Aucune formule définie',
+    Saved: 'Enregistré',
+    fieldsRequired: 'Champs requis',
+
+    // Admin Groupes — JuryScheduleModal
+    JurySelected: 'sélectionnés',
+    SupervisorMustBeInJury: '⚠️ L\'encadreur doit faire partie du jury.',
+    ExactlyOnePresident: '⚠️ Exactement 1 président requis.',
+    DefenseOptional: 'Soutenance (optionnel — peut être complété plus tard)',
+    Date: 'Date',
+    Time: 'Heure',
+    Room: 'Salle',
+    Department: 'Département',
+    PastDateError: 'La date ne peut pas être dans le passé.',
+    JuryComplete: '✅ Jury complet',
+    DefenseScheduled: 'Soutenance planifiée',
+    JuryMembersCount: 'membres jury',
+
+    // Admin Groupes — GroupDetailModal
+    Graded: 'Noté',
+    DefenseTitle: 'Soutenance',
+    NotScheduled: 'Non planifiée',
+    Deliverables_title: 'Livrables',
+    NoDeliverable: 'Aucun livrable soumis.',
+    DownloadAll: '⬇ Tout télécharger',
+
+    // Admin Groupes — EditGroupModal
+    ModifyGroup: 'Modifier',
+    MembersCount: 'Membres',
+    GroupLeader: 'Chef',
+    RemoveMember: 'Retirer',
+    AddStudent: 'Ajouter un étudiant',
+    NoStudentAvailable: 'Aucun étudiant sans groupe disponible pour ce niveau.',
+    SupervisorSection: 'Encadreur',
+    ChangeSupervisor: 'Changer l\'encadreur',
+    ArchiveGroup: 'Archiver',
+
+    // Admin Groupes — CreateGroupModal
+    ProjectTypeLabel: 'Type de Projet *',
+    TitleDefaultNote: '📌 Le titre du projet sera "temp" par défaut. Le chef de groupe pourra modifier le nom et le type du projet après création.',
+    LeaveEmptyLater: 'Laissez vide pour laisser le groupe choisir plus tard.',
+    NoResults: 'Aucun résultat',
+    AllStudentsHaveGroup: 'Tous les étudiants ont un groupe',
+    Approved_Stat: 'Approuvés',
+
+    // Admin Groupes — ArchiveAllModal
+    CloseArchiveProjects: 'Clôturer & archiver des projets',
+    OnlyGradedArchivable: 'Seuls les projets notés peuvent être archivés.',
+    FilterByLevel: 'Filtrer par niveau',
+    GradedProjects: 'Projets notés',
+    Archivable: 'archivables',
+    UngradedProjects: 'Projets non notés',
+    WontBeArchived: 'ne seront pas archivés',
+    IrreversibleArchive: 'L\'archivage est irréversible. Les projets archivés ne peuvent plus être modifiés par les étudiants.',
+    Continue: 'Continuer',
+    Selected: 'sélectionné(s)',
+    FinalConfirmation: 'Confirmation finale',
+    ArchiveConfirmMsg: 'Vous allez archiver ces projets — cette action est irréversible.',
+    TypeToConfirm: 'Tapez ARCHIVER pour confirmer :',
+    TypeArchive: 'Tapez ARCHIVER',
+    Back: 'Retour',
+    ArchivingInProgress: 'Archivage en cours…',
+    ArchiveNow: 'Archiver maintenant',
+    SelectAll: 'Tout sélectionner',
+    DeselectAll: 'Tout désélectionner',
+    ArchiveAll: 'Archiver tout',
+    AllTags: 'Tous les tags',
+    AllLevels: 'Tous les niveaux',
+    AllSupervisors: 'Tous les encadreurs',
+    ActiveTag: 'Actif',
+    ApprovedTag: 'Approuvé',
+    GradedTag: 'Noté',
+    ReadyForDefense: 'Prêt pour la soutenance',
+    JuryOkDateMissing: '⏳ Jury ✓ — Date manquante',
+    JuryRequired: '⏳ Jury requis',
+    GradedScore: 'Noté —',
+
+    // Admin Students
+    StudentAssignments: 'Affectations des Étudiants',
+    StudentAssignmentsSub: 'Visualisez et gérez le statut d\'adhésion des étudiants aux groupes.',
+    WithGroup: 'Avec Groupe',
+    WithoutGroup: 'Sans Groupe',
+    NotAssigned: 'Non assigné',
+    Project: 'Projet',
+    Student: 'Étudiant',
+    Previous: 'Précédent',
+    Next: 'Suivant',
+
+    // Admin Users
+    ImportExcel: 'Importer Excel',
+    FileLevel: 'NIVEAU DU FICHIER',
+    ConfirmImport: 'Confirmer l\'import',
+    Grades: 'Notes',
+    AlreadyExists: 'Déjà existant — niveau mis à jour',
+    PasswordSentByEmail: '✉️ Mot de passe envoyé par email',
+    ExpectedColumns: '📋 Colonnes attendues :',
+    ImportAnotherFile: '↩ Importer un autre fichier',
+    DeleteSelection: 'Supprimer la sélection ?',
+    ConfirmBulkDelete: 'Êtes-vous sûr de vouloir supprimer définitivement ces utilisateurs ?',
+    BulkDeleted: 'utilisateurs supprimés',
+    BulkDeleteError: 'Erreur lors de la suppression groupée',
+    Dispo: '🟢 Dispo',
+    Indispo: '🔴 Indispo',
+    Roles: 'Rôle',
+    AllLevels2: 'Tous les niveaux',
+    ID_Matricule: 'ID / Matricule (National ID)',
+    YearLabel1: '1ère Année (1CPI)',
+    YearLabel2: '2ème Année (2CPI)',
+    YearLabel3: '3ème Année (1CS / 3CS)',
+    YearLabel4: '4ème Année (2CS / 4CS)',
+    YearLabel5: '5ème Année (3CS / 5CS)',
+
+    // Admin Archive
+    ArchiveVisibleStudents: '🔓 Archive visible aux étudiants',
+    ArchivHiddenStudents: '🔒 Archive masquée aux étudiants',
+    ArchiveVisibilityNote: 'Cette option active/désactive l\'onglet Archive pour tous les étudiants.',
+    AvgGrade_Stat: 'Moyenne',
+    Mention: 'Mentions',
+    Found: 'trouvés',
+    NoDescription: 'Aucune description disponible.',
+    ProjectPublic: 'Public',
+    ProjectPrivate: 'Privé',
+    ProjectVisibility: 'Visibilité du projet',
+    ProjectVisibilityDesc: 'Rendre le projet visible (public) ou le masquer (privé).',
+    ProjectHidden: 'Projet masqué — cliquer pour rendre public',
+    ProjectPublicTitle: 'Projet public — cliquer pour masquer',
+    DeleteConfirmation: 'Cette action est irréversible.',
+    SearchSupervisor: 'Rechercher encadreur...',
+    Technologies: 'TECHNOLOGIES (séparées par des virgules)',
+
+    // Admin Dashboard
+    NoUsersYet: 'Aucun utilisateur pour l\'instant.',
+    NoGradesYet: 'Aucune note enregistrée',
+    AvgNotesByTeacher: 'Notes moyennes — Enseignants',
+
+    // Admin Notifications
+    NotifSend: 'Send Notification',
+    NotifSendLabel: 'Envoyer une notification',
+    NotifTitle: 'Titre',
+    NotifMessage: 'Message',
+    NotifAudience_all: 'Tout le monde',
+    NotifAudience_students: 'Étudiants',
+    NotifAudience_staff: 'Enseignants / Staff',
+    NotifLevelOptional: 'Niveau (optionnel)',
+    NotifSpecialtyOptional: 'Spécialité (optionnel)',
+    AllSpecialties: 'Toutes les spécialités',
+    NotifHistory: 'Notifications envoyées',
+    NotifNoHistory: 'Aucune notification envoyée.',
+    Refresh: 'Actualiser',
+    Sending: 'Envoi en cours…',
+    SendNotification: 'Envoyer la notification',
+    NotifTitleRequired: 'Titre et message requis.',
+    NotifSentSuccess: 'Notification envoyée',
+    NotifDeleteFail: 'Échec de la suppression',
+    NotifSendFail: 'Échec de l\'envoi',
+    NotifDeleted: 'Supprimée',
+
+    // Admin Profil
+    CurrentPassword: 'Mot de passe actuel',
+    Departement: 'Département',
+    Specialite: 'Spécialité',
+
+    // Teacher Meetings
+    PendingMeetings: 'En attente',
+    UpcomingMeetings: 'À venir',
+    PastCancelledMeetings: 'Passées / annulées',
+    AllGroups2: 'Tous les groupes',
+    NoMeetings: 'Aucune réunion pour l\'instant',
+    ApproveMeeting: '✓ Approuver',
+    RejectMeeting: '✕ Refuser',
+    CancelMeeting: 'Annuler',
+    Attendances: '📋 Présences',
+    CancellationReason: 'Motif d\'annulation :',
+    AttendancesTitle: 'Présences',
+    CheckPresentMembers: 'Cochez les membres présents',
+    NoMembersFound: 'Aucun membre trouvé',
+    SavingAttendance: 'Enregistrement…',
+    SaveAttendance: 'Enregistrer',
+    CancelConfirmTitle: 'Confirmer l\'annulation',
+    CancelReasonPlaceholder: 'Motif d\'annulation (optionnel)...',
+    AttendanceSaved: 'Présences enregistrées',
+    AttendanceSaveError: 'Erreur lors de l\'enregistrement',
+    CancelError: 'Erreur lors de l\'annulation',
+    LoadAttendanceError: 'Impossible de charger les présences',
+    MeetingStatusPending: 'En attente',
+    MeetingStatusApproved: 'Planifiée',
+    MeetingStatusRejected: 'Refusée',
+    MeetingStatusCancelled: 'Annulée',
+
+    // Teacher Groups
+    Encadreur: 'Encadreur',
+    NoRepo: 'Aucun dépôt renseigné par le groupe.',
+    DownloadAllDocs: '⬇ Tout télécharger',
+    NotAvailable: 'Non disponible',
+    Open2: 'Ouvrir',
+    GroupMembers: 'membre(s)',
+    NoDocuments: 'Aucun document joint.',
+    ProjectDocs: 'Documents du projet',
+    ProjectApproved: 'Projet approuvé',
+    Deadline: 'Deadline',
+
+    // Admin Dashboard labels
+    Pending_label: 'En attente',
+    Approved_label: 'Approuvés',
+    Archived_label: 'Archivés',
+
+    // TeacherJury
+    DateNotScheduled: 'Date non planifiée',
+    NoActiveFormula: "Aucune formule d'évaluation active trouvée.",
+
+    // TeacherRequests
+    TeacherReqSubtitle: "Gérez vos demandes d'encadrement et validations de projets.",
+    SupervFeedbackDefault: "Projet refusé. Veuillez consulter l'encadreur.",
+    SubmittedOn: 'Soumis le',
+    GitHubRepo_label: 'Dépôt GitHub :',
+    NotProvided: 'Non renseigné',
+    IrreversibleAction: 'Action irréversible',
+    ImportantAction: 'Action importante',
+    AcceptSupervBody: "Vous êtes sur le point d'accepter cette demande d'encadrement. Cette action ne peut pas être annulée. Voulez-vous continuer ?",
+    FinalApproveWarningInfo: "⚠️ Attention : Approuver une soumission finale valide le projet pour la soutenance. La création de tâches sera désactivée pour ce groupe. Les réunions restent accessibles.",
+    FinalApproveBody: "Approuver cette soumission finale valide le projet pour la soutenance. La création de tâches sera désactivée pour ce groupe. Cette action est définitive.",
+    RejectFeedbackNote: "Précisez la raison du refus. Le groupe pourra relire ce feedback et soumettre à nouveau.",
+    FeedbackPlaceholder2: "Ex : Le rapport final est incomplet, merci de revoir la section méthodologie...",
+    Members_label: 'Membres',
+
+    // Student Groupe
+    GithubRepoNotFound: 'Dépôt introuvable ou privé',
+    GithubConnError: 'Erreur de connexion à GitHub',
+    SupervInitialMsg: "Demande d'encadrement initiale lors de la création du groupe.",
+    ChooseRoleFirst: 'Veuillez choisir un rôle.',
+    ConfirmSupervReqTitle: '⚠️ Confirmation de la demande',
+    ConfirmSupervMsg: "Vous allez envoyer une demande d'encadrement à",
+    Rejected_label: 'Refusé',
+    GroupLockedTitle: 'Groupe verrouillé',
+    GroupLockedDesc: "La composition de ce groupe est figée. Pour toute modification, contactez l'administration.",
+    IncompleteGroupTitle: 'Équipe incomplète',
+    ReqRejectedFull: "a refusé votre demande. Vous devez solliciter un autre enseignant.",
+    ReqPendingFull: "Votre demande est en cours de révision par",
+    NoSupervisorWarning: "Votre groupe n'a pas encore d'encadreur. Recherchez un enseignant disponible.",
+    MeetingNeedsSupervWarn: "⚠️ Vous ne pourrez pas planifier de réunions tant que vous n'aurez pas d'encadreur.",
+    SubmissionApprovedMsg: "✨ Votre projet a été officiellement approuvé pour la soutenance !",
+    SubmissionPendingMsg: "⏳ Projet soumis à l'encadreur. En attente de validation finale...",
+    SubmissionRejectedMsg: "❌ Votre soumission a été refusée. Lisez le feedback ci-dessous et soumettez à nouveau.",
+    DeliverableRequired: 'Vous devez déposer au moins un document avant de soumettre.',
+    SupervFeedbackLabel: "📢 Feedback de l'encadreur :",
+    SelectDocs: 'Sélectionner documents',
+
+    // Student Taches
+    TaskTitleRequired: 'Le titre de la tâche est obligatoire.',
+    DeadlineInPast: 'La date limite ne peut pas être dans le passé.',
+    AssignTaskMember: 'Veuillez assigner la tâche à au moins un membre.',
+    JoinGroupFirst_Tasks: "Vous devez rejoindre ou créer un groupe avant de pouvoir gérer des tâches.",
+    Task_label: 'Tâche :',
+    CurrentBadge: '✓ Actuel',
+
+    // Resources
+    AllAuthors: 'Tous les auteurs',
+    ResourcesSubtitle: 'Fichiers et liens partagés pour toute la plateforme',
+    CategoryOptional: 'Catégorie (optionnel, ex: Tutoriel, Modèle…)',
+    SelectFile: 'Sélectionner un fichier',
+    NoResourcesFilter: 'Aucune ressource ne correspond à vos filtres.',
+    NoResourcesEmpty: "Aucune ressource partagée pour l'instant.",
+    HiddenBadge: 'Masqué',
+    DownloadBtn: 'Télécharger',
+
+    // AssignStudentModal
+    DataLoadError: 'Erreur lors du chargement des données',
+    NoUnassignedStudents: 'Aucun étudiant non assigné',
+    AllGroupsFull: "Tous les groupes sont complets (6 membres max). L'étudiant doit créer son propre groupe.",
+    SelectGroupPlaceholder: '-- Sélectionner un groupe --',
+
+    // ConfirmModal defaults
+    DefaultConfirmMsg: 'Êtes-vous sûr de vouloir continuer ?',
+    DefaultConfirmPlaceholder: 'Saisissez votre réponse...',
+
+    // Grade mentions
+    MentionTresBien: 'Très Bien',
+    MentionBien: 'Bien',
+    MentionAssezBien: 'Assez Bien',
+    MentionPassable: 'Passable',
+
+    // AdminArchive
+    ProjectHiddenTooltip: 'Projet masqué — cliquer pour rendre public',
+    ProjectPublicTooltip: 'Projet public — cliquer pour masquer',
+    ProjectSummaryPlaceholder: 'Résumé du projet...',
+
+    // AdminGroupes
+    JuryModificationDisabled: 'Projet noté — modification désactivée',
+    EditJuryDefense: 'Modifier jury & soutenance',
+    AssignJuryDefense: 'Assigner jury & soutenance',
+
+    // Chart names
+    AvgGradeGiven: 'Moyenne donnée',
+    NewProjects: 'Nouveaux Projets',
+    AverageLabel: 'Moyenne',
+
+    // AdminGroupes extras
+    SelectPlaceholder: '— Sélectionner —',
+    UngradedForLevel: 'Aucun projet noté pour ce niveau',
+    UngradedWarn: 'ne peuvent pas être archivés tant qu\'ils n\'ont pas reçu une note finale',
+
+    // Student Reunions
+    MeetingRequest: 'Demande de réunion envoyée',
+    MustJoinGroup: 'Vous devez rejoindre ou créer un groupe avant de pouvoir planifier des réunions.',
+    NoSupervisorMeetings: 'Aucun encadreur assigné',
+    NoSupervisorMeetingsDesc: 'Vous ne pouvez pas planifier de réunions tant que votre groupe n\'a pas d\'encadreur approuvé.',
+    GoToGroupPage: 'Aller sur la page Groupe',
+    UpcomingSection: 'À venir',
+    HistorySection: 'Historique',
+    NoUpcomingMeetings: 'Aucune réunion planifiée',
+    NewMeeting: 'Nouvelle réunion',
+    ScheduledByTeacher: 'Planifiée par l\'encadreur',
+    ViewAttendance: 'Voir les présences',
+    MeetingType_Pres: 'Présentielle',
+    DateRequired: 'Veuillez choisir une date.',
+    DatePastError: 'La date ne peut pas être dans le passé.',
+    DateTooFarError: 'La date est trop éloignée. Veuillez choisir une date dans l\'année académique.',
+    TimeRequired: 'Veuillez choisir une heure.',
+    TitleRequired: 'Veuillez saisir un objet pour la réunion.',
+    MeetingStatusPending2: 'En attente',
+    MeetingStatusAccepted: 'Acceptée',
+    MeetingStatusRejected2: 'Refusée',
+    MeetingStatusCancelled2: 'Annulée',
+    CalendarDays: 'Lun,Mar,Mer,Jeu,Ven,Sam,Dim',
   },
   en: {
     // Nav / Sidebar
@@ -740,7 +1140,145 @@ export const translations = {
     RowsIgnored: 'row(s) ignored',
     Summary: 'Summary',
     StudentList: 'Student List',
-    Grade: 'Grade'
+    Grade: 'Grade',
+
+    // Student Dashboard (new)
+    TaskProgress: 'Task Progress',
+    TasksDone: 'Tasks done',
+    NoOverdue: 'No overdue',
+    OverdueTasks: 'overdue task(s)',
+    FinalSubmission: 'Final Submission',
+    AttendanceRate: 'Attendance Rate',
+    Meetings_label: 'meetings',
+    FinalGrade: 'Final Grade',
+    NextMeeting: 'Next Meeting',
+
+    // Teacher Dashboard (new)
+    TasksDoneByGroup: 'Tasks done by group',
+    PendingRequestsStat: 'Pending Requests',
+    GroupsToWatch: 'Groups to watch',
+    AllGroupsOnTrack: 'All groups are on track',
+    Tasks_label: 'Tasks',
+    Health_label: 'Health',
+    Health_OnTrack: '🟢 OK',
+    Health_Watch: '🟡 Watch',
+    Health_AtRisk: '🔴 At risk',
+
+    // Admin Dashboard (new)
+    NoGroup_Stat: 'Without group',
+    PendingApprovals_Stat: 'Pending Approvals',
+    DefenseReadiness: 'Defense Readiness',
+    DefenseSubtitle: 'Global funnel · active projects',
+    ActiveProjects_label: 'Active projects',
+    JuriesAssigned_label: 'Juries assigned',
+    DefensesScheduled_label: 'Defenses scheduled',
+    Graded_label: 'Graded',
+    ReadyToArchive_label: 'Ready to archive',
+    ByLevel: 'By level',
+    Graded_count: 'graded',
+
+    // Admin Analytics (new)
+    FailRate: 'Fail Rate',
+
+    // Admin Dashboard labels
+    Pending_label: 'Pending',
+    Approved_label: 'Approved',
+    Archived_label: 'Archived',
+
+    // TeacherJury
+    DateNotScheduled: 'Date not scheduled',
+    NoActiveFormula: 'No active evaluation formula found.',
+
+    // TeacherRequests
+    TeacherReqSubtitle: 'Manage your supervision requests and project validations.',
+    SupervFeedbackDefault: 'Project rejected. Please contact your supervisor.',
+    SubmittedOn: 'Submitted on',
+    GitHubRepo_label: 'GitHub Repo:',
+    NotProvided: 'Not provided',
+    IrreversibleAction: 'Irreversible action',
+    ImportantAction: 'Important action',
+    AcceptSupervBody: "You are about to accept this supervision request. This action cannot be undone. Do you want to continue?",
+    FinalApproveWarningInfo: "⚠️ Warning: Approving a final submission validates the project for defense. Task creation will be disabled for this group. Meetings remain accessible.",
+    FinalApproveBody: "Approving this final submission validates the project for defense. Task creation will be disabled for this group. This action is final.",
+    RejectFeedbackNote: "Specify the reason for rejection. The group can re-read this feedback and resubmit.",
+    FeedbackPlaceholder2: "E.g.: The final report is incomplete, please revise the methodology section...",
+    Members_label: 'Members',
+
+    // Student Groupe
+    GithubRepoNotFound: 'Repository not found or private',
+    GithubConnError: 'GitHub connection error',
+    SupervInitialMsg: 'Initial supervision request upon group creation.',
+    ChooseRoleFirst: 'Please choose a role.',
+    ConfirmSupervReqTitle: '⚠️ Confirm Request',
+    ConfirmSupervMsg: 'You are about to send a supervision request to',
+    Rejected_label: 'Rejected',
+    GroupLockedTitle: 'Group locked',
+    GroupLockedDesc: "This group's composition is locked. For any change, contact administration.",
+    IncompleteGroupTitle: 'Incomplete team',
+    ReqRejectedFull: 'rejected your request. You must contact another teacher.',
+    ReqPendingFull: 'Your request is being reviewed by',
+    NoSupervisorWarning: "Your group doesn't have a supervisor yet. Search for an available teacher.",
+    MeetingNeedsSupervWarn: "⚠️ You won't be able to schedule meetings until you have a supervisor.",
+    SubmissionApprovedMsg: '✨ Your project has been officially approved for defense!',
+    SubmissionPendingMsg: '⏳ Project submitted to supervisor. Waiting for final validation...',
+    SubmissionRejectedMsg: '❌ Your submission was rejected. Read the feedback below and resubmit.',
+    DeliverableRequired: 'You must upload at least one document before submitting.',
+    SupervFeedbackLabel: '📢 Supervisor Feedback:',
+    SelectDocs: 'Select files',
+
+    // Student Taches
+    TaskTitleRequired: 'Task title is required.',
+    DeadlineInPast: 'Deadline cannot be in the past.',
+    AssignTaskMember: 'Please assign the task to at least one member.',
+    JoinGroupFirst_Tasks: 'You must join or create a group before managing tasks.',
+    Task_label: 'Task:',
+    CurrentBadge: '✓ Current',
+
+    // Resources
+    AllAuthors: 'All authors',
+    ResourcesSubtitle: 'Files and links shared across the platform',
+    CategoryOptional: 'Category (optional, e.g.: Tutorial, Template…)',
+    SelectFile: 'Select a file',
+    NoResourcesFilter: 'No resources match your filters.',
+    NoResourcesEmpty: 'No shared resources yet.',
+    HiddenBadge: 'Hidden',
+    DownloadBtn: 'Download',
+
+    // AssignStudentModal
+    DataLoadError: 'Error loading data',
+    NoUnassignedStudents: 'No unassigned students',
+    AllGroupsFull: 'All groups are full (6 members max). The student must create their own group.',
+    SelectGroupPlaceholder: '-- Select a group --',
+
+    // ConfirmModal defaults
+    DefaultConfirmMsg: 'Are you sure you want to continue?',
+    DefaultConfirmPlaceholder: 'Enter your response...',
+
+    // Grade mentions
+    MentionTresBien: 'Very Good',
+    MentionBien: 'Good',
+    MentionAssezBien: 'Fairly Good',
+    MentionPassable: 'Pass',
+
+    // AdminArchive
+    ProjectHiddenTooltip: 'Hidden project — click to make public',
+    ProjectPublicTooltip: 'Public project — click to hide',
+    ProjectSummaryPlaceholder: 'Project summary...',
+
+    // AdminGroupes
+    JuryModificationDisabled: 'Graded project — editing disabled',
+    EditJuryDefense: 'Edit jury & defense',
+    AssignJuryDefense: 'Assign jury & defense',
+
+    // Chart names
+    AvgGradeGiven: 'Average given',
+    NewProjects: 'New Projects',
+    AverageLabel: 'Average',
+
+    // AdminGroupes extras
+    SelectPlaceholder: '— Select —',
+    UngradedForLevel: 'No graded projects for this level',
+    UngradedWarn: 'cannot be archived until they receive a final grade',
   }
 };
 

@@ -41,9 +41,9 @@ export default function TeacherJury() {
   const getTeacherRoles = (j) => {
     const roles = [];
     const teacherId = user?.TID || user?._id || user?.id;
-    if (j.teacher1_id === teacherId) roles.push({ name: 'Président', color: 'var(--primary)', bg: 'var(--primary-subtle)' });
-    if (j.teacher2_id === teacherId || j.teacher3_id === teacherId) roles.push({ name: 'Examinateur', color: '#4B5563', bg: '#F3F4F6' });
-    if (j.supervisor_id === teacherId) roles.push({ name: 'Encadrant', color: '#059669', bg: '#D1FAE5' });
+    if (j.teacher1_id === teacherId) roles.push({ name: t('JuryRoles.president'), color: 'var(--primary)', bg: 'var(--primary-subtle)' });
+    if (j.teacher2_id === teacherId || j.teacher3_id === teacherId) roles.push({ name: t('JuryRoles.examiner'), color: '#4B5563', bg: '#F3F4F6' });
+    if (j.supervisor_id === teacherId) roles.push({ name: t('JuryRoles.supervisor'), color: '#059669', bg: '#D1FAE5' });
     return roles;
   };
 
@@ -165,8 +165,10 @@ export default function TeacherJury() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <Badge variant="primary">{j.group_code}</Badge>
-                    <Badge variant="gray">{j.specialty}</Badge>
+                    {j.academic_level && (
+                      <Badge variant="primary">{({ 2:'2CPI', 3:'1CS', 4:'2CS', 5:'3CS' })[j.academic_level] || `L${j.academic_level}`}</Badge>
+                    )}
+                    {j.specialty && <Badge variant="gray">{j.specialty}</Badge>}
                     <Badge variant={j.schedule ? 'success' : 'warning'}>{j.schedule ? t('Scheduled') : t('InProgress')}</Badge>
                     {userRoles.map((role, idx) => (
                       <span key={idx} style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', fontWeight: 700, color: role.color, background: role.bg, display: 'inline-flex', alignItems: 'center' }}>
@@ -179,7 +181,7 @@ export default function TeacherJury() {
                     {j.schedule ? (
                       <><span>📅 {j.schedule.date}</span><span>🕐 {j.schedule.time}</span><span>📍 {j.schedule.room}</span></>
                     ) : (
-                      <span>Date non planifiée</span>
+                      <span>{t('DateNotScheduled')}</span>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '10px' }}>
@@ -187,31 +189,24 @@ export default function TeacherJury() {
                   </div>
 
                   <div style={{ marginTop: '14px', borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-                    <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Jury</p>
+                    <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>{t('Juries')}</p>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', background: 'var(--primary-subtle)', color: 'var(--primary)', fontWeight: 600 }}>
-                        👑 Président: {j.president_name}
+                        👑 {t('JuryRoles.president')}: {j.president_name}
                       </span>
                       <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                        Examinateur: {j.examiner1_name}
+                        {t('JuryRoles.examiner')}: {j.examiner1_name}
                       </span>
                       <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                        Examinateur: {j.examiner2_name}
+                        {t('JuryRoles.examiner')}: {j.examiner2_name}
                       </span>
                     </div>
                   </div>
                   
-                  {(j.attachments || []).length > 0 && (
-                    <div style={{ marginTop: '12px' }}>
-                      <AttachmentsPopover attachments={j.attachments.map(a => ({ ...a, file_url: a.file_url || getFileUrl(a.url) }))} />
-                    </div>
-                  )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px', flexShrink: 0 }}>
                   {graded ? (
-                    <div style={{ textAlign: 'right' }}>
-                      <Badge variant="success">{t('Evaluated')} ✓</Badge>
-                    </div>
+                    <Badge variant="success">{t('Evaluated')} ✓</Badge>
                   ) : j.my_role === 'president' ? (
                     <button onClick={() => { setGradeModal(j); setEvalMarks({}); setFeedbackInput(''); setIs2CpiProject(false); }}
                       style={{ padding: '10px 20px', borderRadius: '10px', background: 'var(--primary)', border: 'none', color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
@@ -223,6 +218,9 @@ export default function TeacherJury() {
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Lecture seule</span>
                     </div>
                   )}
+                  {(j.attachments || []).length > 0 && (
+                    <AttachmentsPopover attachments={j.attachments.map(a => ({ ...a, file_url: a.file_url || getFileUrl(a.url) }))} />
+                  )}
                 </div>
               </div>
             </Card>
@@ -230,7 +228,7 @@ export default function TeacherJury() {
         })}
       </div>
 
-      <Modal isOpen={!!gradeModal} onClose={() => setGradeModal(null)} title={`${t('DefenseEvaluation')} — ${gradeModal?.group_code}`} size="md">
+      <Modal isOpen={!!gradeModal} onClose={() => setGradeModal(null)} title={`${t('DefenseEvaluation')} — ${gradeModal?.project_name}`} size="md">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)' }}>
             <p style={{ fontSize: '14px', fontWeight: 600 }}>{gradeModal?.project_name}</p>
@@ -269,7 +267,7 @@ export default function TeacherJury() {
             </div>
           ) : (
             <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '10px' }}>
-              Aucune formule d'évaluation active trouvée.
+              {t('NoActiveFormula')}
             </div>
           )}
 

@@ -191,13 +191,12 @@ export default function Taches() {
     setFormError('');
 
     // Validate required fields with specific messages
-    if (!newTask.title.trim()) { setFormError('Le titre de la tâche est obligatoire.'); return; }
-    if (!newTask.deadline)     { setFormError('La date limite est obligatoire.'); return; }
-    // Validate deadline is not in the past
+    if (!newTask.title.trim()) { setFormError(t('TaskTitleRequired')); return; }
+    if (!newTask.deadline)     { setFormError(t('DateRequired')); return; }
     const dlDate = new Date(newTask.deadline); dlDate.setHours(23, 59, 59);
-    if (dlDate < new Date()) { setFormError('La date limite ne peut pas être dans le passé.'); return; }
+    if (dlDate < new Date()) { setFormError(t('DeadlineInPast')); return; }
     if (newTask.assignees.length === 0 && members.length > 0) {
-      setFormError('Veuillez assigner la tâche à au moins un membre.');
+      setFormError(t('AssignTaskMember'));
       return;
     }
 
@@ -230,7 +229,7 @@ export default function Taches() {
           </div>
           <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>{t('TaskManagement')}</h2>
           <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '400px', marginBottom: '24px' }}>
-            Vous devez rejoindre ou créer un groupe avant de pouvoir gérer des tâches.
+            {t('JoinGroupFirst_Tasks')}
           </p>
         </div>
       </DashboardLayout>
@@ -392,7 +391,7 @@ export default function Taches() {
         <Modal isOpen={!!reassignTask} onClose={() => setReassignTask(null)} title="Changer le responsable" size="sm">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-              Tâche : <strong>{reassignTask.title}</strong>
+              {t('Task_label')} <strong>{reassignTask.title}</strong>
             </p>
             {members.map((m, i) => {
               const id = m._id ?? m.name;
@@ -434,7 +433,7 @@ export default function Taches() {
                     <p style={{ fontSize: '13px', fontWeight: 600 }}>{m.name}</p>
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{m.role}</p>
                   </div>
-                  {isCurrentAssignee && <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 700 }}>✓ Actuel</span>}
+                  {isCurrentAssignee && <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 700 }}>{t('CurrentBadge')}</span>}
                 </button>
               );
             })}

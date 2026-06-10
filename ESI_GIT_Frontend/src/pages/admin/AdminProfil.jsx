@@ -72,8 +72,8 @@ export default function AdminProfil() {
               {[
                 { label: t('FullName'),   value: user?.name  || '—', icon: <IoPersonOutline size={16}/> },
                 { label: t('Email'),      value: user?.email || '—', icon: <IoMailOutline size={16}/> },
-                { label: 'Département',   value: user?.department || '—', icon: <IoBusinessOutline size={16}/> },
-                { label: 'Spécialité',    value: user?.specialty  || '—', icon: <IoBookOutline size={16}/> },
+                { label: t('Departement'), value: user?.department || '—', icon: <IoBusinessOutline size={16}/> },
+                { label: t('Specialite'), value: user?.specialty  || '—', icon: <IoBookOutline size={16}/> },
               ].map((f, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
                   <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'var(--primary-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', flexShrink: 0 }}>{f.icon}</div>

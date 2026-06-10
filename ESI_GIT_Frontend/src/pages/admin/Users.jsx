@@ -22,7 +22,6 @@ import { ENDPOINTS } from '../../api/config';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const ROLE_VARIANTS = { student: 'gray', teacher: 'info', admin: 'primary' };
-const STUDENT_DEPT  = ['Cycle Préparatoire', 'Cycle Supérieur'];
 
 // ── Field helper ──────────────────────────────────────────────────
 function Field({ label, children }) {
@@ -191,11 +190,11 @@ function UserForm({ initial, onSave, onCancel }) {
                     const cycle = (v === 'L1' || v === 'L2') ? 'PREP' : 'SUP';
                     setForm(f => ({ ...f, year: v, department: cycle }));
                   }} options={[
-                    { value: 'L1', label: '1ère Année (1CPI)' },
-                    { value: 'L2', label: '2ème Année (2CPI)' },
-                    { value: 'L3', label: '3ème Année (1CS / 3CS)' },
-                    { value: 'M1', label: '4ème Année (2CS / 4CS)' },
-                    { value: 'M2', label: '5ème Année (3CS / 5CS)' },
+                    { value: 'L1', label: t('YearLabel1') },
+                    { value: 'L2', label: t('YearLabel2') },
+                    { value: 'L3', label: t('YearLabel3') },
+                    { value: 'M1', label: t('YearLabel4') },
+                    { value: 'M2', label: t('YearLabel5') },
                   ]}/>
                 </Field>
                 {(form.year === 'M1' || form.year === 'M2') && (
@@ -407,7 +406,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
         {userType === 'student' && !result && (
           <div>
             <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>
-              NIVEAU DU FICHIER
+              {t('FileLevel')}
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[
@@ -510,8 +509,8 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
                      <td style={{ padding: '8px', color: 'var(--text-muted)' }}>{u.email}</td>
                      <td style={{ padding: '8px' }}>
                         {u.action === 'promoted'
-                          ? <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Déjà existant — niveau mis à jour</span>
-                          : <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>✉️ Mot de passe envoyé par email</span>
+                          ? <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('AlreadyExists')}</span>
+                          : <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 600 }}>{t('PasswordSentByEmail')}</span>
                         }
                       </td>
                    </tr>
@@ -524,7 +523,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
         {/* Template hint */}
         {!result && (
           <div style={{ padding: '12px 14px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            <strong style={{ color: 'var(--text-primary)' }}>📋 Colonnes attendues :</strong><br/>
+            <strong style={{ color: 'var(--text-primary)' }}>{t('ExpectedColumns')}</strong><br/>
             {userType === 'student'
               ? <code style={{ fontSize: '11px' }}>Matricule, Nom, Prénom, Email{level === '4' ? ', Spécialité' : ''}</code>
               : <code style={{ fontSize: '11px' }}>email, first_name, last_name, is_admin (0/1), is_teacher (0/1)</code>
@@ -585,7 +584,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
                 <p style={{ color: '#DC2626', fontWeight: 600, fontSize: '14px' }}>{result.errors[0]}</p>
               </div>
             )}
-            <button onClick={reset} style={{ marginTop: '12px', fontSize: '13px', color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>↩ Importer un autre fichier</button>
+            <button onClick={reset} style={{ marginTop: '12px', fontSize: '13px', color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>{t('ImportAnotherFile')}</button>
           </div>
         )}
 
@@ -602,7 +601,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirmedUpload}
-        title="Confirmer l'import"
+        title={t('ConfirmImport')}
         message={`Vous allez importer "${file?.name}" comme liste des étudiants ${LEVEL_LABELS[level]} de l'année ${activeYear}. Confirmer ?`}
         type="warning"
       />
@@ -656,17 +655,17 @@ export default function AdminUsers() {
   const handleBulkDelete = () => {
     setModal({
       isOpen: true,
-      title: "Supprimer la sélection ?",
-      message: `Êtes-vous sûr de vouloir supprimer définitivement ces ${selectedIds.length} utilisateurs ?`,
+      title: t('DeleteSelection'),
+      message: `${t('ConfirmBulkDelete')} ${selectedIds.length}?`,
       type: "warning",
       onConfirm: async () => {
         setIsBulkDeleting(true);
         try {
           await Promise.all(selectedIds.map(id => removeUser(id)));
-          toast.success(`${selectedIds.length} utilisateurs supprimés`);
+          toast.success(`${selectedIds.length} ${t('BulkDeleted')}`);
           setSelectedIds([]);
         } catch (e) {
-          toast.error("Erreur lors de la suppression groupée");
+          toast.error(t('BulkDeleteError'));
         } finally {
           setIsBulkDeleting(false);
           setModal(prev => ({ ...prev, isOpen: false }));
@@ -740,7 +739,7 @@ export default function AdminUsers() {
         </div>
       ),
     },
-    { key: 'role', label: 'Rôle', render: (v, row) => (
+    { key: 'role', label: t('Roles'), render: (v, row) => (
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'nowrap' }}>
         {row.role === 'student' && <Badge variant="gray">{ROLE_LABELS.student}</Badge>}
         {row.role !== 'student' && row.is_teacher && <Badge variant="info">{ROLE_LABELS.teacher}</Badge>}
@@ -773,7 +772,7 @@ export default function AdminUsers() {
             <button 
               onClick={() => updateUser(row._id, { available: !row.available }, 'staff')} 
               style={{ padding: '5px 10px', borderRadius: '8px', background: row.available ? 'var(--primary-subtle)' : '#F3F4F6', border: 'none', color: 'var(--primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-              {row.available ? '🟢 Dispo' : '🔴 Indispo'}
+              {row.available ? `🟢 ${t('Dispo')}` : `🔴 ${t('Indispo')}`}
             </button>
           )}
           <button onClick={() => setDetailUser(row)} style={{ width: 30, height: 30, borderRadius: '8px', background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)' }}>
@@ -839,7 +838,7 @@ export default function AdminUsers() {
             {roleFilter === 'student' && (
               <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)}
                 style={{ padding: '9px 14px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1.5px solid var(--border)', fontSize: '13px', color: 'var(--text-primary)', outline: 'none' }}>
-                <option value="">Tous les niveaux</option>
+                <option value="">{t('AllLevels')}</option>
                 <option value="1">1CPI</option>
                 <option value="2">2CPI</option>
                 <option value="3">1CS</option>
@@ -849,7 +848,7 @@ export default function AdminUsers() {
             )}
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <Button icon={<IoCloudUploadOutline size={16}/>} variant="secondary" onClick={() => setIsImportModalOpen(true)}>Importer Excel</Button>
+            <Button icon={<IoCloudUploadOutline size={16}/>} variant="secondary" onClick={() => setIsImportModalOpen(true)}>{t('ImportExcel')}</Button>
             <Button icon={<IoAddOutline size={16}/>} onClick={openAdd}>{t('AddUser')}</Button>
           </div>
         </div>
@@ -873,7 +872,7 @@ export default function AdminUsers() {
             {t('Displaying')} {filtered.length === 0 ? 0 : (validCurrentPage - 1) * itemsPerPage + 1} {t('To')} {Math.min(validCurrentPage * itemsPerPage, filtered.length)} {t('Of')} {filtered.length} {t('Users').toLowerCase()}
           </span>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <Button variant="ghost" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={validCurrentPage === 1} style={{ fontSize: '13px', padding: '6px 12px' }}>{t('Cancel').split(' ')[0]}</Button>
+            <Button variant="ghost" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={validCurrentPage === 1} style={{ fontSize: '13px', padding: '6px 12px' }}>{t('Previous')}</Button>
             
             {(() => {
               const pages = [];

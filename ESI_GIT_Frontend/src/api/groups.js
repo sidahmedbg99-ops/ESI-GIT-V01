@@ -9,6 +9,7 @@ export const groupApi = {
   assignJury:       async (id, body)  => { const { data } = await client.post(ENDPOINTS.groups.assignJury(id), body); return data; },
   editJury:         async (id, body)  => { const { data } = await client.patch(ENDPOINTS.groups.editJury(id), body);  return data; },
   archiveProject:   async (id)        => { const { data } = await client.patch(ENDPOINTS.groups.archive(id));         return data; },
+  archiveAll:       async (body)      => { const { data } = await client.post(ENDPOINTS.groups.archiveAll, body);     return data; },
   restoreProject:   async (id)        => { const { data } = await client.patch(ENDPOINTS.groups.restore(id));         return data; },
   getArchived:      async ()          => { const { data } = await client.get(ENDPOINTS.groups.archived);              return data; },
 
@@ -35,8 +36,9 @@ export const groupApi = {
   },
   changeSupervisor: async (id, body) => { const { data } = await client.patch(ENDPOINTS.groups.changeSupervisor(id), body); return data; },
   // ── Student side ───────────────────────────────────────────────
-  getStudentGroup:   async ()          => { const { data } = await client.get(ENDPOINTS.groups.myProject);            return data; },
-  getPublicSettings: async ()          => { const { data } = await client.get(ENDPOINTS.groups.publicSettings);       return data; },
+  getStudentGroup:    async ()          => { const { data } = await client.get(ENDPOINTS.groups.myProject);            return data; },
+  getStudentDashboard:async ()          => { const { data } = await client.get(ENDPOINTS.groups.dashboard);            return data; },
+  getPublicSettings:  async ()          => { const { data } = await client.get(ENDPOINTS.groups.publicSettings);       return data; },
 
   createGroup: async (groupData) => {
     const { data: project } = await client.post(ENDPOINTS.groups.create, groupData);
@@ -54,8 +56,9 @@ export const groupApi = {
     return project;
   },
 
-  joinProject:  async (code, role) => { const { data } = await client.post(ENDPOINTS.groups.join, { invite_code: code, role: role }); return data; },
-  leaveProject: async ()           => { const { data } = await client.post(ENDPOINTS.groups.leave);                return data; },
+  joinProject:   async (code, role) => { const { data } = await client.post(ENDPOINTS.groups.join, { invite_code: code, role: role }); return data; },
+  leaveProject:  async ()           => { const { data } = await client.post(ENDPOINTS.groups.leave);                return data; },
+  confirmGroup:  async ()           => { const { data } = await client.post(ENDPOINTS.groups.confirm);             return data; },
   leaderAction: async (patch)      => { const { data } = await client.patch(ENDPOINTS.groups.leader, patch);      return data; },
 
   // Supervisor Requests (Student side)

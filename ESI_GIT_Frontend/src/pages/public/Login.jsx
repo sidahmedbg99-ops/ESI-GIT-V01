@@ -61,9 +61,9 @@ export default function Login() {
 
     setLoading(true);
     clearError();
-    const ok = await login(email, password);
+    const result = await login(email, password);
     setLoading(false);
-    if (ok) {
+    if (result === true) {
       toast.success(t('Success'));
       const userData = JSON.parse(localStorage.getItem('esi-user'));
       if (userData?.first_login) {
@@ -73,7 +73,7 @@ export default function Login() {
         navigate(redirectMap[userData.role] || '/');
       }
     } else {
-      toast.error(t('Error'));
+      toast.error(result?.error || t('Error'));
     }
   };
 
@@ -364,17 +364,18 @@ export default function Login() {
               {error && (
                 <div style={{
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   gap: '10px',
                   padding: '14px 16px',
                   borderRadius: '14px',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.2)',
-                  color: '#FCA5A5',
+                  background: theme === 'dark' ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+                  border: theme === 'dark' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid #FCA5A5',
+                  color: theme === 'dark' ? '#FCA5A5' : '#991B1B',
                   fontSize: '13.5px',
                   marginBottom: '20px',
+                  lineHeight: 1.5,
                 }}>
-                  <IoAlertCircleOutline size={20} style={{ flexShrink: 0, color: '#EF4444' }} />
+                  <IoAlertCircleOutline size={20} style={{ flexShrink: 0, color: '#EF4444', marginTop: '1px' }} />
                   <span>{error}</span>
                 </div>
               )}
