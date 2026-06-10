@@ -1,44 +1,25 @@
 ----------------------------------------PUBLIC----------------------------------------
--add color depth for light mode , in it everything is white which makes the form kinda disappear
 -add password min 8 chars when creating it.
--make it show if you are blocked / invalid email when logging in
 ----------------------------------------STUDENT----------------------------------------
     *DESIGN/DISPLAY:
--dark mode , join a project , choosing a role makes it very white 
--private repo support , with the operations , student can modify , supervisor only load commits no editing
--leader can lock and confirm it the group so no one leaves , he do it when his group is all there (cant do it if less that 3 members)
--"Group: group title" in the group title shouldnt be there
--make supervisor name more visible
--remove x/6 members to x members , this implys that you need 6 members
--remove the auto select for type project as pfe
 
     *LOGIC/CRASH BUGS:
 
 ----------------------------------------TEACHER----------------------------------------
     *DESIGN/DISPLAY:
--the warning pop up needs to be fixed in requests , its only shading a part of the page
--the refuse final submssion prompt needs to be in the website not the browser pop up , same for the warning in approuving inside the group
--add each students role next to their name when a supervisor creats a task for a group
--when in a specific group , next to the members name add their role and email
 
     *LOGIC/CRASH BUGS:
--can get a request for supervision , admin adds a supervisor for them before teacher accept , error happens (should be fixed , needs testing)
 ----------------------------------------ADMIN----------------------------------------
     *DESIGN/DISPLAY:
--better stats
 
     *LOGIC/CRASH BUGS:
--date set to stop students from leaving the project / auto confirm all groups
+
 
 ----------------------------------------ADDITIONS----------------------------------------
     *DESIGN/DISPLAY:
 
     *LOGIC/CRASH BUGS:
--quit group check so students dosent leave a group in the middle of the year
 
 ----------------------------------------NEW FEATURES----------------------------------------
--meeting attendance
--ressources page for everyone
--notifications system for admin
 -real time notifications
 --------------------------------------------------------------------------------------------

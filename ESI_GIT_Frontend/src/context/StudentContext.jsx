@@ -69,13 +69,22 @@ export function StudentProvider({ children }) {
     };
   }, [user]);
 
+  const refreshStudentGroup = useCallback(() => {
+    groupApi.getStudentGroup().then(myGroup => {
+      if (!myGroup) { setGroup(null); return; }
+      setGroup(normalizeGroup(myGroup));
+    }).catch(() => {});
+  }, [normalizeGroup]);
+
   const _allTasks = Object.values(tasks).flat();
   useEffect(() => {
     if (!user?._id) return;
-    
+
+    const interval = setInterval(refreshStudentGroup, 30000);
+
     groupApi.getStudentGroup().then(myGroup => {
       if (!myGroup) return;
-      
+
       const normalizedGroup = normalizeGroup(myGroup);
       setGroup(normalizedGroup);
 
@@ -113,7 +122,9 @@ export function StudentProvider({ children }) {
     }).catch(() => {
       setGroup(null);
     });
-  }, [user, normalizeGroup, loadTasks, loadMeetings, loadLivrables]);
+
+    return () => clearInterval(interval);
+  }, [user, normalizeGroup, loadTasks, loadMeetings, loadLivrables, refreshStudentGroup]);
 
   const pushActivity = useCallback((entry) => {
     setRecentActivity(prev => [{ _id: makeId(), timestamp: nowLabel(), ...entry }, ...prev].slice(0, 20));
@@ -320,7 +331,7 @@ export function StudentProvider({ children }) {
     addMeeting, updateMeetingStatus,
     addLivrable,
     loadThread, sendMessage, markThreadRead,
-    updateGroup, pushActivity,
+    refreshStudentGroup, updateGroup, pushActivity,
     setGroup, setTasks, setMeetings, setLivrables, setMessages, setRecentActivity,
   };
 

@@ -393,11 +393,7 @@ class TeacherSubmitGradeView(APIView):
             return Response({"error": "No jury assigned to this project"}, status=404)
 
         # only president can submit
-        from users.models import Staff
-        try:
-            teacher = Staff.objects.get(TID=request.user.id)
-        except Staff.DoesNotExist:
-            return Response({"error": "Teacher not found"}, status=404)
+        teacher = request.user  # already the authenticated Staff instance
 
         if jury.teacher1_id != teacher:
             return Response(
@@ -440,6 +436,12 @@ class TeacherSubmitGradeView(APIView):
         grade.values = {k: float(v) for k, v in values.items()}
         grade.comments = request.data.get("comments", "")
         grade.save()
+
+        if grade.final_grade is None:
+            return Response(
+                {"error": "Could not compute the final grade — check the active grading formula for errors with these values."},
+                status=500
+            )
 
         # notify project members
         members = SProjects.objects.filter(PID=project).select_related("CID")

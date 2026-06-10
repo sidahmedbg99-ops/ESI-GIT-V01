@@ -207,6 +207,7 @@ export function AdminProvider({ children }) {
       setUsers(prev => [...(prev ?? []), normalized]);
       pushActivity({ type: 'user_created', action: 'Utilisateur ajouté', desc: normalized.name, color: 'var(--primary)' });
       toast.success('Utilisateur créé avec succès !');
+      fetchAnalytics();
       return normalized;
     } catch (e) {
       console.error(e);
@@ -219,7 +220,7 @@ export function AdminProvider({ children }) {
       }
       toast.error(msg);
     }
-  }, [pushActivity]);
+  }, [pushActivity, fetchAnalytics]);
 
   const updateUser = useCallback(async (userId, patch, passedRole) => {
     try {
@@ -264,11 +265,12 @@ export function AdminProvider({ children }) {
       setUsers(prev => prev?.filter(usr => usr.id !== userId && usr._id !== userId) ?? prev);
       pushActivity({ type: 'user_removed', action: 'Utilisateur supprimé', desc: u.name, color: '#EF4444' });
       toast.success('Utilisateur supprimé');
+      fetchAnalytics();
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors de la suppression');
     }
-  }, [users, pushActivity]);
+  }, [users, pushActivity, fetchAnalytics]);
 
   const blockUser = useCallback(async (userId) => {
     try {
@@ -310,13 +312,14 @@ export function AdminProvider({ children }) {
       setGroups(prev => [...(prev ?? []), normalized]);
       pushActivity({ type: 'group_created', action: 'Groupe créé', desc: normalized.title, color: '#F59E0B' });
       toast.success('Groupe créé avec succès !');
+      fetchAnalytics();
       return normalized;
     } catch (e) {
       console.error(e);
       const msg = e?.response?.data?.error || e?.response?.data?.detail || 'Erreur lors de la création';
       toast.error(msg);
     }
-  }, [pushActivity]);
+  }, [pushActivity, fetchAnalytics]);
 
   const updateGroup = useCallback(async (groupId, patch) => {
     try {
@@ -475,11 +478,12 @@ export function AdminProvider({ children }) {
       setGroups(prev => prev?.filter(g => g._id !== groupId) ?? prev);
       pushActivity({ type: 'group_deleted', action: 'Groupe supprimé', desc: groupId, color: '#EF4444' });
       toast.success('Groupe supprimé');
+      fetchAnalytics();
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors de la suppression');
     }
-  }, [pushActivity]);
+  }, [pushActivity, fetchAnalytics]);
 
   const deleteArchiveProject = useCallback(async (projectId) => {
     try {
