@@ -73,17 +73,13 @@ export function TeacherProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadGroups]);
 
-  const refreshMeetings = useCallback(() => {
-    loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadMeetings]);
-
   useEffect(() => {
     if (!user?._id || !isTeacher) return;
 
     refreshGroups();
-    refreshMeetings();
-    const interval = setInterval(() => { refreshGroups(); refreshMeetings(); }, 30000);
+    const interval = setInterval(refreshGroups, 30000); // 30s polling — matches notification polling
+
+    loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(() => setMeetings([]));
     loadEvaluations()
     .then(e => setEvaluations(e))
     .catch(err => {
@@ -93,7 +89,7 @@ export function TeacherProvider({ children }) {
     loadArchive().then(a => setArchive(Array.isArray(a) ? a : [])).catch(() => setArchive([]));
 
     return () => clearInterval(interval);
-  }, [user, isTeacher, refreshGroups, refreshMeetings]);
+  }, [user, isTeacher]);
 
   const pushActivity = useCallback((entry) => {
     setRecentActivity(prev => [{ _id: makeId(), timestamp: nowLabel(), ...entry }, ...prev].slice(0, 20));

@@ -582,7 +582,6 @@ class AdminChangeSupervisorView(APIView):
 
         old_supervisor = project.TID
         project.TID = teacher
-        project.status = 'approved'
         project.save()
 
         from notifications.utils import notify
@@ -1343,11 +1342,12 @@ class ProjectAttachmentsReadView(APIView):
 
         # allow jury member
         is_jury = False
-        if not is_admin and request.user.is_authenticated and hasattr(request.user, 'TID'):
+        if not is_admin and request.user.is_authenticated:
             try:
+                staff = Staff.objects.get(TID=request.user.id)
                 jury  = ProjectJury.objects.get(PID_id=pid)
-                is_jury = request.user in [jury.teacher1_id, jury.teacher2_id, jury.teacher3_id]
-            except ProjectJury.DoesNotExist:
+                is_jury = staff in [jury.teacher1_id, jury.teacher2_id, jury.teacher3_id]
+            except (Staff.DoesNotExist, ProjectJury.DoesNotExist):
                 pass
 
         if not is_admin and not is_jury:

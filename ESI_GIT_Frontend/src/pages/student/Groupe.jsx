@@ -59,7 +59,7 @@ export default function Groupe() {
   }, [loadTeachers]);
 
   const teachers = teachersList || [];
-  const { group: team, updateGroup, setGroup: setTeam, refreshStudentGroup } = useStudent();
+  const { group: team, updateGroup, setGroup: setTeam } = useStudent();
   const [activeTab, setActiveTab] = useState('creer');
   const [createStep, setCreateStep] = useState(0);
   const [groupName, setGroupName] = useState('');
@@ -211,7 +211,9 @@ export default function Groupe() {
     try {
       await groupApi.sendSupervisorRequest(selectedTeacher._id || selectedTeacher.TID || selectedTeacher.id, requestMessage);
       toast.success('Demande envoyée à l\'encadreur');
-      refreshStudentGroup();
+      // Force refresh or update local state
+      const updated = await groupApi.getStudentGroup();
+      updateGroup(updated);
       setCreateStep(2);
       setShowSupervisorConfirmModal(false);
     } catch (err) {
@@ -522,7 +524,7 @@ export default function Groupe() {
                   </Badge>
                 ) : team.supervisorRequest?.status === 'rejected' ? (
                   <Badge style={{ background: '#DC2626', color: '#fff', border: 'none' }}>
-                    ❌ {t('Rejected_label')}
+                    ❌ Refusé
                   </Badge>
                 ) : (
                   <Badge style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>
@@ -583,7 +585,7 @@ export default function Groupe() {
                   <div style={{ position: 'relative', marginBottom: '12px' }}>
                     <IoSearchOutline style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input
-                      placeholder={t('SearchByTeacherName')}
+                      placeholder="Rechercher un enseignant par nom..."
                       value={teacherSearch}
                       onChange={(e) => setTeacherSearch(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px 10px 38px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg)', fontSize: '13px', outline: 'none' }}

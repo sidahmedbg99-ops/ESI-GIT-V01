@@ -41,8 +41,7 @@ export default function Login() {
         setLoading(true);
         await authApi.changePassword(password, newPassword);
 
-        let userData;
-        try { userData = JSON.parse(localStorage.getItem('esi-user') || '{}'); } catch { userData = {}; }
+        let userData = JSON.parse(localStorage.getItem('esi-user'));
         userData.first_login = false;
         localStorage.setItem('esi-user', JSON.stringify(userData));
 
@@ -66,8 +65,7 @@ export default function Login() {
     setLoading(false);
     if (result === true) {
       toast.success(t('Success'));
-      let userData;
-      try { userData = JSON.parse(localStorage.getItem('esi-user') || '{}'); } catch { userData = {}; }
+      const userData = JSON.parse(localStorage.getItem('esi-user'));
       if (userData?.first_login) {
         setIsFirstLoginState(true);
       } else {
