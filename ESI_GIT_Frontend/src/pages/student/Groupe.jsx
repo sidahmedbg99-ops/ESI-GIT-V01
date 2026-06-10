@@ -507,24 +507,28 @@ export default function Groupe() {
                 </div>
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.65)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>{t('Supervisor')} :</span>
-                  {team.supervisorRequest?.status === 'rejected'
-                    ? <span style={{ color: '#FECACA', fontWeight: 600 }}>{team.supervisorRequest.teacher_name} ({t('Rejected_label')})</span>
-                    : team.encadreur
-                      ? <span
-                          onClick={e => setPopover({ user: { name: team.encadreur, email: team.encadreur_email || team.teacher_email || team.supervisor_email || team.encadreurEmail || team.teacherEmail || null }, anchor: { x: e.clientX, y: e.clientY } })}
-                          style={{ cursor: 'pointer', color: '#fff', fontWeight: 700, textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px', fontSize: '14px' }}
-                        >{team.encadreur}</span>
+                  {team.encadreur && team.encadreur !== '—'
+                    ? <span
+                        onClick={e => setPopover({ user: { name: team.encadreur, email: team.encadreur_email || team.teacher_email || team.supervisor_email || team.encadreurEmail || team.teacherEmail || null }, anchor: { x: e.clientX, y: e.clientY } })}
+                        style={{ cursor: 'pointer', color: '#fff', fontWeight: 700, textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px', fontSize: '14px' }}
+                      >{team.encadreur}</span>
+                    : team.supervisorRequest?.status === 'rejected'
+                      ? <span style={{ color: '#FECACA', fontWeight: 600 }}>{team.supervisorRequest.teacher_name} ({t('Rejected_label')})</span>
                       : <span style={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>—</span>}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                {team.supervisorRequest?.status === 'rejected' ? (
+                {team.supervisorApproved ? (
+                  <Badge style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>
+                    ✓ {t('Approve')}
+                  </Badge>
+                ) : team.supervisorRequest?.status === 'rejected' ? (
                   <Badge style={{ background: '#DC2626', color: '#fff', border: 'none' }}>
                     ❌ Refusé
                   </Badge>
                 ) : (
                   <Badge style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none' }}>
-                    {team.supervisorApproved ? `✓ ${t('Approve')}` : `⏳ ${t('NonApproved_Stat')}`}
+                    ⏳ {t('NonApproved_Stat')}
                   </Badge>
                 )}
                 <Badge style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none' }}>{(team.members || []).length}/6 {t('Members').toLowerCase()}</Badge>
@@ -555,7 +559,7 @@ export default function Groupe() {
           )}
 
           {/* Supervisor Management Section */}
-          {!team.supervisorApproved && team.members?.find(m => m.isMe)?.isChef && (
+          {!team.supervisorApproved && (team.encadreur === '—' || !team.encadreur) && team.members?.find(m => m.isMe)?.isChef && (
             <Card style={{ marginBottom: '24px', border: '1.5px dashed var(--primary)', background: 'var(--primary-subtle)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

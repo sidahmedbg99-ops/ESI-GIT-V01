@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   IoNotificationsOutline, IoDocumentTextOutline,
@@ -15,13 +15,16 @@ import { useLanguage } from '../../context/LanguageContext';
 import { toast } from 'react-hot-toast';
 
 export default function TeacherRequests() {
-  const { 
-    supervisorRequests, 
-    respondToSupervisorRequest, 
-    groups, 
+  const {
+    supervisorRequests,
+    respondToSupervisorRequest,
+    groups,
     updateGroup,
-    groupsLoading 
+    groupsLoading,
+    refreshGroups,
   } = useTeacher();
+
+  useEffect(() => { refreshGroups?.(); }, []);
   const { t } = useLanguage();
 
   const safeRequests = supervisorRequests || [];

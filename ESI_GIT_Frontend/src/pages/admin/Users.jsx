@@ -410,11 +410,11 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[
-                { v: '1', label: '1CP', desc: 'Nouveaux' },
-                { v: '2', label: '2CP', desc: '2ème année' },
-                { v: '3', label: '1CS', desc: '3ème année' },
-                { v: '4', label: '2CS', desc: '4ème année' },
-                { v: '5', label: '3CS', desc: '5ème année' },
+                { v: '1', label: '1CP', desc: t('LevelDesc1') },
+                { v: '2', label: '2CP', desc: t('LevelDesc2') },
+                { v: '3', label: '1CS', desc: t('LevelDesc3') },
+                { v: '4', label: '2CS', desc: t('LevelDesc4') },
+                { v: '5', label: '3CS', desc: t('LevelDesc5') },
               ].map(({ v, label, desc }) => (
                 <button key={v} onClick={() => setLevel(v)}
                   style={{ padding: '8px 14px', borderRadius: '10px', border: `2px solid ${level === v ? 'var(--primary)' : 'var(--border)'}`, background: level === v ? 'var(--primary-subtle)' : 'var(--bg)', color: level === v ? 'var(--primary)' : 'var(--text-secondary)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center' }}>
@@ -425,10 +425,9 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
             </div>
             {level !== '1' && (
               <p style={{ fontSize: '11px', color: '#F59E0B', marginTop: '8px', fontWeight: 600 }}>
-                {level === '5'
-                  ? `⚠️ Les étudiants présents dans ce fichier auront leur niveau mis à jour en ${LEVEL_LABELS[level]}. Les étudiants de l'année précédente absents de ce fichier seront considérés comme diplômés. Les nouveaux CIDs seront créés et marqués comme transférés — vérifiez leur année de promotion après l'import.`
-                  : `⚠️ Les étudiants présents dans ce fichier auront leur niveau mis à jour en ${LEVEL_LABELS[level]}. Les nouveaux CIDs seront créés et marqués comme transférés — vérifiez leur année de promotion après l'import.`
-                }
+                ⚠️ {t('ImportWarnPreLevel')} {LEVEL_LABELS[level]}.
+                {level === '5' && ` ${t('ImportWarnGrads')}`}
+                {` ${t('ImportWarnTransfers')}`}
               </p>
             )}
           </div>
@@ -441,27 +440,27 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
             <div style={{ display: 'flex', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
               {result.new > 0 && (
                 <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#DCFCE7', color: '#16A34A', fontSize: '12px', fontWeight: 700 }}>
-                  ✅ {result.new} nouveau{result.new > 1 ? 'x' : ''}
+                  ✅ {result.new} {result.new > 1 ? t('NewPl') : t('NewSg')}
                 </span>
               )}
               {result.promoted > 0 && (
                 <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#DBEAFE', color: '#2563EB', fontSize: '12px', fontWeight: 700 }}>
-                  ⬆️ {result.promoted} promu{result.promoted > 1 ? 's' : ''}
+                  ⬆️ {result.promoted} {result.promoted > 1 ? t('PromotedPl') : t('PromotedSg')}
                 </span>
               )}
               {result.transfers?.length > 0 && (
                 <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#DBEAFE', color: '#2563EB', fontSize: '12px', fontWeight: 700 }}>
-                  🔄 {result.transfers.length} transféré{result.transfers.length > 1 ? 's' : ''}
+                  🔄 {result.transfers.length} {result.transfers.length > 1 ? t('TransferredPl') : t('TransferredSg')}
                 </span>
               )}
               {result.orphans?.length > 0 && (
                 <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#FEF3C7', color: '#D97706', fontSize: '12px', fontWeight: 700 }}>
-                  ⚠️ {result.orphans.length} orphelin{result.orphans.length > 1 ? 's' : ''}
+                  ⚠️ {result.orphans.length} {result.orphans.length > 1 ? t('OrphanPl') : t('OrphanSg')}
                 </span>
               )}
               {result.errors?.length > 0 && (
                 <span style={{ padding: '6px 12px', borderRadius: '20px', background: '#FEE2E2', color: '#DC2626', fontSize: '12px', fontWeight: 700 }}>
-                  ❌ {result.errors.length} erreur{result.errors.length > 1 ? 's' : ''}
+                  ❌ {result.errors.length} {result.errors.length > 1 ? t('ResultErrorPl') : t('ResultErrorSg')}
                 </span>
               )}
             </div>
@@ -469,7 +468,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
             {/* Orphans list */}
             {result.orphans?.length > 0 && (
               <div style={{ marginBottom: '12px', padding: '10px 12px', borderRadius: '8px', background: '#FFFBEB', border: '1px solid #FCD34D' }}>
-                <p style={{ fontSize: '12px', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>CIDs introuvables (à créer manuellement)</p>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: '#D97706', marginBottom: '6px' }}>{t('OrphansFoundDetail')}</p>
                 {result.orphans.map((o, i) => (
                   <p key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0' }}>
                     {o.CID} — {o.name}
@@ -481,7 +480,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
             {result.transfers?.length > 0 && (
               <div style={{ marginBottom: '12px', padding: '10px 12px', borderRadius: '8px', background: '#EFF6FF', border: '1px solid #93C5FD' }}>
                 <p style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB', marginBottom: '6px' }}>
-                  ⚠️ {result.transfers.length} étudiant(s) transféré(s) créé(s) — vérifiez leur année de promotion
+                  ⚠️ {result.transfers.length} {t('TransfersCreatedDetail')}
                 </p>
                 {result.transfers.map((o, i) => (
                   <p key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0' }}>
@@ -497,9 +496,9 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                <thead>
                  <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--border)' }}>
-                   <th style={{ padding: '8px' }}>Nom</th>
+                   <th style={{ padding: '8px' }}>{t('Name_col')}</th>
                    <th style={{ padding: '8px' }}>Email</th>
-                   <th style={{ padding: '8px' }}>Mot de passe</th>
+                   <th style={{ padding: '8px' }}>{t('Password_col')}</th>
                  </tr>
                </thead>
                <tbody>
@@ -548,7 +547,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
               <>
                 <IoDocumentTextOutline size={36} color="#10B981" style={{ marginBottom: '10px' }} />
                 <p style={{ fontWeight: 700, color: '#10B981', fontSize: '14px' }}>{file.name}</p>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{(file.size / 1024).toFixed(1)} KB — Cliquez pour changer</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{(file.size / 1024).toFixed(1)} KB — {t('ClickToChange')}</p>
               </>
             ) : (
               <>
@@ -602,7 +601,7 @@ function ExcelImportModal({ isOpen, onClose, onImported }) {
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirmedUpload}
         title={t('ConfirmImport')}
-        message={`Vous allez importer "${file?.name}" comme liste des étudiants ${LEVEL_LABELS[level]} de l'année ${activeYear}. Confirmer ?`}
+        message={`${t('ImportConfirmBody')} "${file?.name}" ${t('ImportConfirmBodyAs')} ${LEVEL_LABELS[level]} ${t('ImportConfirmBodyYear')} ${activeYear}. ${t('ImportConfirmBodySuffix')}`}
         type="warning"
       />
     </Modal>

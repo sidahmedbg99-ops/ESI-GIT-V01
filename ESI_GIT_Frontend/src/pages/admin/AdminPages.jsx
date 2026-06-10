@@ -59,8 +59,8 @@ export function AdminAnalytics() {
   }));
 
   const activeVsInactiveData = [
-    { name: 'Actifs', value: adv.student_stats?.active ?? 0 },
-    { name: 'Inactifs', value: adv.student_stats?.inactive ?? 0 },
+    { name: t('ActiveStudentsChart'), value: adv.student_stats?.active ?? 0 },
+    { name: t('InactiveStudentsChart'), value: adv.student_stats?.inactive ?? 0 },
   ];
 
   const [studentSearch, setStudentSearch] = useState('');
@@ -163,11 +163,11 @@ export function AdminAnalytics() {
             </PieChart>
             <div style={{ flex: 1, paddingLeft: '20px' }}>
               <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Étudiants Actifs</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('ActiveStudents_label')}</p>
                 <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>{adv.student_stats?.active ?? 0}</p>
               </div>
               <div>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Étudiants Inactifs</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('InactiveStudents_label')}</p>
                 <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-secondary)' }}>{adv.student_stats?.inactive ?? 0}</p>
               </div>
             </div>
@@ -231,8 +231,8 @@ export function AdminAnalytics() {
             <thead>
               <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Student')}</th>
-                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>Niveau</th>
-                {studentLevel !== '2' && <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>Spécialité</th>}
+                <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Level')}</th>
+                {studentLevel !== '2' && <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Specialite')}</th>}
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Project')}</th>
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600 }}>{t('Supervisor')}</th>
                 <th style={{ padding: '12px 8px', color: 'var(--text-muted)', fontWeight: 600, textAlign: 'right' }}>{t('Grade')}</th>
@@ -306,15 +306,22 @@ function PanelYears({ onBack }) {
   };
 
   const handleAdvanceYear = () => {
-    if (!window.confirm(`Clôturer ${platformSettings?.current_academic_year} et archiver tous les projets actifs ?`)) return;
-    setLoading(true);
-    client.post(ENDPOINTS.admin.advanceYear)
-      .then(res => {
-        toast.success(res.data.message);
-        updatePlatformSettings({});
-      })
-      .catch(e => toast.error(e?.response?.data?.error || 'Erreur'))
-      .finally(() => setLoading(false));
+    window.showConfirm({
+      title: t('CloseYearAdvance'),
+      message: `${t('AdvanceYearConfirmPre')} ${platformSettings?.current_academic_year} ${t('AdvanceYearConfirmPost')}`,
+      confirmText: t('Confirm'),
+      type: 'warning',
+      onConfirm: () => {
+        setLoading(true);
+        client.post(ENDPOINTS.admin.advanceYear)
+          .then(res => {
+            toast.success(res.data.message);
+            updatePlatformSettings({});
+          })
+          .catch(e => toast.error(e?.response?.data?.error || t('Error')))
+          .finally(() => setLoading(false));
+      }
+    });
   };
 
   return (

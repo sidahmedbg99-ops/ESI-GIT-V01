@@ -664,13 +664,13 @@ function CreateGroupModal({ withoutGroup, onClose, onSubmit }) {
                     ))
                   }
                   {teachers.filter(u => !supSearch || u.name?.toLowerCase().includes(supSearch.toLowerCase())).length === 0 && (
-                    <p style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>Aucun résultat</p>
+                    <p style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>{t('NoResults')}</p>
                   )}
                 </div>
               </div>
             )}
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Laissez vide pour laisser le groupe choisir plus tard.</p>
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{t('LeaveEmptyLater')}</p>
         </div>
 
         {/* Level filter + Students */}
@@ -886,7 +886,7 @@ export default function AdminGroupes() {
                         ))
                       }
                       {teachers.filter(u => !supSearch || u.name?.toLowerCase().includes(supSearch.toLowerCase())).length === 0 && (
-                        <p style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>Aucun résultat</p>
+                        <p style={{ padding: '12px 14px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>{t('NoResults')}</p>
                       )}
                     </div>
                   </div>
@@ -1212,7 +1212,7 @@ function ArchiveAllModal({ groups, onClose, onArchiveSelected }) {
                           </span>
                         )}
                       </div>
-                      <span style={{ fontSize: '11px', padding: '2px 7px', borderRadius: '5px', background: '#FEF3C7', color: '#D97706', fontWeight: 700, flexShrink: 0 }}>Non noté</span>
+                      <span style={{ fontSize: '11px', padding: '2px 7px', borderRadius: '5px', background: '#FEF3C7', color: '#D97706', fontWeight: 700, flexShrink: 0 }}>{t('UnnotedBadge')}</span>
                     </div>
                   ))}
                 </div>

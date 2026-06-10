@@ -93,11 +93,12 @@ class SupervisorRequest(models.Model):
         PENDING = "pending", "Pending"
         ACCEPTED = "accepted", "Accepted"
         REJECTED = "rejected", "Rejected"
+        ADMIN_ASSIGNED = "admin_assigned", "Admin Assigned"
 
     project_id = models.ForeignKey(Projects, on_delete=models.CASCADE)
     teacher_id = models.ForeignKey(Staff, on_delete=models.CASCADE)
     status = models.CharField(
-        max_length=10, choices=StatusChoices.choices, default="pending"
+        max_length=15, choices=StatusChoices.choices, default="pending"
     )
     message = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -172,7 +172,7 @@ def archived_projects(request):
                 {"error": "Archived projects are hidden for students"}, status=403
             )
 
-        projects = Projects.objects.filter(archived=True).order_by("-creation_date")
+        projects = Projects.objects.filter(archived=True, is_public=True).order_by("-creation_date")
         serializer = StudentProjectSerializer(projects, many=True, context={"request": request})
         return Response(serializer.data)
 
@@ -617,17 +617,17 @@ class AdminChangeSupervisorView(APIView):
                     message=f'Un administrateur a assigné directement un encadreur au groupe "{project.name}". La demande de ce groupe vous concernant a été annulée.',
                 )
 
-        # Notify the group leader
-        try:
-            leader_membership = SProjects.objects.get(PID=project, is_leader=True)
-            notify(
-                recipient_type="student",
-                recipient_id=leader_membership.CID.CID,
-                title="Encadreur assigné",
-                message=f'Un administrateur a assigné {teacher.full_name} comme encadreur de votre groupe "{project.name}".',
-            )
-        except Exception:
-            pass
+        # Notify all group members
+        for membership in SProjects.objects.filter(PID=project).select_related("CID"):
+            try:
+                notify(
+                    recipient_type="student",
+                    recipient_id=membership.CID.CID,
+                    title="Encadreur assigné",
+                    message=f'Un administrateur a assigné {teacher.full_name} comme encadreur de votre groupe "{project.name}".',
+                )
+            except Exception:
+                pass
 
         return Response({"success": True, "teacher_name": teacher.full_name})
 

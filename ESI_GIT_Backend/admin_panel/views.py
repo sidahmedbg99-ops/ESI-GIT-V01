@@ -711,7 +711,7 @@ class AdvancedAnalyticsAPI(APIView):
                     "student_name": m.CID.full_name,
                     "email": m.CID.email,
                     "level": m.CID.level,
-                    "specialty": m.CID.specialty or "—",
+                    "specialty": m.CID.specialty.name if m.CID.specialty else "—",
                     "academic_year": m.PID.year,
                     "project_name": m.PID.name,
                     "supervisor": m.PID.TID.full_name if m.PID.TID else "—",

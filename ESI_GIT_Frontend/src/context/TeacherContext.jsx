@@ -65,18 +65,19 @@ export function TeacherProvider({ children }) {
     }));
   };
 
+  const refreshGroups = useCallback(() => {
+    loadGroups().then(res => {
+      setGroups(normalizeGroups(res));
+      setSupervisorRequests(normalizeRequests(res));
+    }).catch(() => { setGroups([]); setSupervisorRequests([]); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadGroups]);
+
   useEffect(() => {
     if (!user?._id || !isTeacher) return;
 
-    const fetchRequests = () => {
-      loadGroups().then(res => {
-        setGroups(normalizeGroups(res));
-        setSupervisorRequests(normalizeRequests(res));
-      }).catch(() => { setGroups([]); setSupervisorRequests([]); });
-    };
-
-    fetchRequests();
-    const interval = setInterval(fetchRequests, 30000); // 30s polling — matches notification polling
+    refreshGroups();
+    const interval = setInterval(refreshGroups, 30000); // 30s polling — matches notification polling
 
     loadMeetings().then(m => setMeetings(Array.isArray(m) ? m : [])).catch(() => setMeetings([]));
     loadEvaluations()
@@ -314,7 +315,7 @@ export function TeacherProvider({ children }) {
     groups, meetings, evaluations, archive, messages, activeContact, recentActivity,
     assignedTasks, stats, analytics: backendAnalytics, supervisorRequests, platformSettings,
     groupsLoading, meetingsLoading, evaluationsLoading, archiveLoading,
-    addGroup, updateGroup, archiveGroup, respondToSupervisorRequest,
+    refreshGroups, addGroup, updateGroup, archiveGroup, respondToSupervisorRequest,
     assignTask, scheduleMeeting,
     addMeeting, acceptMeeting, rejectMeeting, cancelMeeting,
     gradeEvaluation, gradeArchivedProject,

@@ -27,41 +27,50 @@ export default function TeacherArchive() {
   }, []);
 
   const allProjects = archiveList || [];
-  const [search, setSearch] = useState('');
-  const [filterCat, setFilterCat] = useState(null);
-  const [filterValue, setFilterValue] = useState('all');
+  const [search,           setSearch]           = useState('');
   const [supervisorSearch, setSupervisorSearch] = useState('');
+  const [activeFilters,    setActiveFilters]    = useState({});
+  const [expandedCat,      setExpandedCat]      = useState(null);
 
   const years        = [...new Set(allProjects.map(p => p.year))].filter(Boolean).sort().reverse();
   const specialites  = specialties.length
     ? specialties.map(s => s.name).sort()
     : [...new Set(allProjects.map(p => p.specialite))].filter(Boolean).sort();
-  const levelOptions = ['1CPI', '2CPI', '1CS', '2CS', '3CS'];
+  const levelOptions = ['2CPI', '1CS', '2CS', '3CS'];
 
   const FILTER_CATEGORIES = [
-    { key: 'year',       label: t('Year'),      values: years },
-    { key: 'specialite', label: t('Specialty'), values: specialites },
-    { key: 'level',      label: 'Niveau',       values: levelOptions },
+    { key: 'year',       label: t('YearFilter'), values: years },
+    { key: 'specialite', label: t('Specialty'),  values: specialites },
+    { key: 'level',      label: t('Level'),      values: levelOptions },
   ];
 
-  const firstFiltered = allProjects.filter(p => {
-    if (!filterCat || filterValue === 'all') return true;
-    if (filterCat === 'level') {
-      const label = LEVEL_LABELS[p.academic_level] || LEVEL_LABELS[p.level];
-      return label === filterValue;
-    }
-    return p[filterCat] === filterValue;
-  });
+  const toggleFilter = (cat, val) => {
+    setActiveFilters(prev => {
+      if (prev[cat] === val) { const next = { ...prev }; delete next[cat]; return next; }
+      return { ...prev, [cat]: val };
+    });
+  };
 
-  const filtered = firstFiltered.filter(p => {
+  const clearAllFilters = () => { setActiveFilters({}); setExpandedCat(null); setSupervisorSearch(''); };
+
+  const filtered = allProjects.filter(p => {
+    for (const [cat, val] of Object.entries(activeFilters)) {
+      if (cat === 'level') {
+        const label = LEVEL_LABELS[p.academic_level] || LEVEL_LABELS[p.level];
+        if (label !== val) return false;
+      } else {
+        if (p[cat] !== val) return false;
+      }
+    }
     const q = search.toLowerCase();
-    const matchesSearch = !search || p.name?.toLowerCase().includes(q) || p.encadreur?.toLowerCase().includes(q);
-    const matchesSupervisor = !supervisorSearch || (p.encadreur || '').toLowerCase().includes(supervisorSearch.toLowerCase());
-    return matchesSearch && matchesSupervisor;
+    if (search && !p.name?.toLowerCase().includes(q) && !p.encadreur?.toLowerCase().includes(q)) return false;
+    if (supervisorSearch && !(p.encadreur || '').toLowerCase().includes(supervisorSearch.toLowerCase())) return false;
+    return true;
   });
 
   const avgGrade = allProjects.length ? (allProjects.reduce((a, p) => a + Number(p.grades?.final_grade ?? p.grade ?? 0), 0) / allProjects.length).toFixed(1) : 0;
   const mentions = allProjects.filter(p => Number(p.grades?.final_grade ?? p.grade ?? 0) >= 12).length;
+  const hasActiveFilters = Object.keys(activeFilters).length > 0 || supervisorSearch;
 
   return (
     <DashboardLayout>
@@ -92,48 +101,46 @@ export default function TeacherArchive() {
           </div>
 
           <Card style={{ marginBottom: '20px', padding: '18px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>{t('FilterBy')}</span>
-              {FILTER_CATEGORIES.map(cat => (
-                <button key={cat.key} onClick={() => { setFilterCat(filterCat === cat.key ? null : cat.key); setFilterValue('all'); }}
-                   style={{ padding: '7px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: filterCat === cat.key ? 'var(--primary)' : 'var(--bg)', color: filterCat === cat.key ? '#fff' : 'var(--text-secondary)', border: filterCat === cat.key ? 'none' : '1px solid var(--border)' }}>
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-            {filterCat && (
-              <div style={{ marginTop: '12px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {['all', ...(FILTER_CATEGORIES.find(c => c.key === filterCat)?.values || [])].map(v => (
-                  <button key={v} onClick={() => setFilterValue(v)}
-                    style={{ padding: '6px 14px', borderRadius: '20px', border: filterValue === v ? 'none' : '1px solid var(--border)', background: filterValue === v ? 'var(--primary)' : 'var(--bg-card)', color: filterValue === v ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-                    {v === 'all' ? t('All') : v}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: expandedCat ? '14px' : '0' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}><IoFunnelOutline size={13}/> {t('FilterBy')}</span>
+              {FILTER_CATEGORIES.map(cat => {
+                const active = activeFilters[cat.key];
+                return (
+                  <button key={cat.key} onClick={() => setExpandedCat(expandedCat === cat.key ? null : cat.key)} style={{ padding: '7px 16px', borderRadius: '20px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, background: active ? 'var(--primary)' : expandedCat === cat.key ? 'var(--primary-subtle)' : 'var(--bg)', color: active ? '#fff' : expandedCat === cat.key ? 'var(--primary)' : 'var(--text-secondary)', border: active || expandedCat === cat.key ? 'none' : '1px solid var(--border)' }}>
+                    {active ? `${cat.label}: ${active}` : cat.label}
                   </button>
-                ))}
+                );
+              })}
+              {hasActiveFilters && (
+                <button onClick={clearAllFilters} style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#DC2626', fontSize: '12px', fontWeight: 500, cursor: 'pointer', marginLeft: 'auto' }}>
+                  ✕ {t('Reset')}
+                </button>
+              )}
+            </div>
+            {expandedCat && (
+              <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border)', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {(FILTER_CATEGORIES.find(c => c.key === expandedCat)?.values || []).map(v => {
+                  const isActive = activeFilters[expandedCat] === v;
+                  return (
+                    <button key={v} onClick={() => toggleFilter(expandedCat, v)} style={{ padding: '6px 14px', borderRadius: '20px', border: isActive ? 'none' : '1px solid var(--border)', background: isActive ? 'var(--primary)' : 'var(--bg-card)', color: isActive ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                      {v}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </Card>
 
-          {/* Supervisor search */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', flex: '0 0 220px' }}>
-              <IoPersonOutline size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
-              <input
-                value={supervisorSearch}
-                onChange={e => setSupervisorSearch(e.target.value)}
-                placeholder="Rechercher encadreur..."
-                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--text-primary)', width: '100%' }}
-              />
-              {supervisorSearch && (
-                <button onClick={() => setSupervisorSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: 0, lineHeight: 1 }}>✕</button>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <div style={{ width: '280px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 220px', maxWidth: '260px' }}>
               <Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('Search')} icon={<IoSearchOutline size={16}/>}/>
             </div>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{filtered.length} {t('Projects').toLowerCase()}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-card)', flex: '1 1 220px', maxWidth: '260px' }}>
+              <IoPersonOutline size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }}/>
+              <input value={supervisorSearch} onChange={e => setSupervisorSearch(e.target.value)} placeholder={t('SearchSupervisor')} style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: 'var(--text-primary)', width: '100%' }}/>
+              {supervisorSearch && <button onClick={() => setSupervisorSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '14px', padding: 0, lineHeight: 1 }}>✕</button>}
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{filtered.length} {t('Projects').toLowerCase()}</p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '16px' }}>
@@ -155,7 +162,7 @@ export default function TeacherArchive() {
                       </span>
                     </div>
                     {Number(p.grades?.final_grade ?? p.grade ?? 0) >= 12 ? (
-                      <Badge variant="success">🏅 {Number(p.grades?.final_grade ?? p.grade ?? 0) >= 16 ? 'Très Bien' : Number(p.grades?.final_grade ?? p.grade ?? 0) >= 14 ? 'Bien' : 'Assez Bien'}</Badge>
+                      <Badge variant="success">🏅 {Number(p.grades?.final_grade ?? p.grade ?? 0) >= 16 ? t('MentionTresBien') : Number(p.grades?.final_grade ?? p.grade ?? 0) >= 14 ? t('MentionBien') : t('MentionAssezBien')}</Badge>
                     ) : (
                       <Badge variant="info">✓ {t('Validated')}</Badge>
                     )}
@@ -167,7 +174,7 @@ export default function TeacherArchive() {
                   {p.description ? (
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{p.description}</p>
                   ) : (
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.5 }}>Aucune description disponible.</p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.5 }}>{t('NoDescription')}</p>
                   )}
                 </div>
 

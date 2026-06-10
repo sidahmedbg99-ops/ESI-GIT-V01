@@ -21,7 +21,7 @@ function TaskCard({ task, colId, group, onMove, onDelete, onReassign }) {
   const { t } = useLanguage();
   const myId = String(user?._id || user?.id || user?.CID);
   const isMe = task.assigneeIds?.map(String).includes(myId);
-  const isChef = members.find(m => String(m._id) === myId)?.isChef;
+  const isChef = members.find(m => String(m._id) === myId || String(m.CID) === myId || String(m.student_id) === myId)?.isChef;
 
   return (
     <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '14px', marginBottom: '10px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
@@ -73,8 +73,8 @@ function TaskCard({ task, colId, group, onMove, onDelete, onReassign }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {(task.assigneeIds ?? []).map((id, i) => {
-            const m = members.find(mb => mb._id === id || mb.name === id);
-            const lbl = (m?.name || id?.toString() || '?').charAt(0).toUpperCase();
+            const m = members.find(mb => String(mb._id) === String(id) || String(mb.CID) === String(id) || mb.name === id);
+            const lbl = (m?.name || '?').charAt(0).toUpperCase();
             return (
               <div key={i} style={{ width: 22, height: 22, borderRadius: '50%', background: `hsl(${i * 90 + 200},65%,55%)`, border: '2px solid var(--bg-card)', marginLeft: i > 0 ? -8 : 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#fff', title: m?.name ?? id }}>
                 {lbl}
@@ -93,8 +93,8 @@ function TaskCard({ task, colId, group, onMove, onDelete, onReassign }) {
       {showMembers && task.assigneeIds?.length > 0 && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {task.assigneeIds.map(id => {
-            const m = members.find(mb => mb._id === id || mb.name === id);
-            const name = m?.name ?? id;
+            const m = members.find(mb => String(mb._id) === String(id) || String(mb.CID) === String(id) || mb.name === id);
+            const name = m?.name ?? '?';
             return (
               <div key={id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 'var(--radius-md)', background: 'var(--bg)', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
